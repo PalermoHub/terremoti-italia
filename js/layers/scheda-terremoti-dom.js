@@ -2,6 +2,7 @@
 import { disegnaAccordion, disegnaSezione } from '../core/scheda-disegno.js';
 import { t, tn, localeIntl } from '../core/i18n.js';
 import { titoloConInfo, apriGrande } from '../core/info-grafico.js';
+import { zoomGrafico } from '../core/zoom-grafico.js';
 import { barraNavigazione } from '../core/scheda-navigazione.js';
 import { ANNO_INIZIO, periodoAnno, serieAnnuale, scaricaRiepilogo } from './scheda-archivio.js';
 import { iconaAttesa } from '../core/scheda-util.js';
@@ -387,127 +388,14 @@ function marcatori(svg, g, apri, sync, px, py, quota, testo) {
 // Zoom nel popup: si trascina sul grafico per scegliere un tratto di tempo, che viene ridisegnato; «Reimposta» (o doppio clic) torna a tutto.
 // `g` = dati mostrati, `origine` = dati interi, `ridisegna(g)` = grafico nuovo per quei dati.
 function zoomGrande(blocco, svg, g, origine, ridisegna) {
-  const { L, A, MS, MD, MA, MB } = DIM_GRANDE;
-  let corrente = blocco; // il blocco in pagina: il pan lo sostituisce mentre si trascina
-  const sostituisci = nuovo => { corrente.replaceWith(nuovo); corrente = nuovo; };
-  const tutto = () => sostituisci(ridisegna(origine));
-  if (g !== origine) svg.classList.add('zoomato');
-  // Lente d'ingrandimento (come l'icona di riferimento) con dentro il simbolo: più, meno, o freccia circolare per reimpostare
-  const SIMBOLI = { piu: 'M7 10h6M10 7v6', meno: 'M7 10h6', reimposta: 'M12.6 8.5A3 3 0 1 0 13 10M11.8 11.2L13 10l1.2 1.2' };
-  const icona = (simbolo, chiave, azione) => {
-    const b = el('button', 'zoom-icona');
-    const lente = nodoSvg('svg', { viewBox: '0 0 24 24', 'aria-hidden': 'true' });
-    lente.append(nodoSvg('circle', { cx: 10, cy: 10, r: 7 }), nodoSvg('path', { d: 'M15.2 15.2L21 21' }), nodoSvg('path', { d: SIMBOLI[simbolo] }));
-    b.append(lente);
-    b.type = 'button';
-    b.title = t(chiave);
-    b.setAttribute('aria-label', t(chiave));
-    b.addEventListener('click', azione);
-    return b;
-  };
-  const piuMeno = () => [icona('piu', 'terremoti.zoom.piu', () => scala(0.5, true)), icona('meno', 'terremoti.zoom.meno', () => scala(0.5, false))];
-  if (g === origine) {
-    const aiuto = el('p', 'scheda-nota zoom-aiuto', t('terremoti.zoom.aiuto'));
-    aiuto.append(' ', ...piuMeno());
-    svg.before(aiuto);
-  } else {
-    const riga = el('div', 'zoom-riga');
-    // frecce: spostano il tratto di un terzo della sua durata, senza uscire dai dati
-    const freccia = (simbolo, verso, chiave) => {
-      const b = el('button', `zoom-freccia ${verso < 0 ? 'sx' : 'dx'}`, simbolo);
-      b.type = 'button';
-      b.title = t(chiave);
-      b.setAttribute('aria-label', t(chiave));
-      b.addEventListener('click', () => {
-        const durata = g.a - g.da;
-        const da = Math.min(Math.max(g.da + verso * durata / 3, origine.da), origine.a - durata);
-        const nuovo = ridisegna(finestraTempo(origine, da, da + durata));
-        if (nuovo.querySelector('svg')) sostituisci(nuovo);
-      });
-      return b;
-    };
-    riga.append(...piuMeno(), icona('reimposta', 'terremoti.zoom.reimposta', tutto), el('span', 'scheda-nota', t('terremoti.zoom.tratto', { da: dataEvento(g.da), a: dataEvento(g.a) })));
-    svg.before(riga);
-    blocco.append(freccia('‹', -1, 'terremoti.zoom.sinistra'), freccia('›', 1, 'terremoti.zoom.destra')); // sul grafico, ai lati, come in uno slider di foto
-  }
-  svg.addEventListener('dblclick', tutto);
-  const frazione = ev => {
-    const r = svg.getBoundingClientRect();
-    return Math.min(1, Math.max(0, (((ev.clientX - r.left) * L) / r.width - MS) / (L - MS - MD)));
-  };
-  const xSvg = f => MS + f * (L - MS - MD);
-  // Ingrandisce (o riduce) attorno alla frazione `f` del grafico; tornando alla durata intera si rivede tutto
-  const scala = (f, dentro) => {
-    const durata = g.a - g.da;
-    const nuova = durata * (dentro ? 0.7 : 1 / 0.7);
-    if (nuova >= origine.a - origine.da) { if (g !== origine) tutto(); return; }
-    if (nuova < 60000) return;
-    const da = Math.min(Math.max(g.da + f * durata - f * nuova, origine.da), origine.a - nuova);
-    const nuovo = ridisegna(finestraTempo(origine, da, da + nuova));
-    if (nuovo.querySelector('svg')) sostituisci(nuovo);
-  };
-  // Rotella: un colpo ogni 80 ms, per non ridisegnare a raffica
-  let ultimaRotella = 0;
-  svg.addEventListener('wheel', ev => {
-    ev.preventDefault();
-    if (ev.timeStamp - ultimaRotella < 80) return;
-    ultimaRotella = ev.timeStamp;
-    scala(frazione(ev), ev.deltaY < 0);
-  }, { passive: false });
-  // Pan: con il grafico ingrandito il trascinamento sposta il tratto (Maiusc + trascinamento = nuova selezione). Si parte sempre dai dati d'inizio.
-  const panorama = ev => {
-    const larghezza = svg.getBoundingClientRect().width, x0 = ev.clientX, durata = g.a - g.da;
-    let attesa = false, ultimo = null;
-    const sposta = () => {
-      attesa = false;
-      const df = ((ultimo - x0) * L / larghezza) / (L - MS - MD);
-      const da = Math.min(Math.max(g.da - df * durata, origine.da), origine.a - durata);
-      const nuovo = ridisegna(finestraTempo(origine, da, da + durata));
-      if (nuovo.querySelector('svg')) sostituisci(nuovo);
-    };
-    const muovi = e => {
-      ultimo = e.clientX;
-      if (!attesa) { attesa = true; requestAnimationFrame(sposta); }
-    };
-    const fine = () => {
-      window.removeEventListener('pointermove', muovi);
-      window.removeEventListener('pointerup', fine);
-      if (Math.abs((ultimo ?? x0) - x0) < 6) return;
-      const ferma = c => c.stopPropagation();
-      svg.addEventListener('click', ferma, true);
-      setTimeout(() => svg.removeEventListener('click', ferma, true), 0);
-    };
-    window.addEventListener('pointermove', muovi);
-    window.addEventListener('pointerup', fine);
-  };
-  svg.addEventListener('pointerdown', ev => {
-    if (ev.button !== 0) return;
-    if (g !== origine && !ev.shiftKey) return panorama(ev);
-    const f0 = frazione(ev), x0 = ev.clientX;
-    let rett = null, trascinato = false;
-    const muovi = e => {
-      if (!trascinato && Math.abs(e.clientX - x0) < 6) return; // sotto 6 px è un clic (apre l'evento)
-      trascinato = true;
-      rett ??= svg.appendChild(nodoSvg('rect', { class: 'brush', y: MA, height: A - MA - MB }));
-      const [a, b] = [f0, frazione(e)].sort((x, y) => x - y);
-      rett.setAttribute('x', xSvg(a));
-      rett.setAttribute('width', xSvg(b) - xSvg(a));
-    };
-    const fine = e => {
-      window.removeEventListener('pointermove', muovi);
-      window.removeEventListener('pointerup', fine);
-      rett?.remove();
-      if (!trascinato) return;
-      const ferma = c => c.stopPropagation(); // il clic che chiude il trascinamento non deve aprire un evento
-      svg.addEventListener('click', ferma, true);
-      setTimeout(() => svg.removeEventListener('click', ferma, true), 0);
-      const [a, b] = [f0, frazione(e)].sort((x, y) => x - y);
-      if (b - a < 0.01) return;
-      const nuovo = ridisegna(finestraTempo(g, g.da + a * (g.a - g.da), g.da + b * (g.a - g.da)));
-      if (nuovo.querySelector('svg')) sostituisci(nuovo); // tratto troppo povero di eventi: si resta dove si è
-    };
-    window.addEventListener('pointermove', muovi);
-    window.addEventListener('pointerup', fine);
+  zoomGrafico({
+    blocco, svg,
+    dominio: { da: g.da, a: g.a },
+    origine: { da: origine.da, a: origine.a },
+    geometria: DIM_GRANDE,
+    minDurata: 60000,
+    formatta: (da, a) => t('terremoti.zoom.tratto', { da: dataEvento(da), a: dataEvento(a) }),
+    ridisegna: d => ridisegna(finestraTempo(origine, d.da, d.a)),
   });
 }
 // Linea verticale tratteggiata sulla scossa più forte (solo nel popup)
