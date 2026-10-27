@@ -257,7 +257,33 @@ export const urlStorico = (area, adesso = Date.now()) => {
 
 // Dove sta lo snapshot statico (ramo `snapshot`, rigenerato da una GitHub Action): serve quando manca il server locale, ad esempio su GitHub Pages
 export const URL_SNAPSHOT = 'https://raw.githubusercontent.com/PalermoHub/terremoti-italia/snapshot/';
+// Dove sta l'archivio storico statico (ramo `archivio`, da scripts/esporta-archivio.mjs): un file per anno e i riepiloghi
+export const URL_ARCHIVIO = 'https://raw.githubusercontent.com/PalermoHub/terremoti-italia/archivio/';
 const MASSIMO_MAPPA = 5000; // come MASSIMO_EVENTI del server
+const GIORNI_SNAPSHOT = 29; // lo snapshot copre gli ultimi 30 giorni: un intervallo che parte prima va cercato nell'archivio
+
+// Riga compatta dell'archivio statico → feature GeoJSON dell'INGV
+const featureDaRiga = ([eventId, time, lat, lon, prof, mag, magType, place, type]) => ({
+  type: 'Feature', geometry: { type: 'Point', coordinates: prof == null ? [lon, lat] : [lon, lat, prof] },
+  properties: { eventId, time, mag, magType, place, type },
+});
+
+// Risposta di GET /terremoti per l'intervallo chiesto, dai file per anno dell'archivio statico
+export async function rispostaDaArchivio({ da, a, magMin }, fetchFn = fetch) {
+  const dal = new Date(da).getUTCFullYear(), al = new Date(a).getUTCFullYear();
+  const anni = Array.from({ length: Math.max(0, al - dal + 1) }, (_, i) => dal + i);
+  const file = await Promise.all(anni.map(async anno => {
+    const r = await fetchFn(`${URL_ARCHIVIO}anni/${anno}.json`).catch(() => null);
+    if (r?.status === 404) return []; // anno senza eventi
+    if (!r?.ok) throw new Error(`archivio ${r?.status ?? 'non raggiungibile'}`);
+    return (await r.json()).righe ?? [];
+  }));
+  const dentro = file.flat().map(featureDaRiga).filter(f => {
+    const ts = oraEvento(f.properties.time);
+    return ts >= da && ts <= a && f.properties.mag >= magMin;
+  }).sort((x, y) => oraEvento(y.properties.time) - oraEvento(x.properties.time));
+  return { eventi: dentro.slice(0, MASSIMO_MAPPA), totale: dentro.length, troncato: dentro.length > MASSIMO_MAPPA, aggiornato: null };
+}
 
 // Snapshot { eventi, aggiornato } → stessa risposta di GET /terremoti per l'intervallo chiesto: più recenti prima, al massimo MASSIMO_MAPPA
 export function rispostaDaSnapshot(dati, { da, a, magMin }) {
@@ -269,12 +295,13 @@ export function rispostaDaSnapshot(dati, { da, a, magMin }) {
 }
 
 // Eventi dal nostro archivio (GET /terremoti), come feature GeoJSON dell'INGV; senza duplicati e solo dentro `area`.
-// Senza server (404) si ripiega sullo snapshot degli ultimi 30 giorni: un intervallo più vecchio resta vuoto.
-export async function scaricaEventi({ da, a, magMin, area, fetchFn = fetch }) {
+// Senza server (404) si ripiega sullo snapshot degli ultimi 30 giorni o, per un intervallo più vecchio, sull'archivio statico per anno.
+export async function scaricaEventi({ da, a, magMin, area, fetchFn = fetch, adesso = Date.now() }) {
   const q = new URLSearchParams({ da: String(da), a: String(a), magmin: String(magMin) });
   let dati;
   const r = await fetchFn(`/terremoti?${q}`).catch(() => null);
   if (r?.ok) dati = await r.json();
+  else if (da < adesso - GIORNI_SNAPSHOT * GIORNO_MS) dati = await rispostaDaArchivio({ da, a, magMin }, fetchFn);
   else {
     const s = await fetchFn(`${URL_SNAPSHOT}terremoti.json`).catch(() => null);
     if (!s?.ok) throw new Error(`archivio ${r?.status ?? 'non raggiungibile'}`);

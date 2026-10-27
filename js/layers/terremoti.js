@@ -30,6 +30,8 @@ const popup = creaPopupTerremoti();
 const fasceAccese = new Set(FASCE.map(f => f.colore)); // fasce d'età della legenda ancora in mappa
 let eventi = []; // proprietà degli eventi in mappa
 let pannelloPf = null;
+let inAreaScelta = null; // (proprietà) => bool, dalla ricerca per area; null = nessuna area che restringa
+const inArea = p => !inAreaScelta || inAreaScelta(p);
 
 function el(tag, classe, testo) {
   const e = document.createElement(tag);
@@ -40,7 +42,7 @@ function el(tag, classe, testo) {
 
 function scriviNota(ok) {
   if (!nota) return;
-  const r = riassuntoTerremoti(eventi.filter(p => passaFiltro(p)));
+  const r = riassuntoTerremoti(eventi.filter(p => passaFiltro(p) && inArea(p)));
   if (!ok && !ultimo) { nota.textContent = t('terremoti.nonDisponibile'); return; }
   const ora = new Date(ultimo).toLocaleTimeString(localeIntl(), { hour: '2-digit', minute: '2-digit' });
   const base = r ? t('terremoti.riassunto', { giorni: testoGiorni(filtro.giorni), n: r.n, ora, mag: r.forte.mag.toLocaleString(localeIntl(), { minimumFractionDigits: 1 }), luogo: r.forte.luogo }) : t('terremoti.nessuno', { ora, giorni: testoGiorni(filtro.giorni) });
@@ -73,7 +75,8 @@ function pianifica() {
 // le voci della legenda sono filtri: il colore del cerchio è la fascia d'età
 function applicaFiltro() {
   const fasce = filtroInsieme(['get', 'colore'], fasceAccese, FASCE.length);
-  const espr = ['all', espressioneFiltro(), ...(fasce ? [fasce] : [])];
+  const dentro = inAreaScelta ? [['in', ['get', 'id'], ['literal', eventi.filter(inAreaScelta).map(p => p.id)]]] : [];
+  const espr = ['all', espressioneFiltro(), ...(fasce ? [fasce] : []), ...dentro];
   for (const id of [PUNTI, HIT]) mappa?.getLayer(id) && mappa.setFilter(id, espr);
   scriviNota(true);
 }
@@ -104,7 +107,7 @@ function creaLegenda() {
 }
 
 // Eventi che si vedono in mappa: filtri di periodo e magnitudo, più le fasce d'età accese in legenda
-const visibili = () => eventi.filter(p => passaFiltro(p) && fasceAccese.has(p.colore));
+const visibili = () => eventi.filter(p => passaFiltro(p) && fasceAccese.has(p.colore) && inArea(p));
 
 // Le frecce della scheda scelgono l'evento da aprire: il clic simulato sul suo cerchio, dove ce ne sono di sovrapposti, non deve ripiegare sul più forte
 const FINESTRA_SCELTA_MS = 1500;
@@ -185,6 +188,12 @@ export default {
     },
   },
   legendaPannello: '.lg-terremoti',
+  // Restringe gli eventi a un'area (funzione sulle proprietà dell'evento) o toglie la restrizione (null); restituisce gli eventi che restano in mappa
+  impostaArea(fn) {
+    inAreaScelta = fn;
+    applicaFiltro();
+    return visibili();
+  },
   avvia() { aggiorna(); pianifica(); },
   strati: [{
     id: 'terremoti', etichetta: 'Terremoti in tempo reale', layers: [PUNTI], attivo: true, legendaPannello: '.lg-terremoti',

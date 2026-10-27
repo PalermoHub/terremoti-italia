@@ -2613,3 +2613,17 @@ details.scheda-sez-evento .scheda-sez-testo { display: contents; }
 .legenda .terremoti-archivio > .terremoti-archivio-btn { width: 100%; }
 .legenda .terremoti-archivio > strong { margin-top: 4px; }
 .scheda-sez-testo .tooltip-badge { align-self: flex-start; margin: 0 0 4px; }
+
+/* Ricerca per area: suggerimenti con tipo e contesto, pannello dei filtri a cascata sopra la barra */
+#cerca-risultati li { list-style: none; }
+#cerca-risultati button { display: flex; flex-direction: column; gap: 1px; }
+#cerca-risultati button[aria-selected="true"] { background: var(--surface-hover); }
+.cerca-tipo { font-size: var(--fs-2xs); color: var(--text-muted); }
+#cerca-pannello { padding: 10px 14px 12px; background: var(--surface); border: 1px solid var(--border-ui); border-radius: var(--r-md); box-shadow: var(--ombra); }
+#cerca-pannello[hidden] { display: none; }
+#cerca-pannello h2 { margin: 0 0 6px; font-size: var(--fs-sm); }
+#cerca-pannello select { background: var(--surface); color: var(--text); border: 1px solid var(--border-ui); border-radius: var(--r-sm); }
+.cerca-solo-eventi { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: var(--fs-xs); color: var(--text); }
+.cerca-solo-eventi[hidden] { display: none; }
+#cerca-pannello label { display: block; font-size: var(--fs-xs); color: var(--text-muted); }
+#cerca-pannello select { width: 100%; margin: 2px 0 8px; padding: 6px; }

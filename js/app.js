@@ -7,6 +7,7 @@ import { collegaRail } from './core/rail.js';
 import { collegaStorico } from './core/scheda-storico.js';
 import { collegaStrumenti } from './core/strumenti.js';
 import { collegaStampa } from './core/stampa.js';
+import { collegaRicerca } from './core/ricerca.js';
 import { creaDifferiti } from './core/differiti.js';
 import { creaAvvisoAttesa } from './core/avviso-attesa.js';
 import { collegaTabMobile } from './core/tab-mobile.js';
@@ -92,6 +93,7 @@ map.once('style.load', async () => {
   const esiti = await Promise.allSettled(MODULI.filter(m => m.avvia).map(m => m.avvia(map)));
   esiti.forEach(e => { if (e.status === 'rejected') segnala(t('avviso.stratoNonCaricato.dettaglio', { nome: e.reason?.message ?? e.reason })); });
 
+  collegaRicerca(map, { terremoti });
   collegaStrumenti(map);
   collegaStampa(map, document.getElementById('btn-stampa'), document.getElementById('stampa-menu'));
   window.dt.pronto = true;

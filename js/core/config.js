@@ -1,4 +1,6 @@
 export const DATI = 'dati/';
+// Confini dei comuni italiani (vettoriali, un solo strato «comuni»): servono alla ricerca per area; il sito ospite consente le richieste a intervalli (Range).
+export const URL_COMUNI = 'https://gbvitrano.it/anncus/data/comuni.pmtiles';
 // Vista iniziale: l'Italia intera, con Sardegna, Sicilia e le isole minori (Lampedusa, Pantelleria, Ustica).
 export const VISTA_ITALIA = [[6.4, 35.3], [18.9, 47.3]];
 export const CENTRO = [12.5, 41.3];

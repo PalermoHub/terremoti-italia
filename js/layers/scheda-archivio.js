@@ -1,4 +1,4 @@
-import { CLASSI_MAG, classeMagnitudo, marcaSciami, momentoSismico, magnitudoDaMomento } from './scheda-terremoti.js';
+import { URL_ARCHIVIO, CLASSI_MAG, classeMagnitudo, marcaSciami, momentoSismico, magnitudoDaMomento } from './scheda-terremoti.js';
 
 // Modello puro dell'archivio storico: periodi (anni UTC), serie annuale e confronto tra due periodi, a partire dai riepiloghi di GET /terremoti/riepilogo.
 export const ANNO_INIZIO = 1985;
@@ -60,10 +60,24 @@ export function confrontaPeriodi(a, b, giorniA, giorniB) {
 // Giorni trascorsi di un periodo fino ad adesso (almeno 1)
 export const giorniPeriodo = ({ da, a }, adesso = Date.now()) => Math.max(1, Math.ceil((Math.min(a, adesso) - da) / GIORNO_MS));
 
-// Riepilogo dell'archivio (conteggi per magnitudo e per mese) di un periodo, dal server
+// Senza server: i riepiloghi statici dell'intera storia (riepilogo-M.json, M = 2…5) ristretti al periodo, a mesi interi.
+// La magnitudo minima si porta al riepilogo più vicino; la mappa per magnitudo è dello stesso file e si restringe per classe.
+export const MAGNITUDO_RIEPILOGHI = [2, 3, 4, 5];
+export function riepilogoDaStatico(dati, { da, a }, magMin) {
+  const mese = ts => new Date(ts).toISOString().slice(0, 7);
+  const [dal, al] = [mese(da), mese(a)];
+  const perMese = (dati.perMese ?? []).filter(m => m.mese >= dal && m.mese <= al);
+  const perMagnitudo = (dati.perMagnitudo ?? []).filter(m => m.mag >= magMin);
+  return { totale: perMese.reduce((s, m) => s + m.n, 0), perMagnitudo, perMese };
+}
+
+// Riepilogo dell'archivio (conteggi per magnitudo e per mese) di un periodo, dal server o, se manca, dai file statici
 export async function scaricaRiepilogo(periodo, magMin, fetchFn = fetch) {
   const q = new URLSearchParams({ da: String(periodo.da), a: String(periodo.a), magmin: String(magMin) });
-  const r = await fetchFn(`/terremoti/riepilogo?${q}`);
-  if (!r.ok) throw new Error(`archivio ${r.status}`);
-  return r.json();
+  const r = await fetchFn(`/terremoti/riepilogo?${q}`).catch(() => null);
+  if (r?.ok) return r.json();
+  const m = MAGNITUDO_RIEPILOGHI.findLast(v => v <= magMin) ?? MAGNITUDO_RIEPILOGHI[0];
+  const s = await fetchFn(`${URL_ARCHIVIO}riepilogo-${m}.json`).catch(() => null);
+  if (!s?.ok) throw new Error(`archivio ${s?.status ?? r?.status ?? 'non raggiungibile'}`);
+  return riepilogoDaStatico(await s.json(), periodo, magMin);
 }
