@@ -1,0 +1,9 @@
+{
+  "name": "terremoti-italia",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.js",
+    "test:js": "node --test --import ./tests/js/setup-i18n.mjs tests/js/*.test.mjs"
+  }
+}

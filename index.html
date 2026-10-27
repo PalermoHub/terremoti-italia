@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Terremoti Italia</title>
+<meta name="description" data-i18n-content="html.descrizione" content="Mappa dei terremoti in Italia in tempo reale e dall'archivio, con le allerte meteo-idro della Protezione Civile.">
+<meta name="theme-color" content="#ffffff">
+<link rel="icon" href="img/favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="img/favicon.png">
+<link rel="preconnect" href="https://tiles.openfreemap.org" crossorigin>
+<link rel="preload" href="js/locales/it.json" as="fetch" crossorigin>
+<script>try{if(localStorage.getItem('dt-tema')==='scuro')document.documentElement.dataset.tema='scuro'}catch(e){}</script>
+<link rel="stylesheet" href="css/vendor/maplibre-gl.css">
+<link rel="preload" href="css/fonts/montserrat-Regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="css/fonts/montserrat-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="stylesheet" href="css/app.css">
+<link rel="stylesheet" href="css/terremoti-italia.css">
+</head>
+<body>
+<header id="app-header">
+<button id="switch-tema" type="button" role="switch" aria-checked="false" data-i18n-aria="html.tema" data-i18n-title="html.tema" aria-label="Tema scuro" title="Tema scuro"><span class="switch-pista"><span class="switch-manopola"></span></span></button>
+</header>
+<main id="corpo">
+<div id="mappa"></div>
+
+<div id="pannello" data-i18n-aria="html.strati.nav" aria-label="Strati della mappa"></div>
+<div id="legende-box"><button id="legende-riduci" type="button" aria-expanded="true" data-i18n="html.legende.riduci">▾ Riduci</button><div id="legende"></div></div>
+
+<nav id="barra-strati" data-i18n-aria="html.strati.nav" aria-label="Strati della mappa">
+  <h2 class="barra-titolo" data-i18n="html.strati.titolo">Strati</h2>
+  <div id="barra-gruppi" role="group" data-i18n-aria="html.strati.nav" aria-label="Strati della mappa"></div>
+  <button id="chiudi-strati" type="button" data-i18n="html.strati.fatto">Fatto</button>
+</nav>
+
+<div id="barra-strumenti" role="toolbar" data-i18n-aria="html.strumenti" aria-label="Strumenti mappa">
+  <button id="btn-home" type="button" data-i18n-title="html.btn.home" data-i18n-aria="html.btn.home" title="Vista iniziale" aria-label="Vista iniziale"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" aria-hidden="true"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg></button>
+  <button id="btn-posizione" type="button" data-i18n-title="html.btn.posizione" data-i18n-aria="html.btn.posizione" title="La mia posizione" aria-label="La mia posizione"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="16" height="16" aria-hidden="true"><circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="2.5" fill="currentColor"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg></button>
+  <button id="btn-fs" type="button" data-i18n-title="html.btn.fs" data-i18n-aria="html.btn.fs" title="Schermo intero" aria-label="Schermo intero"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" aria-hidden="true"><path d="M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z"/></svg></button>
+  <button id="btn-stampa" type="button" data-i18n-title="html.btn.stampa" data-i18n-aria="html.btn.stampa" title="Stampa la mappa visualizzata" aria-label="Stampa la mappa visualizzata"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" aria-hidden="true"><path d="M19 8H5c-1.66 0-3 1.34-3 3v6h4v4h12v-4h4v-6c0-1.66-1.34-3-3-3zm-3 11H8v-5h8v5zm3-7c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1zm-1-9H6v4h12V3z"/></svg></button>
+  <button id="btn-tema" type="button" data-i18n-title="html.tema" data-i18n-aria="html.tema" title="Tema scuro" aria-label="Tema scuro" aria-pressed="false"><svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9c0-.46-.04-.92-.1-1.36a5.39 5.39 0 0 1-4.4 2.26 5.4 5.4 0 0 1-3.14-9.8c-.44-.06-.9-.1-1.36-.1z"/></svg></button>
+</div>
+
+<div id="stampa-menu" role="group" data-i18n-aria="html.stampa.gruppo" aria-label="Opzioni di stampa" hidden><label for="stampa-formato" data-i18n="html.stampa.formato">Formato</label><select id="stampa-formato"></select><select id="stampa-direzione" data-i18n-aria="html.stampa.orient" aria-label="Orientamento"></select><label for="stampa-scala" data-i18n="html.stampa.scala">Scala</label><select id="stampa-scala"></select><button id="stampa-vai" type="button" data-i18n="html.stampa.vai">Stampa</button></div>
+
+<div id="zoom-box" role="group" aria-label="Zoom"><div id="zoom-badge" aria-live="off">5</div><div class="zoom-wrap"><input type="range" id="zoom-slider" min="4" max="16" step="0.1" value="5" aria-label="Zoom"></div></div>
+
+<div id="mappa-info"><a id="logo-ods" href="https://opendatasicilia.it/" target="_blank" rel="noopener" title="Open Data Sicilia"><img src="img/opendatasicilia.png" alt="Open Data Sicilia" width="42" height="48"></a><div class="mappa-info-testi"><span id="app-logo" data-i18n="app.titolo">Terremoti Italia</span><span id="piede-coord" aria-hidden="true"></span></div></div>
+
+<div id="strati-chip" role="group" data-i18n-aria="html.chip.gruppo" aria-label="Strati accesi"></div>
+<div id="area-ricerca"><div id="avvisi" role="status"></div></div>
+
+<aside id="scheda" hidden data-i18n-aria="html.scheda.aria" aria-label="Scheda del luogo"></aside>
+<nav id="rail-pannelli" data-i18n-aria="html.rail.aria" aria-label="Pannelli laterali"></nav>
+</main>
+<footer id="app-footer">
+<p class="piede-avviso" data-i18n="html.piede.avviso.ti">Dati INGV e Protezione Civile: informativi, non sostituiscono le comunicazioni ufficiali.</p>
+</footer>
+<script defer src="js/vendor/maplibre-gl.js"></script>
+<script defer src="js/vendor/pmtiles.js"></script>
+<script type="module" src="js/avvio.js"></script>
+</body>
+</html>

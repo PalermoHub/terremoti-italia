@@ -1,0 +1,2 @@
+/* Ritocchi della webapp Terremoti Italia sopra lo stile condiviso (app.css). */
+#barra-tab .tab-aggiungi, #barra-tab [data-tab="aggiungi"], #barra-tab [data-tab="info"] { display: none; }
