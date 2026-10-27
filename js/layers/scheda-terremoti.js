@@ -255,12 +255,31 @@ export const urlStorico = (area, adesso = Date.now()) => {
   return `/terremoti?${q}`;
 };
 
-// Eventi dal nostro archivio (GET /terremoti), come feature GeoJSON dell'INGV; senza duplicati e solo dentro `area`
+// Dove sta lo snapshot statico (ramo `snapshot`, rigenerato da una GitHub Action): serve quando manca il server locale, ad esempio su GitHub Pages
+export const URL_SNAPSHOT = 'https://raw.githubusercontent.com/PalermoHub/terremoti-italia/snapshot/';
+const MASSIMO_MAPPA = 5000; // come MASSIMO_EVENTI del server
+
+// Snapshot { eventi, aggiornato } → stessa risposta di GET /terremoti per l'intervallo chiesto: più recenti prima, al massimo MASSIMO_MAPPA
+export function rispostaDaSnapshot(dati, { da, a, magMin }) {
+  const dentro = (dati?.eventi ?? []).filter(f => {
+    const ts = oraEvento(f?.properties?.time);
+    return ts >= da && ts <= a && f.properties.mag >= magMin;
+  }).sort((x, y) => oraEvento(y.properties.time) - oraEvento(x.properties.time));
+  return { eventi: dentro.slice(0, MASSIMO_MAPPA), totale: dentro.length, troncato: dentro.length > MASSIMO_MAPPA, aggiornato: dati?.aggiornato ?? null };
+}
+
+// Eventi dal nostro archivio (GET /terremoti), come feature GeoJSON dell'INGV; senza duplicati e solo dentro `area`.
+// Senza server (404) si ripiega sullo snapshot degli ultimi 30 giorni: un intervallo più vecchio resta vuoto.
 export async function scaricaEventi({ da, a, magMin, area, fetchFn = fetch }) {
   const q = new URLSearchParams({ da: String(da), a: String(a), magmin: String(magMin) });
-  const r = await fetchFn(`/terremoti?${q}`);
-  if (!r.ok) throw new Error(`archivio ${r.status}`);
-  const dati = await r.json();
+  let dati;
+  const r = await fetchFn(`/terremoti?${q}`).catch(() => null);
+  if (r?.ok) dati = await r.json();
+  else {
+    const s = await fetchFn(`${URL_SNAPSHOT}terremoti.json`).catch(() => null);
+    if (!s?.ok) throw new Error(`archivio ${r?.status ?? 'non raggiungibile'}`);
+    dati = rispostaDaSnapshot(await s.json(), { da, a, magMin });
+  }
   const visti = new Set();
   const eventi = [];
   for (const f of dati.eventi ?? []) {

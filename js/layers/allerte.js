@@ -1,6 +1,7 @@
 import { tutti } from '../core/scheda-util.js';
 import { LIVELLI, coloreLivello, voceAllerta, modelloAllerte } from './scheda-allerte.js';
 import { tl, t } from '../core/i18n.js';
+import { URL_SNAPSHOT } from './scheda-terremoti.js';
 
 // Allerta meteo-idro della Protezione Civile per le 187 zone di allerta d'Italia: il bollettino lo serve il server locale (GET /allerte, dal repository del DPC,
 // rinnovato ogni 15 minuti); i poligoni delle zone ci sono anche a strato spento per la scheda.
@@ -66,7 +67,9 @@ function creaLegenda() {
 
 async function caricaAllerte() {
   try {
-    const r = await fetch('/allerte');
+    // Senza server (GitHub Pages) il bollettino arriva dallo snapshot
+    let r = await fetch('/allerte').catch(() => null);
+    if (!r?.ok) r = await fetch(`${URL_SNAPSHOT}allerte.json`);
     if (!r.ok) throw new Error(String(r.status));
     const dati = await r.json();
     if (!dati.features?.length) throw new Error('no zones');

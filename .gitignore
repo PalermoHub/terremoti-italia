@@ -1,3 +1,10 @@
 .superpowers/
 node_modules/
 dati/*.sqlite*
+docs/
+tests/
+graphify-out/
+.playwright-mcp/
+.remember/
+a.png
+*:Zone.Identifier
