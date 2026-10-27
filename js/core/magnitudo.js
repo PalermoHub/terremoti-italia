@@ -4,11 +4,11 @@
 // intervalli. `raggio` = raggio del cerchio in pixel (i layer lo leggono dalla proprietà `raggio` della feature) e
 // `colore` = colore del tema magnitudo.
 export const CLASSI_MAGNITUDO = [
-  { chiave: 'fino2', da: 1, a: 2, raggio: 3, colore: '#fee08b' },
-  { chiave: 'da2', da: 2, a: 3, raggio: 5, colore: '#fdae61' },
-  { chiave: 'da3', da: 3, a: 4, raggio: 7, colore: '#f46d43' },
-  { chiave: 'da4', da: 4, a: 5, raggio: 10, colore: '#d53e4f' },
-  { chiave: 'da5', da: 5, a: Infinity, raggio: 14, colore: '#9e0142' },
+  { chiave: 'fino2', da: 1, a: 2, raggio: 3, colore: '#fde68a' },
+  { chiave: 'da2', da: 2, a: 3, raggio: 5, colore: '#fbbf24' },
+  { chiave: 'da3', da: 3, a: 4, raggio: 7, colore: '#f97316' },
+  { chiave: 'da4', da: 4, a: 5, raggio: 10, colore: '#c2410c' },
+  { chiave: 'da5', da: 5, a: Infinity, raggio: 14, colore: '#dc2626' },
 ];
 
 // Lo zoom a cui i cerchi in mappa hanno il raggio di CLASSI_MAGNITUDO: i layer interpolano 0,8 volte il raggio a zoom 6
