@@ -47,3 +47,12 @@ export const presente = v => v != null && v !== '' && v !== 'NULL';
 // righe {etichetta, valore} solo per i valori presenti
 export const righe = coppie =>
   coppie.filter(([, valore]) => presente(valore)).map(([etichetta, valore]) => ({ etichetta, valore: String(valore) }));
+
+// Iconcina che gira per le attese della scheda e del tooltip (stile .gira-attesa): un elemento nuovo a ogni disegno,
+// tranne dove va riusata (il tooltip dei comuni viene ridisegnato a ogni movimento del mouse).
+export function iconaAttesa(classe = '') {
+  const i = document.createElement('i');
+  i.className = classe ? `gira-attesa ${classe}` : 'gira-attesa';
+  i.setAttribute('aria-hidden', 'true'); // il testo accanto dice già che si sta aspettando
+  return i;
+}

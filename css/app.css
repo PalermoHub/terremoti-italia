@@ -721,6 +721,9 @@ dialog li { margin: 4px 0; }
 .tooltip-elenco { margin-top: 4px; font-size: var(--fs-xs); font-weight: 400; }
 .tooltip-suggerimento { margin-top: 6px; font-size: var(--fs-xs); font-weight: 400; font-style: italic; color: var(--text-muted); }
 .tooltip-elenco > div { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* cerchietto che gira per le attese (tooltip dei comuni, scheda): la stessa animazione degli avvisi di attesa */
+.gira-attesa { display: inline-block; flex: none; width: 10px; height: 10px; margin-left: 5px; border: 2px solid color-mix(in srgb, currentColor 25%, transparent); border-top-color: currentColor; border-radius: 50%; vertical-align: -1px; animation: giro-attesa .8s linear infinite; }
+.comuni-gira { color: #c27c0e; }
 .pnrr-copertura { margin: 6px 0 8px; padding: 6px 8px; border-left: 3px solid #7048e8; border-radius: 0 var(--r-sm) var(--r-sm) 0; background: var(--accent-soft); font-size: var(--fs-xs); font-weight: 600; line-height: 1.35; }
 /* menu a tendina ben riconoscibili (scheda e legenda): bordo e fondo colorati, testo in grassetto, etichetta sopra */
 .pnrr-scelta { display: block; margin-top: 10px; }
@@ -2613,6 +2616,19 @@ details.scheda-sez-evento .scheda-sez-testo { display: contents; }
 .legenda .terremoti-archivio > .terremoti-archivio-btn { width: 100%; }
 .legenda .terremoti-archivio > strong { margin-top: 4px; }
 .scheda-sez-testo .tooltip-badge { align-self: flex-start; margin: 0 0 4px; }
+
+/* Comune cliccato in mappa: conteggi dei terremoti e serie anno per anno */
+.comune-sismico { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border-ui); }
+.comune-sismico-riga { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 0; font-size: var(--fs-xs); }
+.comune-sismico-etichetta { color: var(--text-muted); }
+.comune-sismico-riga strong { text-align: right; font-weight: 600; }
+.comune-sismico-dove { margin: -3px 0 0; }
+.comune-sismico-titolo { margin: 10px 0 0; font-size: var(--fs-xs); color: var(--text-muted); }
+.comune-sismico-serie { display: flex; align-items: flex-end; gap: 1px; height: 56px; }
+.comune-sismico-serie i { flex: 1 1 0; min-width: 0; background: var(--accent); border-radius: 1px 1px 0 0; }
+.comune-sismico-serie i.oggi { background: #d7263d; }
+.comune-sismico-anni { display: flex; justify-content: space-between; font-size: 10px; color: var(--text-muted); }
+.comune-sismico-link { font-size: 10px; }
 
 /* Ricerca per area: suggerimenti con tipo e contesto, pannello dei filtri a cascata sopra la barra */
 #cerca-risultati li { list-style: none; }

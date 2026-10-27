@@ -13,6 +13,17 @@ function numero(url, nome, predefinito) {
   return n;
 }
 
+// Riquadro facoltativo [ovest, sud, est, nord]: restringe la risposta a un'area (per esempio il comune cliccato in mappa)
+function riquadro(url) {
+  const v = url.searchParams.get('bbox');
+  if (v === null || v === '') return null;
+  const n = v.split(',').map(Number);
+  if (n.length !== 4 || !n.every(Number.isFinite)) throw new Error('parametro bbox non valido');
+  const [minlon, minlat, maxlon, maxlat] = n;
+  if (minlon >= maxlon || minlat >= maxlat) throw new Error('parametro bbox non valido: riquadro vuoto');
+  return { minlon, minlat, maxlon, maxlat };
+}
+
 export function leggiParametri(url, adesso = Date.now()) {
   const a = numero(url, 'a', adesso);
   const da = numero(url, 'da', a - 30 * GIORNO_MS);
@@ -21,7 +32,7 @@ export function leggiParametri(url, adesso = Date.now()) {
   const testo = url.searchParams.get('formato') === 'testo';
   const tetto = testo ? MASSIMO_TESTO : MASSIMO_EVENTI;
   const limite = Math.max(1, Math.min(Math.floor(numero(url, 'limite', tetto)), tetto));
-  return { da, a, magMin, limite, testo };
+  return { da, a, magMin, limite, testo, bbox: riquadro(url) };
 }
 
 export function rispondiTerremoti(archivio, { da, a, magMin, limite }, area) {

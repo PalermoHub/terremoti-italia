@@ -15,6 +15,7 @@ import { traduciModuli } from './core/traduci-moduli.js';
 import { caricaLiveZoom, collegaLiveZoom, creaInterruttoreLegenda as interruttoreLiveZoomLegenda } from './core/live-zoom.js';
 import { t } from './core/i18n.js';
 import eventi from './layers/eventi.js';
+import comuni from './layers/comuni.js';
 import allerte from './layers/allerte.js';
 import terremoti from './layers/terremoti.js';
 import terremotiStorico from './layers/terremoti-storico.js';
@@ -41,7 +42,7 @@ riduciLegenda.addEventListener('click', () => {
 });
 
 // ordine = ordine di sovrapposizione dei layer (il primo sta sotto); «eventi» precede i moduli che mettono i loro strati nel suo gruppo
-const MODULI = [base, eventi, allerte, terremoti, terremotiStorico, terremotiConfronto, faglie, faglieEgdi];
+const MODULI = [base, eventi, comuni, allerte, terremoti, terremotiStorico, terremotiConfronto, faglie, faglieEgdi];
 traduciModuli(MODULI);
 
 const map = creaMappa('mappa', () => segnala(t('app.basemap.errore')));
@@ -95,7 +96,7 @@ map.once('style.load', async () => {
   const esiti = await Promise.allSettled(MODULI.filter(m => m.avvia).map(m => m.avvia(map)));
   esiti.forEach(e => { if (e.status === 'rejected') segnala(t('avviso.stratoNonCaricato.dettaglio', { nome: e.reason?.message ?? e.reason })); });
 
-  collegaRicerca(map, { terremoti, storico: terremotiStorico });
+  collegaRicerca(map, { terremoti, storico: terremotiStorico, comuni });
   collegaStrumenti(map);
   collegaStampa(map, document.getElementById('btn-stampa'), document.getElementById('stampa-menu'));
   window.dt.pronto = true;

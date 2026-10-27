@@ -1,7 +1,9 @@
 import { tl, t, localeIntl } from '../core/i18n.js';
-import { AREA_EVENTI } from '../core/config.js';
+import { AREA_EVENTI, HIT_COMUNI, SRC_COMUNI, STRATO_COMUNI } from '../core/config.js';
 import { filtroInsieme, voceFiltro } from '../core/legenda.js';
+import { primo } from '../core/scheda-util.js';
 import { FASCE, GIORNI_MAX, scaricaEventi, filtro, passaFiltro, espressioneFiltro, eventoDaIngv, modelloPopupTerremoto, voceTerremoto, voceSerie, voceAltri, riassuntoTerremoti, proprietaStorico } from './scheda-terremoti.js';
+import { voceComune } from './scheda-comune.js';
 import { EVENTO_FILTRO, menuFiltro, menuMagnitudo, elencoAltri, graficoSerie, testoGiorni, barraEventi } from './scheda-terremoti-dom.js';
 import { pannelloFiltro } from './terremoti-pannello.js';
 import { registraTooltipStrati } from '../core/tooltip.js';
@@ -133,6 +135,22 @@ function apriDaGrafico(e) {
 
 const proprieta = f => ({ ...f.properties, lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] });
 
+// Confini del comune nei tile già caricati (una parte per tile): servono a contare solo gli epicentri dentro il comune.
+// Vuoto se la mappa non ha ancora i tile del comune: in quel caso la card non si apre.
+function geometrieComune(proCom) {
+  if (!mappa) return [];
+  return mappa.querySourceFeatures(SRC_COMUNI, { sourceLayer: STRATO_COMUNI, filter: ['==', ['get', 'pro_com'], proCom] })
+    .map(f => f?.geometry).filter(g => g?.coordinates);
+}
+
+// Card dei terremoti del comune cliccato (dalla ricerca non serve: la scheda si apre anche solo toccando il confine)
+function voceDelComune(comune) {
+  const p = comune.properties ?? {};
+  const geometrie = geometrieComune(p.pro_com);
+  if (!geometrie.length) return null;
+  return voceComune({ cod: p.pro_com, nome: p.comune, geometrie }, { provincia: p.den_uts ?? '', regione: p.den_reg ?? '' });
+}
+
 export default {
   id: 'terremoti',
   titolo: 'Terremoti in tempo reale',
@@ -175,12 +193,23 @@ export default {
     });
   },
   scheda: {
-    layers: [HIT],
-    // prima l'evento cliccato (il più forte sotto il cerchio, in evidenza), poi tutti gli altri che passano il filtro, anche quelli sovrapposti
+    // HIT: i cerchi degli eventi; HIT_COMUNI: il confine comunale sotto il clic (lo aggiunge js/core/ricerca.js)
+    layers: [HIT, HIT_COMUNI],
+    // prima l'evento cliccato (il più forte sotto il cerchio, in evidenza), poi tutti gli altri che passano il filtro, anche quelli sovrapposti;
+    // senza un evento sotto il dito, la card dei terremoti del comune (se il clic è caduto su un comune)
     voci(trovati) {
-      const primo = evento(trovati.filter(f => f.layer.id === HIT));
-      if (!primo) return [];
-      return [voceTerremoto(proprieta(primo), Date.now(), () => barraEventi(primo.properties.id, visibili, vaiAEvento)), voceSerie(() => graficoSerie(AREA, apriDaGrafico)), voceAltri(() => elencoAltri(() => eventi, new Set([primo.properties.id])))];
+      const voci = [];
+      const primoEvento = evento(trovati.filter(f => f.layer.id === HIT));
+      if (primoEvento) {
+        voci.push(voceTerremoto(proprieta(primoEvento), Date.now(), () => barraEventi(primoEvento.properties.id, visibili, vaiAEvento)), voceSerie(() => graficoSerie(AREA, apriDaGrafico)), voceAltri(() => elencoAltri(() => eventi, new Set([primoEvento.properties.id]))));
+        return voci;
+      }
+      const comune = primo(trovati, HIT_COMUNI);
+      if (comune) {
+        const voce = voceDelComune(comune);
+        if (voce) voci.push(voce);
+      }
+      return voci;
     },
     // gli eventi stanno in mare e fuori dal Comune: il clic su un cerchio apre la scheda (solo a strato acceso: i dati si scaricano all'accensione)
     apertoFuoriComune(map, e) {

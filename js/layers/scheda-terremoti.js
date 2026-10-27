@@ -268,8 +268,10 @@ const featureDaRiga = ([eventId, time, lat, lon, prof, mag, magType, place, type
   properties: { eventId, time, mag, magType, place, type },
 });
 
-// Risposta di GET /terremoti per l'intervallo chiesto, dai file per anno dell'archivio statico
-export async function rispostaDaArchivio({ da, a, magMin }, fetchFn = fetch) {
+// Risposta di GET /terremoti per l'intervallo chiesto, dai file per anno dell'archivio statico.
+// `massimo` è il tetto di eventi restituiti (come nella risposta del server): i conteggi di tutta la storia lo alzano,
+// perché in un solo comune una sequenza può superare i MASSIMO_MAPPA eventi che la mappa sa disegnare.
+export async function rispostaDaArchivio({ da, a, magMin }, fetchFn = fetch, massimo = MASSIMO_MAPPA) {
   const dal = new Date(da).getUTCFullYear(), al = new Date(a).getUTCFullYear();
   const anni = Array.from({ length: Math.max(0, al - dal + 1) }, (_, i) => dal + i);
   const file = await Promise.all(anni.map(async anno => {
@@ -282,7 +284,7 @@ export async function rispostaDaArchivio({ da, a, magMin }, fetchFn = fetch) {
     const ts = oraEvento(f.properties.time);
     return ts >= da && ts <= a && f.properties.mag >= magMin;
   }).sort((x, y) => oraEvento(y.properties.time) - oraEvento(x.properties.time));
-  return { eventi: dentro.slice(0, MASSIMO_MAPPA), totale: dentro.length, troncato: dentro.length > MASSIMO_MAPPA, aggiornato: null };
+  return { eventi: dentro.slice(0, massimo), totale: dentro.length, troncato: dentro.length > massimo, aggiornato: null };
 }
 
 // Snapshot { eventi, aggiornato } → stessa risposta di GET /terremoti per l'intervallo chiesto: più recenti prima, al massimo MASSIMO_MAPPA
@@ -297,7 +299,7 @@ export function rispostaDaSnapshot(dati, { da, a, magMin }) {
 // Eventi dal nostro archivio (GET /terremoti), come feature GeoJSON dell'INGV; senza duplicati e solo dentro `area`.
 // Senza server (404) si ripiega sullo snapshot degli ultimi 30 giorni o, per un intervallo più vecchio, sull'archivio statico per anno.
 export async function scaricaEventi({ da, a, magMin, area, fetchFn = fetch, adesso = Date.now() }) {
-  const q = new URLSearchParams({ da: String(da), a: String(a), magmin: String(magMin) });
+  const q = new URLSearchParams({ da: String(da), a: String(a), magmin: String(magMin), bbox: [area.minlon, area.minlat, area.maxlon, area.maxlat].join(',') });
   let dati;
   const r = await fetchFn(`/terremoti?${q}`).catch(() => null);
   if (r?.ok) dati = await r.json();

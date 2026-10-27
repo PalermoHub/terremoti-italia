@@ -2,7 +2,7 @@ import { svgIcona } from './icone.js';
 import { applicaOpacita } from './opacita.js';
 import { limitiStrato, zoomMinimoStrato } from './zoom-strato.js';
 import { creaPannelloTema } from './pannello-tema.js';
-import { ordinaSezioni, leggiAperte, salvaAperta } from './layer-sezioni.js';
+import { ordinaSezioni, leggiAperte, salvaAperta, CHIAVE } from './layer-sezioni.js';
 import { ordineStrati } from './riordino.js';
 import { raccogliLegende, collegaLegendePannello } from './legenda-pannello.js';
 import { abilitaRiordino, creaOrdineDisegno } from './pannello-riordino.js';
@@ -209,12 +209,13 @@ export function costruisciPannello(map, moduli, contenitore, barra) {
     return el;
   };
   // gruppo ordinario: una sezione ripiegabile dentro il pannello «Layer», creato al primo uso
-  const nuovaSezione = (id, titolo) => {
+  const nuovaSezione = (id, titolo, { aperta = false } = {}) => {
     layer ??= nuovoTab('layer', ETICHETTE.layer);
     const el = document.createElement('details');
     el.id = `gruppo-${id}`;
     el.className = 'layer-sezione';
-    el.open = aperte.includes(id);
+    // una sezione può chiedere di nascere aperta (es. «Territorio»); poi vale la scelta dell'utente, salvata in localStorage
+    el.open = aperte.includes(id) || (aperta && storage?.getItem(CHIAVE) == null);
     const sommario = document.createElement('summary');
     const h = document.createElement('h2');
     h.textContent = ETICHETTE[id] ?? titolo;
@@ -226,14 +227,14 @@ export function costruisciPannello(map, moduli, contenitore, barra) {
     layer.append(el);
     return el;
   };
-  const aggiungi = (id, titolo) => (TAB_DIRETTI.has(id) ? nuovoTab(id, titolo) : nuovaSezione(id, titolo));
+  const aggiungi = (id, titolo, modulo = null) => (TAB_DIRETTI.has(id) ? nuovoTab(id, titolo) : nuovaSezione(id, titolo, { aperta: Boolean(modulo?.sezioneAperta) }));
 
   // in un gruppo condiviso ogni modulo ha il suo titolo, anche quello che ospita gli altri: gli strati si possono spostare
   const perGruppo = new Map();
   for (const m of moduli) perGruppo.set(m.gruppo ?? m.id, (perGruppo.get(m.gruppo ?? m.id) ?? 0) + 1);
   for (const m of moduli) {
     // un modulo con `gruppo` mette i suoi strati in un gruppo già esistente (che deve precederlo in MODULI)
-    const gruppo = (m.gruppo && document.getElementById(`gruppo-${m.gruppo}`)) || aggiungi(m.id, m.titolo);
+    const gruppo = (m.gruppo && document.getElementById(`gruppo-${m.gruppo}`)) || aggiungi(m.id, m.titolo, m);
     // `sezione`: titolo sopra gli strati di un modulo che condivide il gruppo con altri
     const titolo = m.sezione ?? (perGruppo.get(m.gruppo ?? m.id) > 1 && m.strati.length ? m.argomento?.titolo ?? m.titolo : null);
     if (titolo) {

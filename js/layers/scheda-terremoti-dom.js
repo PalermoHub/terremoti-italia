@@ -4,6 +4,7 @@ import { t, tn, localeIntl } from '../core/i18n.js';
 import { titoloConInfo, apriGrande } from '../core/info-grafico.js';
 import { barraNavigazione } from '../core/scheda-navigazione.js';
 import { ANNO_INIZIO, periodoAnno, serieAnnuale, scaricaRiepilogo } from './scheda-archivio.js';
+import { iconaAttesa } from '../core/scheda-util.js';
 import { SCELTE_GIORNI, SCELTE_MAGNITUDO, UNITA, MAG_STORICO, filtro, altriTerremoti, accordionTerremoti, posizioneEvento, urlStorico, eventiDaTesto, serieEventi, puntiMagnitudo, curvaCumulativa, omori, rilascioCumulativo, tempiTraEventi, spazioTempo, finestraTempo, proprietaStorico, voceTerremoto, inquadra, proiettaMiniatura, miniatura, etichettaBarra, periodoSequenza, statisticheEvento } from './scheda-terremoti.js';
 
 export const EVENTO_FILTRO = 'terremoti:filtro';
@@ -748,7 +749,9 @@ export function graficoSerie(area, apri, { sorgente = null, adesso = null } = {}
     if (eventi) corpo.replaceChildren(disegnaSerie(serie), ...(archivio ? [el('p', 'scheda-nota', t('terremoti.serie.altriCinqueAnni'))] : []), disegnaMagnitudoTempo(g, apri), disegnaCurva(g, apri), disegnaRilascio(g, apri), disegnaOmori(g), disegnaAttese(g), disegnaSpazioTempo(g, apri));
   };
   const carica = () => {
-    corpo.replaceChildren(el('p', 'scheda-nota', t('terremoti.serie.carico')));
+    const attesa = el('p', 'scheda-nota', t('terremoti.serie.carico'));
+    attesa.append(iconaAttesa());
+    corpo.replaceChildren(attesa);
     (sorgente ? Promise.resolve(sorgente()) : caricaStorico(area)).then(e => { eventi = e; disegna(); }, () => {
       const riprova = el('button', 'scheda-filtro', t('terremoti.serie.riprova'));
       riprova.type = 'button';

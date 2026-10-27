@@ -2,16 +2,16 @@
 // I nomi vengono da dati/indice-comuni.json (letto alla prima interazione), i confini da comuni.pmtiles: la scelta zooma sull'area
 // e ne evidenzia il confine; con l'interruttore «solo eventi in quest'area» restringe anche i terremoti in tempo reale
 // e, a Live Zoom acceso, inquadra quelli rimasti.
-import { URL_COMUNI, VISTA_ITALIA, urlDati } from './config.js';
+import { HIT_COMUNI, SRC_COMUNI, STRATO_COMUNI as STRATO, VISTA_ITALIA, urlDati, sorgenteComuni } from './config.js';
 import { t } from './i18n.js';
 import { segnala } from './pannello.js';
 import { liveZoomAttivo, riquadroDa } from './live-zoom.js';
 import { LIVELLI, MIN_LETTERE, SCELTA_VUOTA, cambia, cerca, contesto, creaIndice, filtroArea, haScelta, opzioni, puntoInGeometrie, sceltaDaVoce, voceScelta } from './aree.js';
 
-export const SRC = 'aree-comuni';
+export const SRC = SRC_COMUNI;
 const RIEMPIMENTO = 'aree-riempimento';
 const CONTORNO = 'aree-contorno';
-export const STRATO_COMUNI = 'comuni';
+export const STRATO_COMUNI = STRATO;
 const ZOOM_MAX_AREA = 12;
 const DOPO = 'terremoti-punti'; // l'evidenziazione sta sotto i cerchi dei terremoti
 
@@ -22,7 +22,7 @@ const el = (tag, classe, testo) => {
   return e;
 };
 
-export function collegaRicerca(map, { terremoti = null, storico = null } = {}) {
+export function collegaRicerca(map, { terremoti = null, storico = null, comuni = null } = {}) {
   const campo = document.getElementById('cerca-testo');
   const elenco = document.getElementById('cerca-risultati');
   const bottoneFiltri = document.getElementById('cerca-filtri');
@@ -37,12 +37,14 @@ export function collegaRicerca(map, { terremoti = null, storico = null } = {}) {
   let giro = 0; // ogni scelta annulla le attese di quella prima
 
   // ---- mappa: confini dei comuni (invisibili finché non c'è una scelta) ----
-  map.addSource(SRC, { type: 'vector', url: URL_COMUNI.startsWith('pmtiles://') ? URL_COMUNI : `pmtiles://${URL_COMUNI}` });
+  if (!map.getSource(SRC)) map.addSource(SRC, sorgenteComuni());
   const prima = map.getLayer(DOPO) ? DOPO : undefined;
   const nessuno = ['==', ['get', 'pro_com'], -1];
   map.addLayer({ id: RIEMPIMENTO, type: 'fill', source: SRC, 'source-layer': STRATO_COMUNI, filter: nessuno, paint: { 'fill-color': '#f5a623', 'fill-opacity': 0.14 } }, prima);
   map.addLayer({ id: CONTORNO, type: 'line', source: SRC, 'source-layer': STRATO_COMUNI, filter: nessuno, paint: { 'line-color': '#c27c0e', 'line-width': ['interpolate', ['linear'], ['zoom'], 4, 1, 10, 2.5] } }, prima);
 
+  // riempimento senza colore su tutti i comuni: rende il confine cliccabile per la card dei terremoti del comune
+  map.addLayer({ id: HIT_COMUNI, type: 'fill', source: SRC, 'source-layer': STRATO_COMUNI, paint: { 'fill-opacity': 0 } }, prima);
   const margini = () => {
     const p = map.getPadding();
     return { top: p.top + 70, bottom: p.bottom + 120, left: p.left + 40, right: p.right + 40 };
@@ -182,6 +184,8 @@ export function collegaRicerca(map, { terremoti = null, storico = null } = {}) {
     disegnaMenu();
     const filtro = filtroArea(scelta);
     for (const id of [RIEMPIMENTO, CONTORNO]) map.setFilter(id, filtro ?? nessuno);
+    // tooltip ed evidenza dei comuni anche a strato spento, ma solo dentro l'area scelta
+    comuni?.impostaRicerca(filtro);
     // il contorno disegna i confini di ogni comune dell'area: utile per un comune, rumoroso per una provincia o una regione (basta il riempimento)
     map.setPaintProperty(CONTORNO, 'line-opacity', scelta.com != null ? 1 : 0);
     map.setPaintProperty(RIEMPIMENTO, 'fill-opacity', scelta.com != null ? 0.14 : 0.2);

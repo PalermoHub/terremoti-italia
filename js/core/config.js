@@ -1,6 +1,13 @@
 export const DATI = 'dati/';
 // Confini dei comuni italiani (vettoriali, un solo strato «comuni»): servono alla ricerca per area; il sito ospite consente le richieste a intervalli (Range).
 export const URL_COMUNI = 'https://gbvitrano.it/anncus/data/comuni.pmtiles';
+// Sorgente e strato dei confini comunali; HIT_COMUNI è il riempimento trasparente su tutti i comuni, che rende il comune
+// cliccabile anche senza una scelta nella ricerca (card dei terremoti del comune). Lo aggiunge js/core/ricerca.js.
+// La sorgente vettoriale dei comuni si crea una volta sola, dal primo modulo che la usa (js/layers/comuni.js).
+export const SRC_COMUNI = 'aree-comuni';
+export const STRATO_COMUNI = 'comuni';
+export const HIT_COMUNI = 'aree-hit';
+export const sorgenteComuni = () => ({ type: 'vector', url: URL_COMUNI.startsWith('pmtiles://') ? URL_COMUNI : `pmtiles://${URL_COMUNI}` });
 // Vista iniziale: l'Italia intera, con Sardegna, Sicilia e le isole minori (Lampedusa, Pantelleria, Ustica).
 export const VISTA_ITALIA = [[6.4, 35.3], [18.9, 47.3]];
 export const CENTRO = [12.5, 41.3];

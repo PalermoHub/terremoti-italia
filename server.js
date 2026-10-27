@@ -38,13 +38,14 @@ const gestisciExtra = async (req, res) => {
     return true;
   }
   if (url.pathname === '/terremoti/riepilogo' && req.method === 'GET') {
-    try { json(res, 200, rispondiRiepilogo(archivio, leggiParametri(url), AREA)); } catch (e) { json(res, 400, { errore: e.message }); }
+    try { const parametri = leggiParametri(url); json(res, 200, rispondiRiepilogo(archivio, parametri, parametri.bbox ?? AREA)); } catch (e) { json(res, 400, { errore: e.message }); }
     return true;
   }
   if (url.pathname !== '/terremoti' || req.method !== 'GET') return false;
   try {
     const parametri = leggiParametri(url);
-    if (parametri.testo) { res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' }); res.end(rispondiTesto(archivio, parametri, AREA)); } else json(res, 200, rispondiTerremoti(archivio, parametri, AREA));
+    const area = parametri.bbox ?? AREA;
+    if (parametri.testo) { res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' }); res.end(rispondiTesto(archivio, parametri, area)); } else json(res, 200, rispondiTerremoti(archivio, parametri, area));
   } catch (e) { json(res, 400, { errore: e.message }); }
   return true;
 };
