@@ -104,9 +104,12 @@ function creaLegenda() {
   credito.className = 'uffici-nota';
   const link = Object.assign(document.createElement('a'), { textContent: 'INGV', href: 'https://terremoti.ingv.it/', target: '_blank', rel: 'noopener' });
   credito.append(`${t('terremoti.dati')} `, link);
-  legenda.append(titolo, pannello.nodo, chiave.nodo, credito);
+  legenda.append(titolo, chiave.nodo, credito);
   document.getElementById('legende').append(legenda);
 }
+
+// Il modulo del pannello «Confronto» nel rail di destra: la scheda con i filtri e la tabella (creata con la legenda)
+export const nodoConfronto = () => pannello?.nodo ?? null;
 
 export default {
   id: 'terremoti-confronto',

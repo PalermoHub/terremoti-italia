@@ -1373,6 +1373,8 @@
   "rail.schedaSpenta": "Scheda: tocca la mappa per aprirla",
   "rail.storicoSpento": "Storico: tocca un terremoto storico sulla mappa",
   "html.storico.aria": "Terremoti storici",
+  "html.confronto.aria": "Confronto terremoti",
+  "rail.confronto": "Confronto",
   "rampe.gruppo.divergenti": "Crameri · divergenti (serve un valore di riferimento)",
   "rampe.gruppo.sequenziali": "Crameri · sequenziali",
   "ricerca.errore.civici": "civici non disponibili",

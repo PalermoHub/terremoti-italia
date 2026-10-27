@@ -17,7 +17,8 @@ import eventi from './layers/eventi.js';
 import allerte from './layers/allerte.js';
 import terremoti from './layers/terremoti.js';
 import terremotiStorico from './layers/terremoti-storico.js';
-import terremotiConfronto from './layers/terremoti-confronto.js';
+import terremotiConfronto, { nodoConfronto } from './layers/terremoti-confronto.js';
+import { collegaConfronto, apriConfronto } from './core/scheda-confronto.js';
 import base from './layers/base.js';
 
 // telefono: barra di tab e foglio degli strati; la legenda si può ridurre
@@ -65,9 +66,12 @@ map.once('style.load', async () => {
   collegaTooltipScheda(map, MODULI);
   collegaScheda(map, MODULI, document.getElementById('scheda'), {});
   collegaStorico(document.getElementById('storico-pannello'));
+  const confrontoPannello = document.getElementById('confronto-pannello');
+  collegaConfronto(confrontoPannello, nodoConfronto());
   collegaRail(document.getElementById('rail-pannelli'), [
     { id: 'scheda', etichetta: t('app.rail.scheda'), pannello: document.getElementById('scheda') },
     { id: 'storico', etichetta: t('scheda.tab.storico'), pannello: document.getElementById('storico-pannello') },
+    { id: 'confronto', etichetta: t('rail.confronto'), pannello: confrontoPannello, apri: () => apriConfronto(confrontoPannello) },
   ]);
   document.addEventListener('scheda:mostra', () => document.getElementById('scheda').hidden = false);
 

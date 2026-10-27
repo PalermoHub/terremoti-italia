@@ -1373,6 +1373,8 @@
   "rail.schedaSpenta": "Profile: tap the map to open it",
   "rail.storicoSpento": "Historical: tap a historical earthquake on the map",
   "html.storico.aria": "Historical earthquakes",
+  "html.confronto.aria": "Earthquake comparison",
+  "rail.confronto": "Compare",
   "rampe.gruppo.divergenti": "Crameri · diverging (needs a reference value)",
   "rampe.gruppo.sequenziali": "Crameri · sequential",
   "ricerca.errore.civici": "street numbers unavailable",
