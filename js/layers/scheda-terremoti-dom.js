@@ -5,7 +5,7 @@ import { titoloConInfo, apriGrande } from '../core/info-grafico.js';
 import { barraNavigazione } from '../core/scheda-navigazione.js';
 import { ANNO_INIZIO, periodoAnno, serieAnnuale, scaricaRiepilogo } from './scheda-archivio.js';
 import { iconaAttesa } from '../core/scheda-util.js';
-import { SCELTE_GIORNI, SCELTE_MAGNITUDO, PROFONDITA, UNITA, MAG_STORICO, filtro, chiaveProfondita, altriTerremoti, accordionTerremoti, posizioneEvento, urlStorico, eventiDaTesto, serieEventi, puntiMagnitudo, curvaCumulativa, omori, rilascioCumulativo, tempiTraEventi, spazioTempo, finestraTempo, proprietaStorico, voceTerremoto, inquadra, proiettaMiniatura, miniatura, etichettaBarra, periodoSequenza, statisticheEvento } from './scheda-terremoti.js';
+import { SCELTE_GIORNI, SCELTE_MAGNITUDO, PROFONDITA, UNITA, MAG_STORICO, ANNI_STORICO, filtro, chiaveProfondita, altriTerremoti, accordionTerremoti, posizioneEvento, urlStorico, rispostaDaArchivio, eventiDaTesto, eventiDaFeatures, serieEventi, puntiMagnitudo, curvaCumulativa, omori, rilascioCumulativo, tempiTraEventi, spazioTempo, finestraTempo, proprietaStorico, voceTerremoto, inquadra, proiettaMiniatura, miniatura, etichettaBarra, periodoSequenza, statisticheEvento } from './scheda-terremoti.js';
 
 export const EVENTO_FILTRO = 'terremoti:filtro';
 
@@ -104,9 +104,15 @@ const VALIDITA_STORICO_MS = 3600 * 1000;
 let storico = null; // { promessa, quando }
 function caricaStorico(area) {
   if (!storico || Date.now() - storico.quando > VALIDITA_STORICO_MS) {
+    const a = Date.now(), da = a - ANNI_STORICO * 366 * 86400000;
     const promessa = fetch(urlStorico(area)).then(r => {
       if (!r.ok && r.status !== 204) throw new Error(String(r.status));
       return r.status === 204 ? [] : r.text().then(eventiDaTesto);
+    }).catch(async () => {
+      // Senza server (sito statico, GitHub Pages, file locali) lo storico si ricostruisce dai file per anno dell'archivio:
+      // è la stessa fonte del confronto, quindi la serie resta disponibile anche fuori da `node server.js`.
+      const { eventi } = await rispostaDaArchivio({ da, a, magMin: MAG_STORICO }, fetch, Infinity);
+      return eventiDaFeatures(eventi);
     });
     storico = { promessa, quando: Date.now() };
     promessa.catch(() => { storico = null; }); // un errore non si ricorda: si riprova alla prossima apertura

@@ -1183,6 +1183,9 @@ details.scheda-sez[open] > summary > .scheda-riassunto { display: none; }
 .scheda-sez { margin-top: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: var(--r-md); background: var(--surface); }
 .scheda-corpo > .scheda-sez:first-child { margin-top: 10px; padding: 10px 12px; border: 1px solid var(--border); }
 .scheda-vuota, .rndt-attesa, .rndt-gruppo-vuoto { padding: 18px 14px; border: 1px dashed var(--border-ui); border-radius: var(--r-md); background: var(--surface-alt); color: var(--text-muted); text-align: center; }
+.scheda-vuoto-storico { display: flex; flex-direction: column; gap: 12px; margin: 16px 14px; padding: 16px 14px; border: 1px dashed var(--border-ui); border-radius: var(--r-md); background: var(--surface-alt); }
+.scheda-vuoto-storico .scheda-nota { margin: 0; text-align: left; }
+.scheda-vuoto-storico .scheda-filtro { align-self: flex-start; font-weight: 600; }
 .rndt-gruppo-vuoto { margin: 6px 0; padding: 12px 10px; }
 .scheda-piede { padding: 8px 12px 12px; background: var(--surface-alt); }
 

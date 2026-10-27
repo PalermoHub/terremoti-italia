@@ -433,6 +433,17 @@ export function eventiDaTesto(testo) {
   return eventi;
 }
 
+// Feature dell'archivio statico (rispostaDaArchivio) → stessa forma di eventiDaTesto. Serve allo storico quando il server locale non c'è
+// (sito statico o GitHub Pages): il ripiego usa i file per anno, con le stesse property delle feature INGV.
+export function eventiDaFeatures(features) {
+  return (features ?? []).map(f => {
+    const p = f?.properties ?? {};
+    const [lon, lat, prof] = f?.geometry?.coordinates ?? [];
+    const ts = oraEvento(p.time);
+    return { ts, mag: Number(p.mag), id: String(p.eventId ?? ''), time: p.time, lat: Number.isFinite(lat) ? lat : NaN, lon: Number.isFinite(lon) ? lon : NaN, prof: Number.isFinite(prof) ? prof : null, tipoMag: p.magType ?? '', autore: p.author ?? '', luogo: p.place ?? '' };
+  }).filter(e => Number.isFinite(e.ts) && Number.isFinite(e.mag));
+}
+
 // Inizio della barra che contiene `ts` e della successiva (ora locale: «giorno» è il giorno di calendario del browser)
 function inizioBarra(ts, unita, passo = 0) {
   const d = new Date(ts);
