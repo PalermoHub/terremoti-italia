@@ -18,6 +18,8 @@ import eventi from './layers/eventi.js';
 import allerte from './layers/allerte.js';
 import terremoti from './layers/terremoti.js';
 import terremotiStorico from './layers/terremoti-storico.js';
+import faglie from './layers/faglie.js';
+import faglieEgdi from './layers/faglie-egdi.js';
 import terremotiConfronto, { nodoConfronto } from './layers/terremoti-confronto.js';
 import { collegaConfronto, apriConfronto } from './core/scheda-confronto.js';
 import base from './layers/base.js';
@@ -39,7 +41,7 @@ riduciLegenda.addEventListener('click', () => {
 });
 
 // ordine = ordine di sovrapposizione dei layer (il primo sta sotto); «eventi» precede i moduli che mettono i loro strati nel suo gruppo
-const MODULI = [base, eventi, allerte, terremoti, terremotiStorico, terremotiConfronto];
+const MODULI = [base, eventi, allerte, terremoti, terremotiStorico, terremotiConfronto, faglie, faglieEgdi];
 traduciModuli(MODULI);
 
 const map = creaMappa('mappa', () => segnala(t('app.basemap.errore')));
