@@ -57,6 +57,21 @@ export function confrontaPeriodi(a, b, giorniA, giorniB) {
   };
 }
 
+// Riepilogo (stessa forma di GET /terremoti/riepilogo) calcolato dagli eventi già scaricati: serve quando il confronto è ristretto a un territorio
+export function riepilogoDaEventi(eventi) {
+  const perMag = new Map(), perMese = new Map();
+  for (const { mag, ts } of eventi) {
+    const m = Math.round(mag * 10) / 10;
+    perMag.set(m, (perMag.get(m) ?? 0) + 1);
+    const mese = new Date(ts).toISOString().slice(0, 7);
+    const v = perMese.get(mese) ?? { mese, n: 0, magMax: mag };
+    v.n++;
+    if (mag > v.magMax) v.magMax = mag;
+    perMese.set(mese, v);
+  }
+  return { totale: eventi.length, perMagnitudo: [...perMag].map(([mag, n]) => ({ mag, n })).sort((a, b) => a.mag - b.mag), perMese: [...perMese.values()].sort((a, b) => a.mese.localeCompare(b.mese)) };
+}
+
 // Giorni trascorsi di un periodo fino ad adesso (almeno 1)
 export const giorniPeriodo = ({ da, a }, adesso = Date.now()) => Math.max(1, Math.ceil((Math.min(a, adesso) - da) / GIORNO_MS));
 

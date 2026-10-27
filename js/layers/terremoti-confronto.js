@@ -6,6 +6,7 @@ import { pannelloConfronto } from './terremoti-archivio.js';
 import { creaPopupTerremoti, simboliRighe } from './terremoti-popup.js';
 import { registraTooltipStrati } from '../core/tooltip.js';
 import { clicSu } from '../core/scheda-navigazione.js';
+import { creaFiltroTerritorio } from '../core/filtro-territorio.js';
 
 // Confronto tra due anni: gli eventi dei due anni insieme in mappa, a parte dai terremoti storici. Spento all'avvio; si accende dal pannello Strati.
 // Anno A azzurro, anno B arancio: il colore dice a quale anno appartiene il cerchio, la grandezza la magnitudo. Non si aggiorna da solo.
@@ -43,17 +44,17 @@ const evento = trovati => {
 };
 const vaiAEvento = p => clicSu(mappa, [p.lon, p.lat], () => { scelto = { id: p.id, fino: Date.now() + FINESTRA_SCELTA_MS }; });
 
-async function scaricaLato(lato, periodo, magMin) {
+async function scaricaLato(lato, periodo, magMin, area) {
   const scarico = await scaricaEventi({ da: periodo.da, a: periodo.a, magMin, area: AREA });
   const colore = lato === 'a' ? COLORE_A : COLORE_B;
-  const features = scarico.eventi.map(f => eventoDaIngv(f, Infinity)).filter(Boolean).map(f => ({ ...f, properties: { ...f.properties, colore, lato, fascia: 'Confronto', anno: annoRoma(f.properties.ts) } }));
-  return { features, troncato: scarico.troncato };
+  const features = scarico.eventi.map(f => eventoDaIngv(f, Infinity)).filter(Boolean).filter(f => !area || area.dentro({ lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] })).map(f => ({ ...f, properties: { ...f.properties, colore, lato, fascia: 'Confronto', anno: annoRoma(f.properties.ts) } }));
+  return { features, troncato: scarico.troncato, eventi: features.map(f => f.properties) };
 }
 
-// Mostra in mappa gli eventi dei due periodi con magnitudo ≥ magMin; risponde { a, b } con { n, troncato }, o null se nel frattempo è partita un'altra richiesta
-async function carica(periodoA, periodoB, magMin) {
+// Mostra in mappa gli eventi dei due periodi con magnitudo ≥ magMin (e dentro `area`, se c'è: lo stesso territorio per entrambi); risponde { a, b } con { n, troncato, eventi }, o null se nel frattempo è partita un'altra richiesta
+async function carica(periodoA, periodoB, magMin, area = null) {
   const mia = ++richiesta;
-  const [a, b] = await Promise.all([scaricaLato('a', periodoA, magMin), scaricaLato('b', periodoB, magMin)]);
+  const [a, b] = await Promise.all([scaricaLato('a', periodoA, magMin, area), scaricaLato('b', periodoB, magMin, area)]);
   if (mia !== richiesta) return null;
   const features = [...a.features, ...b.features];
   eventi = features.map(proprieta);
@@ -61,7 +62,7 @@ async function carica(periodoA, periodoB, magMin) {
   mappa?.getSource(SRC)?.setData({ type: 'FeatureCollection', features });
   popup.chiudi();
   chiave?.update(periodoA, periodoB);
-  return { a: { n: a.features.length, troncato: a.troncato }, b: { n: b.features.length, troncato: b.troncato } };
+  return { a: { n: a.features.length, troncato: a.troncato, eventi: a.eventi }, b: { n: b.features.length, troncato: b.troncato, eventi: b.eventi } };
 }
 
 // Chiave dei colori: quale anno è azzurro e quale arancio, e quanti eventi ha ciascuno
@@ -98,7 +99,7 @@ function creaLegenda() {
   legenda.hidden = !acceso;
   const titolo = document.createElement('strong');
   titolo.textContent = t('terremoti.arc.titoloConfronto');
-  pannello = pannelloConfronto({ carica });
+  pannello = pannelloConfronto({ carica, territorio: creaFiltroTerritorio(mappa) });
   chiave = creaChiave();
   const credito = document.createElement('p');
   credito.className = 'uffici-nota';
@@ -156,7 +157,7 @@ export default {
       if (!primo) return [];
       const grafici = graficoSerie(AREA, p => { const trovato = eventi.find(v => v.id === String(p.id)); if (trovato) vaiAEvento(trovato); }, { sorgente: () => eventi, adesso: () => periodoMostrato?.a ?? Date.now() });
       return [
-        voceTerremoto(proprieta(primo), Date.now(), () => barraEventi(primo.properties.id, () => eventi, vaiAEvento), true),
+        { ...voceTerremoto(proprieta(primo), Date.now(), () => barraEventi(primo.properties.id, () => eventi, vaiAEvento)), chiave: `terremoto-confronto-${primo.properties.id}` }, // nella scheda principale, con le altre sezioni del luogo: non nel pannello Storico
         { ...voceSerie(() => grafici), chiave: 'terremoto-confronto-serie' },
         { ...voceAltri(() => elencoAltri(() => eventi, new Set([primo.properties.id]))), chiave: 'terremoto-confronto-altri' },
       ];

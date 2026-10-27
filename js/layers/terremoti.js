@@ -2,7 +2,7 @@ import { tl, t, localeIntl } from '../core/i18n.js';
 import { AREA_EVENTI } from '../core/config.js';
 import { filtroInsieme, voceFiltro } from '../core/legenda.js';
 import { FASCE, GIORNI_MAX, scaricaEventi, filtro, passaFiltro, espressioneFiltro, eventoDaIngv, modelloPopupTerremoto, voceTerremoto, voceSerie, voceAltri, riassuntoTerremoti, proprietaStorico } from './scheda-terremoti.js';
-import { EVENTO_FILTRO, menuFiltro, elencoAltri, graficoSerie, testoGiorni, barraEventi } from './scheda-terremoti-dom.js';
+import { EVENTO_FILTRO, menuFiltro, menuMagnitudo, elencoAltri, graficoSerie, testoGiorni, barraEventi } from './scheda-terremoti-dom.js';
 import { pannelloFiltro } from './terremoti-pannello.js';
 import { registraTooltipStrati } from '../core/tooltip.js';
 import { clicSu } from '../core/scheda-navigazione.js';
@@ -194,6 +194,7 @@ export default {
     applicaFiltro();
     return visibili();
   },
+  menuMagnitudo,
   avvia() { aggiorna(); pianifica(); },
   strati: [{
     id: 'terremoti', etichetta: 'Terremoti in tempo reale', layers: [PUNTI], attivo: true, legendaPannello: '.lg-terremoti',

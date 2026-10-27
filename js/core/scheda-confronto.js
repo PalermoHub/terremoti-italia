@@ -20,6 +20,10 @@ export function collegaConfronto(pannello, nodo) {
   if (nodo) corpo.append(nodo);
   pannello.replaceChildren(testata, corpo);
   x.addEventListener('click', () => { pannello.hidden = true; });
+  // accendendo lo strato dalla lista dei layer la scheda si apre da sola
+  document.addEventListener('change', e => {
+    if (e.target.matches?.(CASELLA_STRATO) && e.target.checked) pannello.hidden = false;
+  });
 }
 
 // Mostra il pannello e accende lo strato se è spento (la prima volta parte anche il confronto tra gli ultimi due anni)

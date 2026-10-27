@@ -2,7 +2,7 @@
 // Il confronto usa GET /terremoti/riepilogo (conteggi aggregati dal server), non gli eventi in mappa: resta corretto oltre il tetto di eventi della mappa.
 import { t, localeIntl } from '../core/i18n.js';
 import { CLASSI_MAG } from './scheda-terremoti.js';
-import { ANNO_INIZIO, periodoAnno, periodoValido, confrontaPeriodi, giorniPeriodo, scaricaRiepilogo } from './scheda-archivio.js';
+import { ANNO_INIZIO, periodoAnno, periodoValido, confrontaPeriodi, giorniPeriodo, scaricaRiepilogo, riepilogoDaEventi } from './scheda-archivio.js';
 
 const MAGNITUDO_ARCHIVIO = [2, 3, 4, 5];
 const MAG_PREDEFINITA = 3; // a M ≥ 2 anni come il 2016 superano il tetto di eventi della mappa
@@ -85,8 +85,9 @@ export function pannelloArchivio({ carica, annoIniziale, magIniziale = MAG_PREDE
   return { nodo, mostra: vaiMostra };
 }
 
-// Strato «Confronto»: `carica(periodoA, periodoB, magMin)` mette in mappa gli eventi dei due anni e risponde { a, b } con { n, troncato } (null se superata)
-export function pannelloConfronto({ carica }) {
+// Strato «Confronto»: `carica(periodoA, periodoB, magMin, area)` mette in mappa gli eventi dei due anni e risponde { a, b } con { n, troncato, eventi } (null se superata).
+// `territorio` (opzionale, da creaFiltroTerritorio) restringe entrambi gli anni allo stesso territorio: allora i conteggi vengono dagli eventi, non dal riepilogo del server.
+export function pannelloConfronto({ carica, territorio = null }) {
   const nodo = el('div', 'terremoti-pannello terremoti-archivio');
   const { adesso, anni } = anniArchivio();
   const { messaggio, esegui } = stato();
@@ -102,8 +103,14 @@ export function pannelloConfronto({ carica }) {
     const pa = periodoAnno(annoA.valore()), pb = periodoAnno(annoB.valore());
     const m = mag.valore();
     esegui(nodo, async () => {
-      // conteggi dal server (esatti anche oltre il tetto della mappa) ed eventi sulla mappa, insieme
-      const [ra, rb, mappa] = await Promise.all([scaricaRiepilogo(pa, m), scaricaRiepilogo(pb, m), carica(pa, pb, m)]);
+      let area = null;
+      if (territorio?.attivo()) {
+        try { area = await territorio.prepara(); } catch { messaggio.textContent = t('terremoti.arc.territorioErrore'); }
+      }
+      // senza territorio: conteggi dal server (esatti anche oltre il tetto della mappa) ed eventi sulla mappa, insieme
+      const [ra, rb, mappa] = area
+        ? await carica(pa, pb, m, area).then(r => [r && riepilogoDaEventi(r.a.eventi), r && riepilogoDaEventi(r.b.eventi), r])
+        : await Promise.all([scaricaRiepilogo(pa, m), scaricaRiepilogo(pb, m), carica(pa, pb, m)]);
       if (!mappa) return;
       esito.replaceChildren(...disegnaConfronto(confrontaPeriodi(ra, rb, giorniPeriodo(pa), giorniPeriodo(pb)), annoA.valore(), annoB.valore(), adesso));
       nota.textContent = mappa.a.troncato || mappa.b.troncato ? t('terremoti.troncato', { n: Math.max(mappa.a.n, mappa.b.n) }) : '';
@@ -112,6 +119,7 @@ export function pannelloConfronto({ carica }) {
   confronta.addEventListener('click', vaiConfronta);
   const filtri = el('div', 'terremoti-filtri');
   filtri.append(annoA.nodo, annoB.nodo, mag.nodo);
+  if (territorio) filtri.append(territorio.nodo);
   nodo.append(el('strong', null, t('terremoti.arc.confrontaTitolo')), filtri, confronta, nota, messaggio, esito, el('p', 'uffici-nota', t('terremoti.arc.utc')));
   return { nodo, confronta: vaiConfronta };
 }

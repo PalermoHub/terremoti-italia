@@ -8,10 +8,10 @@ import { segnala } from './pannello.js';
 import { liveZoomAttivo, riquadroDa } from './live-zoom.js';
 import { LIVELLI, MIN_LETTERE, SCELTA_VUOTA, cambia, cerca, contesto, creaIndice, filtroArea, haScelta, opzioni, puntoInGeometrie, sceltaDaVoce, voceScelta } from './aree.js';
 
-const SRC = 'aree-comuni';
+export const SRC = 'aree-comuni';
 const RIEMPIMENTO = 'aree-riempimento';
 const CONTORNO = 'aree-contorno';
-const STRATO_COMUNI = 'comuni';
+export const STRATO_COMUNI = 'comuni';
 const ZOOM_MAX_AREA = 12;
 const DOPO = 'terremoti-punti'; // l'evidenziazione sta sotto i cerchi dei terremoti
 
@@ -22,7 +22,7 @@ const el = (tag, classe, testo) => {
   return e;
 };
 
-export function collegaRicerca(map, { terremoti = null } = {}) {
+export function collegaRicerca(map, { terremoti = null, storico = null } = {}) {
   const campo = document.getElementById('cerca-testo');
   const elenco = document.getElementById('cerca-risultati');
   const bottoneFiltri = document.getElementById('cerca-filtri');
@@ -133,6 +133,16 @@ export function collegaRicerca(map, { terremoti = null } = {}) {
     pannello.append(etichetta, sel);
   }
   pannello.append(nodoEventi);
+  if (terremoti?.menuMagnitudo) pannello.append(terremoti.menuMagnitudo());
+  if (storico?.mostraAnno) {
+    const selAnno = el('select');
+    selAnno.id = 'filtro-anno';
+    selAnno.append(Object.assign(el('option', null, t('filtri.annoRealTime')), { value: '' }), ...storico.anni().map(a => Object.assign(el('option', null, String(a)), { value: String(a) })));
+    selAnno.addEventListener('change', () => storico.mostraAnno(selAnno.value === '' ? null : Number(selAnno.value)));
+    const etAnno = el('label', null, t('filtri.anno'));
+    etAnno.htmlFor = 'filtro-anno';
+    pannello.append(etAnno, selAnno);
+  }
   casellaEventi.addEventListener('change', () => { soloEventi = casellaEventi.checked; applicaEventi(); });
 
   function disegnaMenu() {
@@ -148,8 +158,8 @@ export function collegaRicerca(map, { terremoti = null } = {}) {
     const n = [scelta.reg, scelta.prov, scelta.com].filter(x => x != null).length;
     bottoneFiltri.dataset.attivo = String(n > 0);
     bottoneFiltri.dataset.n = String(n);
-    casellaEventi.disabled = !haScelta(scelta) || !terremoti;
-    nodoEventi.hidden = !terremoti;
+    casellaEventi.disabled = !haScelta(scelta) || !(terremoti || storico);
+    nodoEventi.hidden = !(terremoti || storico);
   }
 
   bottoneFiltri.addEventListener('click', async () => {
@@ -183,9 +193,9 @@ export function collegaRicerca(map, { terremoti = null } = {}) {
 
   // Restringe i terremoti all'area: serve la geometria dei comuni scelti, che si legge dai tile caricati a fine movimento.
   function applicaEventi() {
-    if (!terremoti) return;
+    if (!terremoti && !storico) return;
     const mio = giro;
-    if (!soloEventi || !haScelta(scelta)) { terremoti.impostaArea(null); return; }
+    if (!soloEventi || !haScelta(scelta)) { terremoti?.impostaArea(null); storico?.impostaArea(null); return; }
     const filtro = filtroArea(scelta);
     const calcola = () => {
       if (mio !== giro) return;
@@ -194,7 +204,8 @@ export function collegaRicerca(map, { terremoti = null } = {}) {
       const dentro = geometrie.length
         ? p => p.lon >= o && p.lon <= e && p.lat >= s && p.lat <= n && puntoInGeometrie(p.lon, p.lat, geometrie)
         : p => p.lon >= o && p.lon <= e && p.lat >= s && p.lat <= n; // tile non ancora pronti: vale il riquadro
-      const rimasti = terremoti.impostaArea(dentro);
+      storico?.impostaArea(dentro);
+      const rimasti = terremoti?.impostaArea(dentro) ?? [];
       if (liveZoomAttivo() && rimasti.length) {
         const r = riquadroDa(rimasti.map(p => ({ geometry: { coordinates: [p.lon, p.lat] } })));
         if (r) inquadra(r, { maxZoom: 11 });

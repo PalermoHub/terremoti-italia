@@ -40,6 +40,9 @@ const cambia = campo => v => {
 
 export const testoGiorni = g => (g === 1 ? t('terremoti.ultime24') : t('terremoti.ultimiGiorni', { n: g }));
 
+// Solo la magnitudo minima (ricerca): stesso filtro dei menu della legenda, che seguono la scelta
+export const menuMagnitudo = () => menu(t('terremoti.magMin'), SCELTE_MAGNITUDO, () => filtro.magMin, m => `≥ ${m}`, cambia('magMin'));
+
 // Periodo e magnitudo minima: valgono per la mappa e per l'elenco
 export function menuFiltro() {
   const riga = el('div', 'terremoti-filtri');

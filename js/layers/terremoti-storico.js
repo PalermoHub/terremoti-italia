@@ -1,7 +1,8 @@
 import { tl, t } from '../core/i18n.js';
 import { AREA_EVENTI } from '../core/config.js';
-import { scaricaEventi, eventoDaIngv, modelloPopupTerremoto, voceTerremoto, voceSerie, voceAltri } from './scheda-terremoti.js';
-import { barraEventi, graficoSerie, elencoAltri } from './scheda-terremoti-dom.js';
+import { scaricaEventi, eventoDaIngv, modelloPopupTerremoto, voceTerremoto, voceSerie, voceAltri, filtro } from './scheda-terremoti.js';
+import { EVENTO_FILTRO, barraEventi, graficoSerie, elencoAltri } from './scheda-terremoti-dom.js';
+import { ANNO_INIZIO, periodoAnno } from './scheda-archivio.js';
 import { pannelloArchivio } from './terremoti-archivio.js';
 import { creaPopupTerremoti, simboliRighe } from './terremoti-popup.js';
 import { registraTooltipStrati } from '../core/tooltip.js';
@@ -25,6 +26,9 @@ let periodoMostrato = null;
 let eventi = []; // proprietà degli eventi in mappa
 let primaVolta = true;
 let pannello = null;
+let inAreaScelta = null; // restrizione all'area scelta nella ricerca (funzione sulle proprietà), null = nessuna
+let features = []; // tutti gli eventi dell'anno, prima della restrizione
+let annoRicerca = null; // anno scelto dalla ricerca: segue la magnitudo minima del filtro
 let scelto = null; // evento scelto con le frecce della scheda
 let richiesta = 0; // una risposta in ritardo di una richiesta precedente si scarta
 const popup = creaPopupTerremoti();
@@ -39,15 +43,21 @@ const evento = trovati => {
 };
 const vaiAEvento = p => clicSu(mappa, [p.lon, p.lat], () => { scelto = { id: p.id, fino: Date.now() + FINESTRA_SCELTA_MS }; });
 
+// Scrive in mappa gli eventi dell'anno, ristretti all'area scelta se c'è
+function mostraEventi() {
+  const visibili = inAreaScelta ? features.filter(f => inAreaScelta(proprieta(f))) : features;
+  eventi = visibili.map(proprieta);
+  mappa?.getSource(SRC)?.setData({ type: 'FeatureCollection', features: visibili });
+}
+
 // Mostra in mappa gli eventi del periodo con magnitudo ≥ magMin; risponde { n, troncato }, o null se nel frattempo è partita un'altra richiesta
 async function carica(periodo, magMin) {
   const mia = ++richiesta;
   const scarico = await scaricaEventi({ da: periodo.da, a: periodo.a, magMin, area: AREA });
   if (mia !== richiesta) return null;
-  const features = scarico.eventi.map(f => eventoDaIngv(f, Infinity)).filter(Boolean).map(f => ({ ...f, properties: { ...f.properties, colore: COLORE, fascia: 'Archivio storico', anno: annoRoma(f.properties.ts) } }));
-  eventi = features.map(proprieta);
+  features = scarico.eventi.map(f => eventoDaIngv(f, Infinity)).filter(Boolean).map(f => ({ ...f, properties: { ...f.properties, colore: COLORE, fascia: 'Archivio storico', anno: annoRoma(f.properties.ts) } }));
   periodoMostrato = periodo;
-  mappa?.getSource(SRC)?.setData({ type: 'FeatureCollection', features });
+  mostraEventi();
   popup.chiudi();
   return { n: eventi.length, troncato: scarico.troncato };
 }
@@ -79,6 +89,7 @@ export default {
   },
   aggiungiLayer(map) {
     mappa = map;
+    document.addEventListener(EVENTO_FILTRO, () => { if (annoRicerca != null && acceso) carica(periodoAnno(annoRicerca), Math.max(filtro.magMin, 2)); });
     // i più forti sopra gli altri; spento all'avvio (visibilità esplicita: i moduli del nucleo la leggono)
     map.addLayer({
       id: PUNTI, type: 'circle', source: SRC, layout: { visibility: 'none', 'circle-sort-key': ['get', 'mag'] },
@@ -123,6 +134,19 @@ export default {
     },
   },
   legendaPannello: '.lg-terremoti-storico',
+  // Dalla ricerca: accende lo strato (se spento) e mostra l'anno scelto con magnitudo ≥ magMin; anno null spegne lo strato
+  // Restringe gli eventi dell'anno a un'area (funzione sulle proprietà dell'evento) o toglie la restrizione (null)
+  impostaArea(fn) {
+    inAreaScelta = fn;
+    mostraEventi();
+  },
+  anni: () => Array.from({ length: new Date().getUTCFullYear() - ANNO_INIZIO + 1 }, (_, i) => new Date().getUTCFullYear() - i),
+  async mostraAnno(anno, magMin = filtro.magMin) {
+    annoRicerca = anno;
+    const casella = document.querySelector('#strato-terremoti-storico');
+    if (casella && casella.checked !== (anno != null)) { primaVolta = false; casella.checked = anno != null; casella.dispatchEvent(new Event('change', { bubbles: true })); }
+    return anno == null ? null : carica(periodoAnno(anno), Math.max(magMin, 2));
+  },
   strati: [{
     id: 'terremoti-storico', etichetta: 'Terremoti storici (archivio)', layers: [PUNTI, ANNI], attivo: false, legendaPannello: '.lg-terremoti-storico',
     suCambio(attivo) {

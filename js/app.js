@@ -93,7 +93,7 @@ map.once('style.load', async () => {
   const esiti = await Promise.allSettled(MODULI.filter(m => m.avvia).map(m => m.avvia(map)));
   esiti.forEach(e => { if (e.status === 'rejected') segnala(t('avviso.stratoNonCaricato.dettaglio', { nome: e.reason?.message ?? e.reason })); });
 
-  collegaRicerca(map, { terremoti });
+  collegaRicerca(map, { terremoti, storico: terremotiStorico });
   collegaStrumenti(map);
   collegaStampa(map, document.getElementById('btn-stampa'), document.getElementById('stampa-menu'));
   window.dt.pronto = true;

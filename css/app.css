@@ -2625,5 +2625,6 @@ details.scheda-sez-evento .scheda-sez-testo { display: contents; }
 #cerca-pannello select { background: var(--surface); color: var(--text); border: 1px solid var(--border-ui); border-radius: var(--r-sm); }
 .cerca-solo-eventi { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: var(--fs-xs); color: var(--text); }
 .cerca-solo-eventi[hidden] { display: none; }
+#cerca-pannello .terremoti-filtro { margin-top: 8px; }
 #cerca-pannello label { display: block; font-size: var(--fs-xs); color: var(--text-muted); }
 #cerca-pannello select { width: 100%; margin: 2px 0 8px; padding: 6px; }
