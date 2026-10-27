@@ -23,9 +23,24 @@ export const fasciaEta = (ts, adesso = Date.now()) => FASCE.find(f => adesso - t
 export const GIORNI_MAX = 30;
 export const SCELTE_GIORNI = [1, 7, 30];
 export const SCELTE_MAGNITUDO = [1, 2, 3, 4];
+// Classi di profondità dell'ipocentro (km): la prima non filtra; gli intervalli sono estremi inclusi.
+// Sono le stesse dei pannelli Archivio e Confronto; il menu della ricerca scrive `profMin`/`profMax` nel filtro condiviso.
+export const PROFONDITA = [
+  { chiave: 'tutte', min: null, max: null },
+  { chiave: 'fino10', min: 0, max: 10 },
+  { chiave: 'da10a30', min: 10, max: 30 },
+  { chiave: 'da30a70', min: 30, max: 70 },
+  { chiave: 'oltre70', min: 70, max: null },
+];
 // Oltre a questi, il pannello con slider e istogramma imposta `finestra` ([da, a] in giorni interi dall'inizio dei GIORNI_MAX, null = tutto) e `classi` (indici di CLASSI_MAG accesi, null = tutte).
-export const filtro = { giorni: 7, magMin: 1, finestra: null, classi: null };
+export const FILTRO_INIZIALE = Object.freeze({ giorni: 7, magMin: 1, profMin: null, profMax: null, finestra: null, classi: null });
+export const filtro = { ...FILTRO_INIZIALE };
 const GIORNO_MS = 24 * ORA_MS;
+
+// Profondità scelta come intervallo per le chiamate al server, o null se non filtra
+export const profonditaDaFiltro = (f = filtro) => (f.profMin == null && f.profMax == null ? null : { min: f.profMin, max: f.profMax });
+// Chiave della classe di profondità corrispondente al filtro (per i menu)
+export const chiaveProfondita = (f = filtro) => PROFONDITA.find(p => p.min === f.profMin && p.max === f.profMax)?.chiave ?? 'tutte';
 
 // Classi dell'istogramma di magnitudo
 export const CLASSI_MAG = [{ da: 1, a: 2 }, { da: 2, a: 3 }, { da: 3, a: 4 }, { da: 4, a: Infinity }];
@@ -40,12 +55,16 @@ export function intervallo({ giorni, finestra } = filtro, adesso = Date.now()) {
 
 export const passaFiltro = (p, f = filtro, adesso = Date.now()) => {
   const [da, a] = intervallo(f, adesso);
-  return p.mag >= f.magMin && p.ts >= da && p.ts <= a && (!f.classi || f.classi.has(classeMagnitudo(p.mag)));
+  return p.mag >= f.magMin && p.ts >= da && p.ts <= a
+    && (f.profMin == null || p.prof >= f.profMin) && (f.profMax == null || p.prof <= f.profMax)
+    && (!f.classi || f.classi.has(classeMagnitudo(p.mag)));
 };
 // Stesso filtro come espressione MapLibre (per cerchi e strato di interrogazione)
 export function espressioneFiltro(f = filtro, adesso = Date.now()) {
   const [da, a] = intervallo(f, adesso);
   return ['all', ['>=', ['get', 'mag'], f.magMin], ['>=', ['get', 'ts'], da], ...(a === Infinity ? [] : [['<=', ['get', 'ts'], a]]),
+    ...(f.profMin == null ? [] : [['>=', ['get', 'prof'], f.profMin]]),
+    ...(f.profMax == null ? [] : [['<=', ['get', 'prof'], f.profMax]]),
     ...(f.classi ? [['any', ...[...f.classi].map(i => ['all', ['>=', ['get', 'mag'], CLASSI_MAG[i].da], ...(CLASSI_MAG[i].a === Infinity ? [] : [['<', ['get', 'mag'], CLASSI_MAG[i].a]])])]] : [])];
 }
 
@@ -54,7 +73,7 @@ export function eventiPerGiorno(eventi, f = filtro, adesso = Date.now()) {
   const n = Array(GIORNI_MAX).fill(0);
   for (const p of eventi) {
     const i = GIORNI_MAX - 1 - Math.floor((adesso - p.ts) / GIORNO_MS);
-    if (p.mag >= f.magMin && i >= 0 && i < GIORNI_MAX && (!f.classi || f.classi.has(classeMagnitudo(p.mag)))) n[i]++;
+    if (p.mag >= f.magMin && (f.profMin == null || p.prof >= f.profMin) && (f.profMax == null || p.prof <= f.profMax) && i >= 0 && i < GIORNI_MAX && (!f.classi || f.classi.has(classeMagnitudo(p.mag)))) n[i]++;
   }
   return n;
 }
@@ -260,6 +279,7 @@ export const URL_SNAPSHOT = 'https://raw.githubusercontent.com/PalermoHub/terrem
 // Dove sta l'archivio storico statico (ramo `archivio`, da scripts/esporta-archivio.mjs): un file per anno e i riepiloghi
 export const URL_ARCHIVIO = 'https://raw.githubusercontent.com/PalermoHub/terremoti-italia/archivio/';
 const MASSIMO_MAPPA = 5000; // come MASSIMO_EVENTI del server
+const MASSIMO_TESTO = 200000; // come MASSIMO_TESTO del server: il formato testo non ha il tetto della mappa
 const GIORNI_SNAPSHOT = 29; // lo snapshot copre gli ultimi 30 giorni: un intervallo che parte prima va cercato nell'archivio
 
 // Riga compatta dell'archivio statico → feature GeoJSON dell'INGV
@@ -271,7 +291,7 @@ const featureDaRiga = ([eventId, time, lat, lon, prof, mag, magType, place, type
 // Risposta di GET /terremoti per l'intervallo chiesto, dai file per anno dell'archivio statico.
 // `massimo` è il tetto di eventi restituiti (come nella risposta del server): i conteggi di tutta la storia lo alzano,
 // perché in un solo comune una sequenza può superare i MASSIMO_MAPPA eventi che la mappa sa disegnare.
-export async function rispostaDaArchivio({ da, a, magMin }, fetchFn = fetch, massimo = MASSIMO_MAPPA) {
+export async function rispostaDaArchivio({ da, a, magMin, profMin = null, profMax = null }, fetchFn = fetch, massimo = MASSIMO_MAPPA) {
   const dal = new Date(da).getUTCFullYear(), al = new Date(a).getUTCFullYear();
   const anni = Array.from({ length: Math.max(0, al - dal + 1) }, (_, i) => dal + i);
   const file = await Promise.all(anni.map(async anno => {
@@ -282,45 +302,86 @@ export async function rispostaDaArchivio({ da, a, magMin }, fetchFn = fetch, mas
   }));
   const dentro = file.flat().map(featureDaRiga).filter(f => {
     const ts = oraEvento(f.properties.time);
-    return ts >= da && ts <= a && f.properties.mag >= magMin;
+    const prof = f.geometry.coordinates[2];
+    return ts >= da && ts <= a && f.properties.mag >= magMin
+      && (profMin == null || prof >= profMin) && (profMax == null || prof <= profMax);
   }).sort((x, y) => oraEvento(y.properties.time) - oraEvento(x.properties.time));
   return { eventi: dentro.slice(0, massimo), totale: dentro.length, troncato: dentro.length > massimo, aggiornato: null };
 }
 
 // Snapshot { eventi, aggiornato } → stessa risposta di GET /terremoti per l'intervallo chiesto: più recenti prima, al massimo MASSIMO_MAPPA
-export function rispostaDaSnapshot(dati, { da, a, magMin }) {
+export function rispostaDaSnapshot(dati, { da, a, magMin, profMin = null, profMax = null }, massimo = MASSIMO_MAPPA) {
   const dentro = (dati?.eventi ?? []).filter(f => {
     const ts = oraEvento(f?.properties?.time);
-    return ts >= da && ts <= a && f.properties.mag >= magMin;
+    const prof = f?.geometry?.coordinates?.[2];
+    return ts >= da && ts <= a && f.properties.mag >= magMin
+      && (profMin == null || prof >= profMin) && (profMax == null || prof <= profMax);
   }).sort((x, y) => oraEvento(y.properties.time) - oraEvento(x.properties.time));
-  return { eventi: dentro.slice(0, MASSIMO_MAPPA), totale: dentro.length, troncato: dentro.length > MASSIMO_MAPPA, aggiornato: dati?.aggiornato ?? null };
+  return { eventi: dentro.slice(0, massimo), totale: dentro.length, troncato: dentro.length > massimo, aggiornato: dati?.aggiornato ?? null };
+}
+
+// Toglie duplicati, eventi fuori dall'area e fuori dall'intervallo di profondità: le sorgenti (server, archivio
+// statico, snapshot) possono ripetere lo stesso evento, e il filtro locale vale anche quando rispondono i file statici.
+function eventiNelFiltro(eventi, area, profMin = null, profMax = null) {
+  const visti = new Set();
+  const dentro = [];
+  for (const f of eventi ?? []) {
+    const id = f?.properties?.eventId;
+    const [lon, lat, prof] = f?.geometry?.coordinates ?? [];
+    if (id == null || visti.has(id)) continue;
+    if (lon < area.minlon || lon > area.maxlon || lat < area.minlat || lat > area.maxlat) continue;
+    if (profMin != null && !(prof >= profMin)) continue;
+    if (profMax != null && !(prof <= profMax)) continue;
+    visti.add(id);
+    dentro.push(f);
+  }
+  return dentro;
 }
 
 // Eventi dal nostro archivio (GET /terremoti), come feature GeoJSON dell'INGV; senza duplicati e solo dentro `area`.
 // Senza server (404) si ripiega sullo snapshot degli ultimi 30 giorni o, per un intervallo più vecchio, sull'archivio statico per anno.
-export async function scaricaEventi({ da, a, magMin, area, fetchFn = fetch, adesso = Date.now() }) {
+export async function scaricaEventi({ da, a, magMin, profMin = null, profMax = null, area, fetchFn = fetch, adesso = Date.now() }) {
   const q = new URLSearchParams({ da: String(da), a: String(a), magmin: String(magMin), bbox: [area.minlon, area.minlat, area.maxlon, area.maxlat].join(',') });
+  if (profMin != null) q.set('profmin', String(profMin));
+  if (profMax != null) q.set('profmax', String(profMax));
   let dati;
   const r = await fetchFn(`/terremoti?${q}`).catch(() => null);
   if (r?.ok) dati = await r.json();
-  else if (da < adesso - GIORNI_SNAPSHOT * GIORNO_MS) dati = await rispostaDaArchivio({ da, a, magMin }, fetchFn);
+  else if (da < adesso - GIORNI_SNAPSHOT * GIORNO_MS) dati = await rispostaDaArchivio({ da, a, magMin, profMin, profMax }, fetchFn);
   else {
     const s = await fetchFn(`${URL_SNAPSHOT}terremoti.json`).catch(() => null);
     if (!s?.ok) throw new Error(`archivio ${r?.status ?? 'non raggiungibile'}`);
-    dati = rispostaDaSnapshot(await s.json(), { da, a, magMin });
+    dati = rispostaDaSnapshot(await s.json(), { da, a, magMin, profMin, profMax });
   }
-  const visti = new Set();
-  const eventi = [];
-  for (const f of dati.eventi ?? []) {
-    const id = f?.properties?.eventId;
-    const [lon, lat] = f?.geometry?.coordinates ?? [];
-    if (id == null || visti.has(id)) continue;
-    if (lon < area.minlon || lon > area.maxlon || lat < area.minlat || lat > area.maxlat) continue;
-    visti.add(id);
-    eventi.push(f);
-  }
-  return { eventi, troncato: Boolean(dati.troncato) };
+  return { eventi: eventiNelFiltro(dati.eventi, area, profMin, profMax), troncato: Boolean(dati.troncato) };
 }
+
+// Tutti gli eventi di un intervallo dentro `area`, oltre il tetto di 5000 della mappa: il formato testo del server arriva a 200000 righe.
+// Serve ai conteggi di un territorio (regione, provincia, comune), dove la magnitudo minima deve valere come per tutta l'Italia.
+export async function scaricaEventiTutti({ da, a, magMin, profMin = null, profMax = null, area, fetchFn = fetch, adesso = Date.now() }) {
+  const q = new URLSearchParams({ formato: 'testo', da: String(da), a: String(a), magmin: String(magMin), bbox: [area.minlon, area.minlat, area.maxlon, area.maxlat].join(','), limite: String(MASSIMO_TESTO) });
+  if (profMin != null) q.set('profmin', String(profMin));
+  if (profMax != null) q.set('profmax', String(profMax));
+  let dati;
+  const r = await fetchFn(`/terremoti?${q}`).catch(() => null);
+  if (r?.ok) {
+    const righe = eventiDaTesto(await r.text());
+    dati = { eventi: righe.map(featureDaEventoTesto), troncato: righe.length >= MASSIMO_TESTO };
+  } else if (da < adesso - GIORNI_SNAPSHOT * GIORNO_MS) dati = await rispostaDaArchivio({ da, a, magMin, profMin, profMax }, fetchFn, Infinity);
+  else {
+    const s = await fetchFn(`${URL_SNAPSHOT}terremoti.json`).catch(() => null);
+    if (!s?.ok) throw new Error(`archivio ${r?.status ?? 'non raggiungibile'}`);
+    dati = rispostaDaSnapshot(await s.json(), { da, a, magMin, profMin, profMax }, Infinity);
+  }
+  return { eventi: eventiNelFiltro(dati.eventi, area, profMin, profMax), troncato: Boolean(dati.troncato) };
+}
+
+// Riga del formato testo → feature GeoJSON dell'INGV (la stessa forma che legge eventoDaIngv)
+const featureDaEventoTesto = e => ({
+  type: 'Feature',
+  geometry: { type: 'Point', coordinates: e.prof == null ? [e.lon, e.lat] : [e.lon, e.lat, e.prof] },
+  properties: { eventId: e.id, time: e.time, mag: e.mag, magType: e.tipoMag, place: e.luogo, author: e.autore, type: '' },
+});
 
 // Formato «text» di INGV: righe separate da «|», la prima con l'intestazione. Colonne: 0 = id, 1 = ora, 2-3 = lat/lon, 4 = profondità, 5 = autore, 9 = tipo magnitudo, 10 = magnitudo, 12 = zona
 export function eventiDaTesto(testo) {
@@ -329,7 +390,7 @@ export function eventiDaTesto(testo) {
     if (!riga || riga.startsWith('#')) continue;
     const c = riga.split('|');
     const ts = oraEvento(c[1]), mag = Number(c[10]), lat = Number(c[2]), lon = Number(c[3]), prof = Number(c[4]);
-    if (Number.isFinite(ts) && Number.isFinite(mag)) eventi.push({ ts, mag, id: c[0], lat: c[2] === '' ? NaN : lat, lon: c[3] === '' ? NaN : lon, prof: c[4] !== '' && Number.isFinite(prof) ? prof : null, tipoMag: c[9] ?? '', autore: c[5] ?? '', luogo: c[12] ?? '' });
+    if (Number.isFinite(ts) && Number.isFinite(mag)) eventi.push({ ts, mag, id: c[0], time: c[1], lat: c[2] === '' ? NaN : lat, lon: c[3] === '' ? NaN : lon, prof: c[4] !== '' && Number.isFinite(prof) ? prof : null, tipoMag: c[9] ?? '', autore: c[5] ?? '', luogo: c[12] ?? '' });
   }
   return eventi;
 }

@@ -2635,7 +2635,7 @@ details.scheda-sez-evento .scheda-sez-testo { display: contents; }
 #cerca-risultati button { display: flex; flex-direction: column; gap: 1px; }
 #cerca-risultati button[aria-selected="true"] { background: var(--surface-hover); }
 .cerca-tipo { font-size: var(--fs-2xs); color: var(--text-muted); }
-#cerca-pannello { padding: 10px 14px 12px; background: var(--surface); border: 1px solid var(--border-ui); border-radius: var(--r-md); box-shadow: var(--ombra); }
+#cerca-pannello { padding: 10px 14px 12px; background: var(--surface); border: 1px solid var(--border-ui); border-radius: var(--r-md); box-shadow: var(--ombra); max-height: min(70vh, 520px); overflow-y: auto; overscroll-behavior: contain; }
 #cerca-pannello[hidden] { display: none; }
 #cerca-pannello h2 { margin: 0 0 6px; font-size: var(--fs-sm); }
 #cerca-pannello select { background: var(--surface); color: var(--text); border: 1px solid var(--border-ui); border-radius: var(--r-sm); }

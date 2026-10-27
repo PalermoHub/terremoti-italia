@@ -136,11 +136,12 @@ export function collegaRicerca(map, { terremoti = null, storico = null, comuni =
   }
   pannello.append(nodoEventi);
   if (terremoti?.menuMagnitudo) pannello.append(terremoti.menuMagnitudo());
+  if (terremoti?.menuProfondita) pannello.append(terremoti.menuProfondita());
   if (storico?.mostraAnno) {
     const selAnno = el('select');
     selAnno.id = 'filtro-anno';
     selAnno.append(Object.assign(el('option', null, t('filtri.annoRealTime')), { value: '' }), ...storico.anni().map(a => Object.assign(el('option', null, String(a)), { value: String(a) })));
-    selAnno.addEventListener('change', () => storico.mostraAnno(selAnno.value === '' ? null : Number(selAnno.value)));
+    selAnno.addEventListener('change', () => storico.mostraAnno(selAnno.value === '' ? null : Number(selAnno.value), undefined, terremoti?.profonditaScelta?.() ?? null));
     const etAnno = el('label', null, t('filtri.anno'));
     etAnno.htmlFor = 'filtro-anno';
     pannello.append(etAnno, selAnno);
@@ -174,6 +175,12 @@ export function collegaRicerca(map, { terremoti = null, storico = null, comuni =
   azzera.addEventListener('click', () => {
     campo.value = '';
     chiudiElenco();
+    casellaEventi.checked = false;
+    soloEventi = false;
+    const anno = document.getElementById('filtro-anno');
+    if (anno) anno.value = '';
+    storico?.mostraAnno?.(null); // spegne l'archivio storico e torna al tempo reale
+    terremoti?.ripristinaFiltro?.(); // periodo, magnitudo e classi iniziali
     applica({ ...SCELTA_VUOTA }, { casa: true });
   });
 
@@ -199,7 +206,7 @@ export function collegaRicerca(map, { terremoti = null, storico = null, comuni =
   function applicaEventi() {
     if (!terremoti && !storico) return;
     const mio = giro;
-    if (!soloEventi || !haScelta(scelta)) { terremoti?.impostaArea(null); storico?.impostaArea(null); return; }
+    if (!soloEventi || !haScelta(scelta)) { terremoti?.impostaArea(null); storico?.impostaArea(null, null); return; }
     const filtro = filtroArea(scelta);
     const calcola = () => {
       if (mio !== giro) return;
@@ -208,7 +215,7 @@ export function collegaRicerca(map, { terremoti = null, storico = null, comuni =
       const dentro = geometrie.length
         ? p => p.lon >= o && p.lon <= e && p.lat >= s && p.lat <= n && puntoInGeometrie(p.lon, p.lat, geometrie)
         : p => p.lon >= o && p.lon <= e && p.lat >= s && p.lat <= n; // tile non ancora pronti: vale il riquadro
-      storico?.impostaArea(dentro);
+      storico?.impostaArea(dentro, [o, s, e, n]);
       const rimasti = terremoti?.impostaArea(dentro) ?? [];
       if (liveZoomAttivo() && rimasti.length) {
         const r = riquadroDa(rimasti.map(p => ({ geometry: { coordinates: [p.lon, p.lat] } })));

@@ -1,6 +1,6 @@
 import { tl, t } from '../core/i18n.js';
 import { AREA_EVENTI } from '../core/config.js';
-import { scaricaEventi, eventoDaIngv, modelloPopupTerremoto, voceTerremoto, voceSerie, voceAltri } from './scheda-terremoti.js';
+import { scaricaEventi, scaricaEventiTutti, eventoDaIngv, modelloPopupTerremoto, voceTerremoto, voceSerie, voceAltri } from './scheda-terremoti.js';
 import { barraEventi, graficoSerie, elencoAltri } from './scheda-terremoti-dom.js';
 import { pannelloConfronto } from './terremoti-archivio.js';
 import { creaPopupTerremoti, simboliRighe } from './terremoti-popup.js';
@@ -44,17 +44,27 @@ const evento = trovati => {
 };
 const vaiAEvento = p => clicSu(mappa, [p.lon, p.lat], () => { scelto = { id: p.id, fino: Date.now() + FINESTRA_SCELTA_MS }; });
 
-async function scaricaLato(lato, periodo, magMin, area) {
-  const scarico = await scaricaEventi({ da: periodo.da, a: periodo.a, magMin, area: AREA });
+const MASSIMO_MAPPA = 5000; // eventi disegnati; i conteggi del territorio usano anche quelli oltre il tetto
+
+async function scaricaLato(lato, periodo, magMin, area, profondita = null) {
+  // Con un territorio o una profondità si leggono tutti gli eventi (formato testo, senza il tetto della mappa):
+  // il tetto di 5000 resta solo per i cerchi, così magnitudo e profondità valgono per tutta Italia e per ogni singolo territorio.
+  const riquadro = area ? { minlon: area.riquadro[0], minlat: area.riquadro[1], maxlon: area.riquadro[2], maxlat: area.riquadro[3] } : AREA;
+  const conTutti = Boolean(area) || profondita?.min != null;
+  const scarico = conTutti
+    ? await scaricaEventiTutti({ da: periodo.da, a: periodo.a, magMin, profMin: profondita?.min, profMax: profondita?.max, area: riquadro })
+    : await scaricaEventi({ da: periodo.da, a: periodo.a, magMin, area: riquadro });
   const colore = lato === 'a' ? COLORE_A : COLORE_B;
-  const features = scarico.eventi.map(f => eventoDaIngv(f, Infinity)).filter(Boolean).filter(f => !area || area.dentro({ lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] })).map(f => ({ ...f, properties: { ...f.properties, colore, lato, fascia: 'Confronto', anno: annoRoma(f.properties.ts) } }));
-  return { features, troncato: scarico.troncato, eventi: features.map(f => f.properties) };
+  const nelTerritorio = scarico.eventi.map(f => eventoDaIngv(f, Infinity)).filter(Boolean).filter(f => !area || area.dentro({ lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] }));
+  const features = nelTerritorio.slice(0, MASSIMO_MAPPA).map(f => ({ ...f, properties: { ...f.properties, colore, lato, fascia: 'Confronto', anno: annoRoma(f.properties.ts) } }));
+  return { features, troncato: scarico.troncato || nelTerritorio.length > features.length, eventi: nelTerritorio.map(f => f.properties) };
 }
 
-// Mostra in mappa gli eventi dei due periodi con magnitudo ≥ magMin (e dentro `area`, se c'è: lo stesso territorio per entrambi); risponde { a, b } con { n, troncato, eventi }, o null se nel frattempo è partita un'altra richiesta
-async function carica(periodoA, periodoB, magMin, area = null) {
+// Mostra in mappa gli eventi dei due periodi con magnitudo ≥ magMin e profondità nell'intervallo scelto (dentro `area`, se c'è:
+// lo stesso filtro per entrambi); risponde { a, b } con { n, troncato, eventi }, o null se nel frattempo è partita un'altra richiesta
+async function carica(periodoA, periodoB, magMin, area = null, profondita = null) {
   const mia = ++richiesta;
-  const [a, b] = await Promise.all([scaricaLato('a', periodoA, magMin, area), scaricaLato('b', periodoB, magMin, area)]);
+  const [a, b] = await Promise.all([scaricaLato('a', periodoA, magMin, area, profondita), scaricaLato('b', periodoB, magMin, area, profondita)]);
   if (mia !== richiesta) return null;
   const features = [...a.features, ...b.features];
   eventi = features.map(proprieta);

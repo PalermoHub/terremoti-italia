@@ -29,25 +29,30 @@ export function leggiParametri(url, adesso = Date.now()) {
   const da = numero(url, 'da', a - 30 * GIORNO_MS);
   if (da > a) throw new Error('intervallo non valido: da > a');
   const magMin = numero(url, 'magmin', 0);
+  const profMin = numero(url, 'profmin', null);
+  const profMax = numero(url, 'profmax', null);
+  if (profMin != null && profMin < 0) throw new Error('parametro profmin non valido');
+  if (profMax != null && profMax < 0) throw new Error('parametro profmax non valido');
+  if (profMin != null && profMax != null && profMin > profMax) throw new Error('intervallo di profondità non valido');
   const testo = url.searchParams.get('formato') === 'testo';
   const tetto = testo ? MASSIMO_TESTO : MASSIMO_EVENTI;
   const limite = Math.max(1, Math.min(Math.floor(numero(url, 'limite', tetto)), tetto));
-  return { da, a, magMin, limite, testo, bbox: riquadro(url) };
+  return { da, a, magMin, profMin, profMax, limite, testo, bbox: riquadro(url) };
 }
 
-export function rispondiTerremoti(archivio, { da, a, magMin, limite }, area) {
-  const { eventi, totale } = archivio.interroga({ da, a, magMin, area, limite });
+export function rispondiTerremoti(archivio, { da, a, magMin, profMin, profMax, limite }, area) {
+  const { eventi, totale } = archivio.interroga({ da, a, magMin, profMin, profMax, area, limite });
   return { eventi, totale, troncato: totale > eventi.length, aggiornato: archivio.ultimoTs() };
 }
 
-export function rispondiRiepilogo(archivio, { da, a, magMin }, area) {
-  return { ...archivio.riepilogo({ da, a, magMin, area }), aggiornato: archivio.ultimoTs() };
+export function rispondiRiepilogo(archivio, { da, a, magMin, profMin, profMax }, area) {
+  return { ...archivio.riepilogo({ da, a, magMin, profMin, profMax, area }), aggiornato: archivio.ultimoTs() };
 }
 
 // Stesso formato «text» dell'INGV (colonne separate da «|»): lo legge eventiDaTesto(), usato dalle serie storiche
 const INTESTAZIONE = '#EventID|Time|Latitude|Longitude|Depth/Km|Author|Catalog|Contributor|ContributorID|MagType|Magnitude|MagAuthor|EventLocationName|EventType';
-export function rispondiTesto(archivio, { da, a, magMin, limite }, area) {
-  const { eventi } = archivio.interroga({ da, a, magMin, area, limite });
+export function rispondiTesto(archivio, { da, a, magMin, profMin, profMax, limite }, area) {
+  const { eventi } = archivio.interroga({ da, a, magMin, profMin, profMax, area, limite });
   const riga = f => {
     const p = f.properties;
     const [lon, lat, prof] = f.geometry.coordinates;

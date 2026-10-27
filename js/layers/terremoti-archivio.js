@@ -1,7 +1,7 @@
 // Pannello della legenda dello strato «Terremoti storici»: sceglie l'anno da mostrare in mappa e confronta due anni.
 // Il confronto usa GET /terremoti/riepilogo (conteggi aggregati dal server), non gli eventi in mappa: resta corretto oltre il tetto di eventi della mappa.
 import { t, localeIntl } from '../core/i18n.js';
-import { CLASSI_MAG } from './scheda-terremoti.js';
+import { CLASSI_MAG, PROFONDITA } from './scheda-terremoti.js';
 import { ANNO_INIZIO, periodoAnno, periodoValido, confrontaPeriodi, giorniPeriodo, scaricaRiepilogo, riepilogoDaEventi } from './scheda-archivio.js';
 
 const MAGNITUDO_ARCHIVIO = [2, 3, 4, 5];
@@ -26,6 +26,20 @@ function scelta(etichetta, valori, predefinito, testoValore = String) {
   sel.value = String(predefinito);
   lab.append(el('span', null, etichetta), sel);
   return { nodo: lab, valore: () => Number(sel.value) };
+}
+
+// Scelta della classe di profondità: valore = { chiave, min, max } (min/max null = nessun limite)
+function sceltaProfondita(etichetta, predefinito = 0) {
+  const lab = el('label', 'terremoti-filtro');
+  const sel = el('select');
+  PROFONDITA.forEach((p, i) => {
+    const o = el('option', null, t(`terremoti.arc.prof.${p.chiave}`));
+    o.value = String(i);
+    sel.append(o);
+  });
+  sel.value = String(predefinito);
+  lab.append(el('span', null, etichetta), sel);
+  return { nodo: lab, valore: () => PROFONDITA[Number(sel.value)] ?? PROFONDITA[0] };
 }
 
 const numero = (n, d = 0) => n.toLocaleString(localeIntl(), { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -55,13 +69,14 @@ const anniArchivio = () => {
 };
 const giorno = ts => new Date(ts).toLocaleDateString(localeIntl(), { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
 
-// Strato «Terremoti storici»: `carica(periodo, magMin)` mostra l'anno in mappa e risponde { n, troncato } (null se superata da una richiesta più recente)
+// Strato «Terremoti storici»: `carica(periodo, magMin, profondita)` mostra l'anno in mappa e risponde { n, troncato } (null se superata da una richiesta più recente)
 export function pannelloArchivio({ carica, annoIniziale, magIniziale = MAG_PREDEFINITA }) {
   const nodo = el('div', 'terremoti-pannello terremoti-archivio');
   const { adesso, anni } = anniArchivio();
   const { messaggio, esegui } = stato();
   const annoMappa = scelta(t('terremoti.arc.anno'), anni, annoIniziale ?? adesso - 1);
   const magMappa = scelta(t('terremoti.arc.magMin'), MAGNITUDO_ARCHIVIO, magIniziale, m => `≥ ${m}`);
+  const profMappa = sceltaProfondita(t('terremoti.arc.prof'));
   const mostra = el('button', 'terremoti-archivio-btn', t('terremoti.arc.mostraBtn'));
   mostra.type = 'button';
   const nota = el('p', 'uffici-nota');
@@ -70,23 +85,26 @@ export function pannelloArchivio({ carica, annoIniziale, magIniziale = MAG_PREDE
     const errore = periodoValido(p);
     if (errore) { messaggio.textContent = t(errore); return; }
     const mag = magMappa.valore();
+    const prof = profMappa.valore();
     esegui(nodo, async () => {
-      const r = await carica(p, mag);
+      const r = await carica(p, mag, prof);
       if (!r) return;
+      const base = t(prof.chiave === 'tutte' ? 'terremoti.arc.nota' : 'terremoti.arc.notaProf', { n: r.n, da: giorno(p.da), a: giorno(p.a), mag, prof: t(`terremoti.arc.prof.${prof.chiave}`) });
       nota.textContent = r.n
-        ? [t('terremoti.arc.nota', { n: r.n, da: giorno(p.da), a: giorno(p.a), mag }), r.troncato ? t('terremoti.troncato', { n: r.n }) : ''].filter(Boolean).join(' ')
+        ? [base, r.troncato ? t('terremoti.troncato', { n: r.n }) : ''].filter(Boolean).join(' ')
         : t('terremoti.arc.nessunEvento');
     }, vaiMostra);
   };
   mostra.addEventListener('click', vaiMostra);
   const filtri = el('div', 'terremoti-filtri');
-  filtri.append(annoMappa.nodo, magMappa.nodo);
+  filtri.append(annoMappa.nodo, magMappa.nodo, profMappa.nodo);
   nodo.append(el('strong', null, t('terremoti.arc.mostra')), filtri, mostra, nota, messaggio, el('p', 'uffici-nota', t('terremoti.arc.utc')));
   return { nodo, mostra: vaiMostra };
 }
 
-// Strato «Confronto»: `carica(periodoA, periodoB, magMin, area)` mette in mappa gli eventi dei due anni e risponde { a, b } con { n, troncato, eventi } (null se superata).
-// `territorio` (opzionale, da creaFiltroTerritorio) restringe entrambi gli anni allo stesso territorio: allora i conteggi vengono dagli eventi, non dal riepilogo del server.
+// Strato «Confronto»: `carica(periodoA, periodoB, magMin, area, profondita)` mette in mappa gli eventi dei due anni e risponde { a, b } con { n, troncato, eventi } (null se superata).
+// `territorio` (opzionale, da creaFiltroTerritorio) restringe entrambi gli anni allo stesso territorio; magnitudo e profondità
+// possono restringerlo ancora: con un territorio o una profondità i conteggi vengono da tutti gli eventi, non dal riepilogo del server.
 export function pannelloConfronto({ carica, territorio = null }) {
   const nodo = el('div', 'terremoti-pannello terremoti-archivio');
   const { adesso, anni } = anniArchivio();
@@ -94,7 +112,7 @@ export function pannelloConfronto({ carica, territorio = null }) {
   const annoA = scelta(t('terremoti.arc.periodoA'), anni, adesso - 2);
   const annoB = scelta(t('terremoti.arc.periodoB'), anni, adesso - 1);
   const mag = scelta(t('terremoti.arc.magMin'), MAGNITUDO_ARCHIVIO, MAG_PREDEFINITA, m => `≥ ${m}`);
-  mag.nodo.classList.add('terremoti-archivio-larga');
+  const prof = sceltaProfondita(t('terremoti.arc.prof'));
   const confronta = el('button', 'terremoti-archivio-btn', t('terremoti.arc.confronta'));
   confronta.type = 'button';
   const nota = el('p', 'uffici-nota');
@@ -102,15 +120,18 @@ export function pannelloConfronto({ carica, territorio = null }) {
   const vaiConfronta = () => {
     const pa = periodoAnno(annoA.valore()), pb = periodoAnno(annoB.valore());
     const m = mag.valore();
+    const p = prof.valore();
     esegui(nodo, async () => {
       let area = null;
       if (territorio?.attivo()) {
         try { area = await territorio.prepara(); } catch { messaggio.textContent = t('terremoti.arc.territorioErrore'); }
       }
-      // senza territorio: conteggi dal server (esatti anche oltre il tetto della mappa) ed eventi sulla mappa, insieme
-      const [ra, rb, mappa] = area
-        ? await carica(pa, pb, m, area).then(r => [r && riepilogoDaEventi(r.a.eventi), r && riepilogoDaEventi(r.b.eventi), r])
-        : await Promise.all([scaricaRiepilogo(pa, m), scaricaRiepilogo(pb, m), carica(pa, pb, m)]);
+      // con un territorio o una profondità scelta i conteggi vengono da tutti gli eventi (oltre il tetto della mappa);
+      // senza, dal riepilogo del server (esatto anche oltre il tetto) e dagli eventi in mappa, insieme.
+      const conEventi = Boolean(area) || p.min != null;
+      const [ra, rb, mappa] = conEventi
+        ? await carica(pa, pb, m, area, p).then(r => [r && riepilogoDaEventi(r.a.eventi), r && riepilogoDaEventi(r.b.eventi), r])
+        : await Promise.all([scaricaRiepilogo(pa, m), scaricaRiepilogo(pb, m), carica(pa, pb, m, null, p)]);
       if (!mappa) return;
       esito.replaceChildren(...disegnaConfronto(confrontaPeriodi(ra, rb, giorniPeriodo(pa), giorniPeriodo(pb)), annoA.valore(), annoB.valore(), adesso));
       nota.textContent = mappa.a.troncato || mappa.b.troncato ? t('terremoti.troncato', { n: Math.max(mappa.a.n, mappa.b.n) }) : '';
@@ -118,7 +139,7 @@ export function pannelloConfronto({ carica, territorio = null }) {
   };
   confronta.addEventListener('click', vaiConfronta);
   const filtri = el('div', 'terremoti-filtri');
-  filtri.append(annoA.nodo, annoB.nodo, mag.nodo);
+  filtri.append(annoA.nodo, annoB.nodo, mag.nodo, prof.nodo);
   if (territorio) filtri.append(territorio.nodo);
   nodo.append(el('strong', null, t('terremoti.arc.confrontaTitolo')), filtri, confronta, nota, messaggio, esito, el('p', 'uffici-nota', t('terremoti.arc.utc')));
   return { nodo, confronta: vaiConfronta };

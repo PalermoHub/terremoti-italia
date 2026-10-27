@@ -3,6 +3,16 @@ import { DatabaseSync } from 'node:sqlite';
 
 const oraEvento = testo => Date.parse(`${String(testo).slice(0, 23)}Z`);
 
+// Clausola comune a interroga e riepilogo. La profondità è facoltativa: gli eventi senza profondità
+// (coordinata assente) restano fuori solo quando si chiede un intervallo.
+function clausola({ da, a, magMin, profMin = null, profMax = null, area }) {
+  let dove = 'ts >= ? AND ts <= ? AND mag >= ? AND lon >= ? AND lon <= ? AND lat >= ? AND lat <= ?';
+  const par = [da, a, magMin, area.minlon, area.maxlon, area.minlat, area.maxlat];
+  if (profMin != null) { dove += ' AND prof >= ?'; par.push(profMin); }
+  if (profMax != null) { dove += ' AND prof <= ?'; par.push(profMax); }
+  return { dove, par };
+}
+
 export function apriArchivio(percorso) {
   const db = new DatabaseSync(percorso);
   db.exec(`
@@ -46,17 +56,15 @@ export function apriArchivio(percorso) {
       } catch (e) { db.exec('ROLLBACK'); throw e; }
       return cambiati;
     },
-    interroga({ da, a, magMin, area, limite }) {
-      const dove = 'ts >= ? AND ts <= ? AND mag >= ? AND lon >= ? AND lon <= ? AND lat >= ? AND lat <= ?';
-      const par = [da, a, magMin, area.minlon, area.maxlon, area.minlat, area.maxlat];
+    interroga({ da, a, magMin, profMin = null, profMax = null, area, limite }) {
+      const { dove, par } = clausola({ da, a, magMin, profMin, profMax, area });
       const { n } = db.prepare(`SELECT COUNT(*) AS n FROM eventi WHERE ${dove}`).get(...par);
       const righe = db.prepare(`SELECT * FROM eventi WHERE ${dove} ORDER BY ts DESC LIMIT ?`).all(...par, limite);
       return { eventi: righe.map(comeFeature), totale: n };
     },
     // Conteggi per classe di magnitudo (0,1) e per mese UTC, per le serie storiche e il confronto: il browser non scarica gli eventi
-    riepilogo({ da, a, magMin, area }) {
-      const dove = 'ts >= ? AND ts <= ? AND mag >= ? AND lon >= ? AND lon <= ? AND lat >= ? AND lat <= ?';
-      const par = [da, a, magMin, area.minlon, area.maxlon, area.minlat, area.maxlat];
+    riepilogo({ da, a, magMin, profMin = null, profMax = null, area }) {
+      const { dove, par } = clausola({ da, a, magMin, profMin, profMax, area });
       const tutte = sql => db.prepare(sql).all(...par).map(r => ({ ...r }));
       const { n } = db.prepare(`SELECT COUNT(*) AS n FROM eventi WHERE ${dove}`).get(...par);
       return {

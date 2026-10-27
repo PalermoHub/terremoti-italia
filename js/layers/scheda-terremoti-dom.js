@@ -5,7 +5,7 @@ import { titoloConInfo, apriGrande } from '../core/info-grafico.js';
 import { barraNavigazione } from '../core/scheda-navigazione.js';
 import { ANNO_INIZIO, periodoAnno, serieAnnuale, scaricaRiepilogo } from './scheda-archivio.js';
 import { iconaAttesa } from '../core/scheda-util.js';
-import { SCELTE_GIORNI, SCELTE_MAGNITUDO, UNITA, MAG_STORICO, filtro, altriTerremoti, accordionTerremoti, posizioneEvento, urlStorico, eventiDaTesto, serieEventi, puntiMagnitudo, curvaCumulativa, omori, rilascioCumulativo, tempiTraEventi, spazioTempo, finestraTempo, proprietaStorico, voceTerremoto, inquadra, proiettaMiniatura, miniatura, etichettaBarra, periodoSequenza, statisticheEvento } from './scheda-terremoti.js';
+import { SCELTE_GIORNI, SCELTE_MAGNITUDO, PROFONDITA, UNITA, MAG_STORICO, filtro, chiaveProfondita, altriTerremoti, accordionTerremoti, posizioneEvento, urlStorico, eventiDaTesto, serieEventi, puntiMagnitudo, curvaCumulativa, omori, rilascioCumulativo, tempiTraEventi, spazioTempo, finestraTempo, proprietaStorico, voceTerremoto, inquadra, proiettaMiniatura, miniatura, etichettaBarra, periodoSequenza, statisticheEvento } from './scheda-terremoti.js';
 
 export const EVENTO_FILTRO = 'terremoti:filtro';
 
@@ -44,12 +44,35 @@ export const testoGiorni = g => (g === 1 ? t('terremoti.ultime24') : t('terremot
 // Solo la magnitudo minima (ricerca): stesso filtro dei menu della legenda, che seguono la scelta
 export const menuMagnitudo = () => menu(t('terremoti.magMin'), SCELTE_MAGNITUDO, () => filtro.magMin, m => `≥ ${m}`, cambia('magMin'));
 
-// Periodo e magnitudo minima: valgono per la mappa e per l'elenco
+// Profondità: un solo menu per la ricerca e per la legenda, come la magnitudo; scrive profMin/profMax nel filtro condiviso
+export function menuProfondita() {
+  const lab = el('label', 'terremoti-filtro');
+  const sel = el('select');
+  for (const p of PROFONDITA) {
+    const o = el('option', null, t(`terremoti.arc.prof.${p.chiave}`));
+    o.value = p.chiave;
+    sel.append(o);
+  }
+  sel.value = chiaveProfondita(filtro);
+  sel.addEventListener('change', () => {
+    const p = PROFONDITA.find(x => x.chiave === sel.value) ?? PROFONDITA[0];
+    filtro.profMin = p.min;
+    filtro.profMax = p.max;
+    document.dispatchEvent(new CustomEvent(EVENTO_FILTRO));
+  });
+  const segui = () => (lab.isConnected ? sel.value = chiaveProfondita(filtro) : document.removeEventListener(EVENTO_FILTRO, segui));
+  document.addEventListener(EVENTO_FILTRO, segui);
+  lab.append(el('span', null, t('terremoti.arc.prof')), sel);
+  return lab;
+}
+
+// Periodo, magnitudo minima e profondità: valgono per la mappa e per l'elenco
 export function menuFiltro() {
   const riga = el('div', 'terremoti-filtri');
   riga.append(
     menu(t('terremoti.periodo'), SCELTE_GIORNI, () => filtro.giorni, testoGiorni, cambia('giorni')),
     menu(t('terremoti.magMin'), SCELTE_MAGNITUDO, () => filtro.magMin, m => `≥ ${m}`, cambia('magMin')),
+    menuProfondita(),
   );
   return riga;
 }

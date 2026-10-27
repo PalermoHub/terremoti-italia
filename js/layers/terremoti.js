@@ -2,9 +2,9 @@ import { tl, t, localeIntl } from '../core/i18n.js';
 import { AREA_EVENTI, HIT_COMUNI, SRC_COMUNI, STRATO_COMUNI } from '../core/config.js';
 import { filtroInsieme, voceFiltro } from '../core/legenda.js';
 import { primo } from '../core/scheda-util.js';
-import { FASCE, GIORNI_MAX, scaricaEventi, filtro, passaFiltro, espressioneFiltro, eventoDaIngv, modelloPopupTerremoto, voceTerremoto, voceSerie, voceAltri, riassuntoTerremoti, proprietaStorico } from './scheda-terremoti.js';
+import { FASCE, GIORNI_MAX, scaricaEventi, filtro, FILTRO_INIZIALE, profonditaDaFiltro, passaFiltro, espressioneFiltro, eventoDaIngv, modelloPopupTerremoto, voceTerremoto, voceSerie, voceAltri, riassuntoTerremoti, proprietaStorico } from './scheda-terremoti.js';
 import { voceComune } from './scheda-comune.js';
-import { EVENTO_FILTRO, menuFiltro, menuMagnitudo, elencoAltri, graficoSerie, testoGiorni, barraEventi } from './scheda-terremoti-dom.js';
+import { EVENTO_FILTRO, menuFiltro, menuMagnitudo, menuProfondita, elencoAltri, graficoSerie, testoGiorni, barraEventi } from './scheda-terremoti-dom.js';
 import { pannelloFiltro } from './terremoti-pannello.js';
 import { registraTooltipStrati } from '../core/tooltip.js';
 import { clicSu } from '../core/scheda-navigazione.js';
@@ -224,6 +224,14 @@ export default {
     return visibili();
   },
   menuMagnitudo,
+  menuProfondita,
+  // Profondità scelta nel filtro condiviso, per i menu che la passano allo strato storico
+  profonditaScelta: () => profonditaDaFiltro(filtro),
+  // Riporta ai valori iniziali i filtri condivisi (pulsante «Azzera» accanto alla ricerca): periodo, magnitudo, profondità, finestra e classi
+  ripristinaFiltro() {
+    Object.assign(filtro, FILTRO_INIZIALE);
+    document.dispatchEvent(new CustomEvent(EVENTO_FILTRO));
+  },
   avvia() { aggiorna(); pianifica(); },
   strati: [{
     id: 'terremoti', etichetta: 'Terremoti in tempo reale', layers: [PUNTI], attivo: true, legendaPannello: '.lg-terremoti',
