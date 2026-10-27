@@ -13,6 +13,7 @@ import { creaAvvisoAttesa } from './core/avviso-attesa.js';
 import { collegaTabMobile } from './core/tab-mobile.js';
 import { traduciModuli } from './core/traduci-moduli.js';
 import { caricaLiveZoom, collegaLiveZoom, creaInterruttoreLegenda as interruttoreLiveZoomLegenda } from './core/live-zoom.js';
+import { caricaTemaMagnitudo } from './core/tema-magnitudo.js';
 import { t } from './core/i18n.js';
 import eventi from './layers/eventi.js';
 import comuni from './layers/comuni.js';
@@ -30,6 +31,7 @@ const tab = collegaTabMobile(document, { barraTitolo: document.querySelector('#b
 document.getElementById('corpo').append(tab.barra);
 document.getElementById('chiudi-strati').addEventListener('click', () => tab.imposta(null));
 caricaLiveZoom(localStorage);
+caricaTemaMagnitudo(localStorage);
 // riquadro in fondo alla legenda in mappa: l'interruttore di Live Zoom (si nasconde con la legenda ridotta)
 const riquadroLegenda = Object.assign(document.createElement('div'), { id: 'legende-raggio' });
 riquadroLegenda.append(interruttoreLiveZoomLegenda(localStorage));

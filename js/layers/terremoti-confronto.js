@@ -1,12 +1,14 @@
 import { tl, t } from '../core/i18n.js';
 import { AREA_EVENTI } from '../core/config.js';
-import { scaricaEventi, scaricaEventiTutti, eventoDaIngv, modelloPopupTerremoto, voceTerremoto, voceSerie, voceAltri } from './scheda-terremoti.js';
-import { barraEventi, graficoSerie, elencoAltri } from './scheda-terremoti-dom.js';
+import { scaricaEventi, scaricaEventiTutti, eventoDaIngv, modelloPopupTerremoto, voceTerremoto, voceSerie, voceAltri, filtro } from './scheda-terremoti.js';
+import { EVENTO_FILTRO, barraEventi, graficoSerie, elencoAltri } from './scheda-terremoti-dom.js';
 import { pannelloConfronto } from './terremoti-archivio.js';
 import { creaPopupTerremoti, simboliRighe } from './terremoti-popup.js';
 import { registraTooltipStrati } from '../core/tooltip.js';
 import { clicSu } from '../core/scheda-navigazione.js';
 import { creaFiltroTerritorio } from '../core/filtro-territorio.js';
+import { espressioneClassiMagnitudo, espressioneColoreMagnitudo } from '../core/magnitudo.js';
+import { aggiornaLegendaInMappa, creaClassiFiltro, EVENTO_TEMA_MAGNITUDO, temaMagnitudoAttivo } from '../core/tema-magnitudo.js';
 
 // Confronto tra due anni: gli eventi dei due anni insieme in mappa, a parte dai terremoti storici. Spento all'avvio; si accende dal pannello Strati.
 // Anno A azzurro, anno B arancio: il colore dice a quale anno appartiene il cerchio, la grandezza la magnitudo. Non si aggiorna da solo.
@@ -33,6 +35,9 @@ let pannello = null;
 let scelto = null; // evento scelto con le frecce della scheda
 let richiesta = 0; // una risposta in ritardo di una richiesta precedente si scarta
 const popup = creaPopupTerremoti();
+let titolo = null; // intestazione della legenda: cambia col tema magnitudo
+let classiFiltro = null; // classi di magnitudo della legenda, quando il tema è acceso
+let notaAnno = null; // con il tema il colore è la magnitudo: l'anno resta il bordo
 
 const annoRoma = ts => Number(new Date(ts).toLocaleDateString('en-CA', { timeZone: 'Europe/Rome', year: 'numeric' }));
 const proprieta = f => ({ ...f.properties, lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] });
@@ -80,10 +85,12 @@ function creaChiave() {
   const nodo = document.createElement('div');
   nodo.className = 'terremoti-confronto-chiave';
   nodo.hidden = true;
+  const pallini = [];
   const riga = (colore) => {
     const r = document.createElement('span');
     const pallino = document.createElement('i');
     pallino.style.background = colore;
+    pallini.push({ pallino, colore });
     const testo = document.createElement('span');
     r.append(pallino, testo);
     nodo.append(r);
@@ -100,23 +107,66 @@ function creaChiave() {
       testoB.textContent = `${anno(pb)} · ${conta('b')}`;
       nodo.hidden = false;
     },
+    // Con il tema magnitudo il colore del cerchio è la magnitudo e l'anno resta il bordo: la chiave mostra anelli.
+    stileTema(tema) {
+      for (const { pallino, colore } of pallini) {
+        pallino.style.background = tema ? 'transparent' : colore;
+        pallino.style.border = tema ? `2px solid ${colore}` : '0';
+        pallino.style.boxSizing = 'border-box';
+      }
+    },
   };
+}
+
+// Le classi di magnitudo (tema magnitudo) filtrano cerchi ed etichette dei due anni senza ripassare dal server.
+function applicaFiltroClassi() {
+  const espr = espressioneClassiMagnitudo(filtro.classi);
+  for (const id of [PUNTI, ANNI, HIT]) if (mappa?.getLayer(id)) mappa.setFilter(id, espr);
+}
+
+// Tema magnitudo: il colore del cerchio diventa la classe di magnitudo e l'anno resta il bordo (più spesso, per
+// leggersi); la legenda mostra le classi, che filtrano la mappa, e la chiave degli anni diventa di anelli.
+function applicaTema() {
+  const tema = temaMagnitudoAttivo();
+  if (mappa?.getLayer(PUNTI)) {
+    mappa.setPaintProperty(PUNTI, 'circle-color', tema ? espressioneColoreMagnitudo() : ['get', 'colore']);
+    mappa.setPaintProperty(PUNTI, 'circle-stroke-color', ['get', 'colore']);
+    mappa.setPaintProperty(PUNTI, 'circle-stroke-width', tema ? 2.5 : 1.5);
+  }
+  applicaFiltroClassi();
+  if (legenda) {
+    titolo.textContent = tema ? t('tema.magnitudo.titoloStrato', { nome: t('terremoti.arc.titoloConfronto') }) : t('terremoti.arc.titoloConfronto');
+    classiFiltro.nodo.hidden = !tema;
+    classiFiltro.sincronizza();
+    notaAnno.hidden = !tema;
+    chiave?.stileTema(tema);
+  }
+  aggiornaLegendaInMappa();
 }
 
 function creaLegenda() {
   legenda = document.createElement('div');
   legenda.className = 'legenda legenda-monumenti lg-terremoti-confronto';
   legenda.hidden = !acceso;
-  const titolo = document.createElement('strong');
+  titolo = document.createElement('strong');
   titolo.textContent = t('terremoti.arc.titoloConfronto');
+  classiFiltro = creaClassiFiltro({ accese: () => filtro.classi, suCambio: insieme => { filtro.classi = insieme; document.dispatchEvent(new Event(EVENTO_FILTRO)); } });
+  const nota = document.createElement('p');
+  nota.className = 'legenda-magnitudo-nota';
+  nota.textContent = t('tema.magnitudo.filtro');
+  classiFiltro.nodo.append(nota);
   pannello = pannelloConfronto({ carica, territorio: creaFiltroTerritorio(mappa) });
   chiave = creaChiave();
+  notaAnno = document.createElement('p');
+  notaAnno.className = 'legenda-magnitudo-nota';
+  notaAnno.textContent = t('tema.magnitudo.bordoAnno');
   const credito = document.createElement('p');
   credito.className = 'uffici-nota';
   const link = Object.assign(document.createElement('a'), { textContent: 'INGV', href: 'https://terremoti.ingv.it/', target: '_blank', rel: 'noopener' });
   credito.append(`${t('terremoti.dati')} `, link);
-  legenda.append(titolo, chiave.nodo, credito);
+  legenda.append(titolo, classiFiltro.nodo, chiave.nodo, notaAnno, credito);
   document.getElementById('legende').append(legenda);
+  applicaTema();
 }
 
 // Il modulo del pannello «Confronto» nel rail di destra: la scheda con i filtri e la tabella (creata con la legenda)
@@ -159,6 +209,9 @@ export default {
     }]);
     map.on('mouseenter', PUNTI, () => { map.getCanvas().style.cursor = 'pointer'; });
     map.on('mouseleave', PUNTI, () => { map.getCanvas().style.cursor = ''; });
+    document.addEventListener(EVENTO_FILTRO, applicaFiltroClassi);
+    document.addEventListener(EVENTO_TEMA_MAGNITUDO, applicaTema);
+    applicaTema(); // il tema può essere già acceso da una sessione precedente
   },
   scheda: {
     layers: [HIT],
@@ -183,8 +236,9 @@ export default {
     suCambio(attivo) {
       acceso = attivo;
       if (legenda) legenda.hidden = !attivo;
-      if (!attivo) { popup.chiudi(); return; }
-      if (primaVolta && pannello) { primaVolta = false; pannello.confronta(); } // la prima volta si vede subito il confronto tra gli ultimi due anni
+      if (!attivo) { popup.chiudi(); }
+      else if (primaVolta && pannello) { primaVolta = false; pannello.confronta(); } // la prima volta si vede subito il confronto tra gli ultimi due anni
+      aggiornaLegendaInMappa(); // con il tema acceso la legenda in mappa è una sola: può essere questa
     },
   }],
   pannello: creaLegenda,

@@ -1,6 +1,8 @@
 import { righe } from '../core/scheda-util.js';
 import { t, tl, tn, localeIntl } from '../core/i18n.js';
 import { posizioneIn } from '../core/scheda-navigazione.js';
+import { CLASSI_MAGNITUDO, classeMagnitudo, raggioMagnitudo } from '../core/magnitudo.js';
+export { classeMagnitudo, raggioMagnitudo }; // API pubblica del modulo: grafici, popup e scheda li importano da qui
 
 // Modello puro dei terremoti in tempo reale (INGV, servizio FDSN event): stesse righe per il popup e per la scheda di destra (tab «Luogo»).
 // Il browser interroga direttamente il servizio (risponde con CORS aperto): ogni evento ha magnitudo, ora (UTC), zona, profondità (km, terza coordinata) e autore della localizzazione.
@@ -42,9 +44,9 @@ export const profonditaDaFiltro = (f = filtro) => (f.profMin == null && f.profMa
 // Chiave della classe di profondità corrispondente al filtro (per i menu)
 export const chiaveProfondita = (f = filtro) => PROFONDITA.find(p => p.min === f.profMin && p.max === f.profMax)?.chiave ?? 'tutte';
 
-// Classi dell'istogramma di magnitudo
-export const CLASSI_MAG = [{ da: 1, a: 2 }, { da: 2, a: 3 }, { da: 3, a: 4 }, { da: 4, a: Infinity }];
-export const classeMagnitudo = m => Math.max(0, CLASSI_MAG.findIndex(c => m < c.a));
+// Classi dell'istogramma di magnitudo e del filtro per classe: le stesse della legenda e dei cerchi in mappa
+// (core/magnitudo.js), così il tema magnitudo, il grafico e il filtro non possono andare ognuno per conto suo.
+export const CLASSI_MAG = CLASSI_MAGNITUDO;
 
 // Intervallo [da, a] in millisecondi: la finestra dello slider se c'è, altrimenti gli ultimi `giorni`. Il limite finale della finestra piena è aperto, così gli eventi nuovi restano dentro.
 export function intervallo({ giorni, finestra } = filtro, adesso = Date.now()) {
@@ -92,12 +94,6 @@ export function prossimaFinestra(finestra, larghezza = 3) {
   return a >= GIORNI_MAX ? [0, l] : [da + 1, a + 1];
 }
 
-// Classi della legenda di magnitudo dell'INGV: fino a 2.0, 2.0-2.9, 3.0-3.9, 4.0-4.9, da 5.0
-const CLASSI_LEGENDA = [{ chiave: 'fino2', raggio: 3, sotto: 2 }, { chiave: 'da2', raggio: 5, sotto: 3 }, { chiave: 'da3', raggio: 7, sotto: 4 }, { chiave: 'da4', raggio: 10, sotto: 5 }, { chiave: 'da5', raggio: 14, sotto: Infinity }];
-
-// Magnitudo → raggio del cerchio in pixel: uno per classe della legenda, lo stesso dei cerchi disegnati nella legenda
-const classeLegenda = m => Math.max(0, CLASSI_LEGENDA.findIndex(c => m < c.sotto));
-export const raggioMagnitudo = m => CLASSI_LEGENDA[classeLegenda(m)].raggio;
 
 const num = (n, d = 1) => n.toLocaleString(localeIntl(), { minimumFractionDigits: d, maximumFractionDigits: d });
 
@@ -113,7 +109,7 @@ export function eventoDaIngv(f, adesso = Date.now()) {
   const fascia = fasciaEta(ts, adesso);
   return {
     type: 'Feature', geometry: { type: 'Point', coordinates: [lon, lat] },
-    properties: { id: String(p.eventId), mag: p.mag, tipoMag: p.magType ?? '', luogo: p.place ?? '', ts, ora: new Date(ts).toISOString().slice(0, 16).replace('T', ' '), prof: Number.isFinite(prof) ? prof : null, autore: p.author ?? '', fascia: fascia.nome, colore: fascia.colore, raggio: raggioMagnitudo(p.mag) },
+    properties: { id: String(p.eventId), mag: p.mag, tipoMag: p.magType ?? '', luogo: p.place ?? '', ts, ora: new Date(ts).toISOString().slice(0, 16).replace('T', ' '), prof: Number.isFinite(prof) ? prof : null, autore: p.author ?? '', fascia: fascia.nome, colore: fascia.colore, raggio: raggioMagnitudo(p.mag), classeMag: classeMagnitudo(p.mag) },
   };
 }
 
@@ -157,7 +153,7 @@ const oraRoma = ts => new Date(ts).toLocaleTimeString(localeIntl(), { timeZone: 
 
 // Scheda dell'evento sul modello di quella dell'INGV: titolo e zona, data e ora, magnitudo e profondità, poi le due legende con la voce dell'evento in evidenza
 export function modelloEvento(p) {
-  const classe = classeLegenda(p.mag);
+  const classe = classeMagnitudo(p.mag);
   return {
     titolo: t('terremoti.ev.titolo'), luogo: p.luogo || t('terremoti.zonaSconosciuta'), ...(p.anno ? { badge: { testo: String(p.anno), colore: p.colore } } : {}),
     campi: [
@@ -167,7 +163,7 @@ export function modelloEvento(p) {
       { chiave: t('terremoti.ev.profondita'), valore: p.prof == null ? '' : `${num(p.prof, 0)} km` },
     ].filter(c => c.valore),
     legende: [
-      { titolo: t('terremoti.ev.legendaMagnitudo'), voci: CLASSI_LEGENDA.map((c, i) => ({ testo: t(`terremoti.ev.mag.${c.chiave}`), raggio: c.raggio, attiva: i === classe, badge: `M ${num(p.mag)}` })) },
+      { titolo: t('terremoti.ev.legendaMagnitudo'), voci: CLASSI_MAGNITUDO.map((c, i) => ({ testo: t(`terremoti.ev.mag.${c.chiave}`), raggio: c.raggio, attiva: i === classe, badge: `M ${num(p.mag)}` })) },
       { titolo: t('terremoti.ev.legendaTempo'), voci: FASCE.map(f => ({ testo: tl(f.nome), colore: f.colore, attiva: f.nome === p.fascia, badge: tl(f.nome) })) },
     ],
     autore: p.autore ? `${t('terremoti.ev.localizzazione')}: ${p.autore}` : '',
@@ -581,7 +577,7 @@ export function spazioTempo(g) {
 export function proprietaStorico(e, adesso = Date.now()) {
   if (!Number.isFinite(e?.lon) || !Number.isFinite(e?.lat)) return null;
   const fascia = fasciaEta(e.ts, adesso);
-  return { id: String(e.id), mag: e.mag, tipoMag: e.tipoMag ?? '', luogo: e.luogo ?? '', ts: e.ts, prof: e.prof ?? null, autore: e.autore ?? '', fascia: fascia.nome, colore: fascia.colore, raggio: raggioMagnitudo(e.mag), lon: e.lon, lat: e.lat };
+  return { id: String(e.id), mag: e.mag, tipoMag: e.tipoMag ?? '', luogo: e.luogo ?? '', ts: e.ts, prof: e.prof ?? null, autore: e.autore ?? '', fascia: fascia.nome, colore: fascia.colore, raggio: raggioMagnitudo(e.mag), classeMag: classeMagnitudo(e.mag), lon: e.lon, lat: e.lat };
 }
 
 // Etichetta breve sotto la barra e testo completo del suggerimento

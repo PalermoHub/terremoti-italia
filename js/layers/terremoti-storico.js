@@ -7,6 +7,8 @@ import { pannelloArchivio } from './terremoti-archivio.js';
 import { creaPopupTerremoti, simboliRighe } from './terremoti-popup.js';
 import { registraTooltipStrati } from '../core/tooltip.js';
 import { clicSu } from '../core/scheda-navigazione.js';
+import { espressioneClassiMagnitudo, espressioneColoreMagnitudo } from '../core/magnitudo.js';
+import { aggiornaLegendaInMappa, creaClassiFiltro, EVENTO_TEMA_MAGNITUDO, temaMagnitudoAttivo } from '../core/tema-magnitudo.js';
 
 // Terremoti storici: gli eventi di un anno qualsiasi dell'archivio (dal 1985), a parte dal tempo reale. Spento all'avvio; si accende dal pannello Strati.
 // Cerchio = un evento, grande quanto la magnitudo; un solo colore (viola), perché l'età non dice niente su un anno intero. Non si aggiorna da solo.
@@ -35,6 +37,8 @@ let annoRicerca = null; // anno scelto dalla ricerca: segue la magnitudo minima 
 let scelto = null; // evento scelto con le frecce della scheda
 let richiesta = 0; // una risposta in ritardo di una richiesta precedente si scarta
 const popup = creaPopupTerremoti();
+let titolo = null; // intestazione della legenda: cambia col tema magnitudo
+let classiFiltro = null; // classi di magnitudo della legenda, quando il tema è acceso
 
 const annoRoma = ts => Number(new Date(ts).toLocaleDateString('en-CA', { timeZone: 'Europe/Rome', year: 'numeric' }));
 const proprieta = f => ({ ...f.properties, lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] });
@@ -73,19 +77,49 @@ async function carica(periodo, magMin, profondita = null) {
   return { n: eventi.length, troncato: scarico.troncato };
 }
 
+// Le classi di magnitudo (tema magnitudo) filtrano cerchi ed etichette dell'anno senza ripassare dal server.
+function applicaFiltroClassi() {
+  const espr = espressioneClassiMagnitudo(filtro.classi);
+  for (const id of [PUNTI, ANNI, HIT]) if (mappa?.getLayer(id)) mappa.setFilter(id, espr);
+}
+
+// Tema magnitudo: i cerchi prendono il colore della classe (invece del viola dell'archivio) e la legenda mostra le
+// classi, che filtrano la mappa. Con il tema acceso la legenda sta in mappa se questo è il primo strato dei terremoti.
+function applicaTema() {
+  const tema = temaMagnitudoAttivo();
+  if (mappa?.getLayer(PUNTI)) {
+    const colore = tema ? espressioneColoreMagnitudo() : COLORE;
+    mappa.setPaintProperty(PUNTI, 'circle-color', colore);
+    mappa.setPaintProperty(PUNTI, 'circle-stroke-color', colore);
+  }
+  applicaFiltroClassi();
+  if (legenda) {
+    titolo.textContent = tema ? t('tema.magnitudo.titoloStrato', { nome: t('terremoti.arc.titoloStrato') }) : t('terremoti.arc.titoloStrato');
+    classiFiltro.nodo.hidden = !tema;
+    classiFiltro.sincronizza();
+  }
+  aggiornaLegendaInMappa();
+}
+
 function creaLegenda() {
   legenda = document.createElement('div');
   legenda.className = 'legenda legenda-monumenti lg-terremoti-storico';
   legenda.hidden = !acceso;
-  const titolo = document.createElement('strong');
+  titolo = document.createElement('strong');
   titolo.textContent = t('terremoti.arc.titoloStrato');
+  classiFiltro = creaClassiFiltro({ accese: () => filtro.classi, suCambio: insieme => { filtro.classi = insieme; document.dispatchEvent(new Event(EVENTO_FILTRO)); } });
+  const nota = document.createElement('p');
+  nota.className = 'legenda-magnitudo-nota';
+  nota.textContent = t('tema.magnitudo.filtro');
+  classiFiltro.nodo.append(nota);
   pannello = pannelloArchivio({ carica });
   const credito = document.createElement('p');
   credito.className = 'uffici-nota';
   const link = Object.assign(document.createElement('a'), { textContent: 'INGV', href: 'https://terremoti.ingv.it/', target: '_blank', rel: 'noopener' });
   credito.append(`${t('terremoti.dati')} `, link);
-  legenda.append(titolo, pannello.nodo, credito);
+  legenda.append(titolo, classiFiltro.nodo, pannello.nodo, credito);
   document.getElementById('legende').append(legenda);
+  applicaTema();
 }
 
 export default {
@@ -100,7 +134,16 @@ export default {
   },
   aggiungiLayer(map) {
     mappa = map;
-    document.addEventListener(EVENTO_FILTRO, () => { if (annoRicerca != null && acceso) carica(periodoAnno(annoRicerca), Math.max(filtro.magMin, 2), profonditaDaFiltro()); });
+    // Il filtro condiviso cambia anche per le classi di magnitudo, che si applicano in mappa senza ricaricare: si torna
+    // al server solo se cambiano la magnitudo minima o la profondità.
+    document.addEventListener(EVENTO_FILTRO, () => {
+      if (annoRicerca == null || !acceso) return;
+      const mag = Math.max(filtro.magMin, 2), prof = profonditaDaFiltro();
+      if (mag === magMostrata && JSON.stringify(prof) === JSON.stringify(profMostrata)) return;
+      carica(periodoAnno(annoRicerca), mag, prof);
+    });
+    document.addEventListener(EVENTO_FILTRO, applicaFiltroClassi);
+    document.addEventListener(EVENTO_TEMA_MAGNITUDO, applicaTema);
     // i più forti sopra gli altri; spento all'avvio (visibilità esplicita: i moduli del nucleo la leggono)
     map.addLayer({
       id: PUNTI, type: 'circle', source: SRC, layout: { visibility: 'none', 'circle-sort-key': ['get', 'mag'] },
@@ -126,6 +169,7 @@ export default {
     }]);
     map.on('mouseenter', PUNTI, () => { map.getCanvas().style.cursor = 'pointer'; });
     map.on('mouseleave', PUNTI, () => { map.getCanvas().style.cursor = ''; });
+    applicaTema(); // il tema può essere già acceso da una sessione precedente
   },
   scheda: {
     layers: [HIT],
@@ -177,8 +221,9 @@ export default {
     suCambio(attivo) {
       acceso = attivo;
       if (legenda) legenda.hidden = !attivo;
-      if (!attivo) { popup.chiudi(); return; }
-      if (primaVolta && pannello) { primaVolta = false; pannello.mostra(); } // la prima volta si vede subito l'anno scorso
+      if (!attivo) { popup.chiudi(); }
+      else if (primaVolta && pannello) { primaVolta = false; pannello.mostra(); } // la prima volta si vede subito l'anno scorso
+      aggiornaLegendaInMappa(); // con il tema acceso la legenda in mappa è una sola: può essere questa
     },
   }],
   pannello: creaLegenda,

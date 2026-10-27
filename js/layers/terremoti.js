@@ -8,6 +8,8 @@ import { EVENTO_FILTRO, menuFiltro, menuMagnitudo, menuProfondita, elencoAltri, 
 import { pannelloFiltro } from './terremoti-pannello.js';
 import { registraTooltipStrati } from '../core/tooltip.js';
 import { clicSu } from '../core/scheda-navigazione.js';
+import { coloreMagnitudo, espressioneColoreMagnitudo } from '../core/magnitudo.js';
+import { aggiornaLegendaInMappa, creaClassiFiltro, EVENTO_TEMA_MAGNITUDO, temaMagnitudoAttivo } from '../core/tema-magnitudo.js';
 import { creaPopupTerremoti, simboliRighe } from './terremoti-popup.js';
 
 // Terremoti in tempo reale in Italia: gli eventi degli ultimi 30 giorni dal nostro archivio (GET /terremoti), che il server tiene allineato al servizio FDSN dell'INGV.
@@ -32,6 +34,9 @@ const popup = creaPopupTerremoti();
 const fasceAccese = new Set(FASCE.map(f => f.colore)); // fasce d'età della legenda ancora in mappa
 let eventi = []; // proprietà degli eventi in mappa
 let pannelloPf = null;
+let titolo = null; // intestazione della legenda: cambia col tema magnitudo
+let bloccoFasce = null; // filtri per età (colore del cerchio): con il tema magnitudo non descrivono più la mappa
+let classiFiltro = null; // classi di magnitudo della legenda, quando il tema è acceso
 let inAreaScelta = null; // (proprietà) => bool, dalla ricerca per area; null = nessuna area che restringa
 const inArea = p => !inAreaScelta || inAreaScelta(p);
 
@@ -80,23 +85,58 @@ function applicaFiltro() {
   const dentro = inAreaScelta ? [['in', ['get', 'id'], ['literal', eventi.filter(inAreaScelta).map(p => p.id)]]] : [];
   const espr = ['all', espressioneFiltro(), ...(fasce ? [fasce] : []), ...dentro];
   for (const id of [PUNTI, HIT]) mappa?.getLayer(id) && mappa.setFilter(id, espr);
+  classiFiltro?.sincronizza(); // le caselle seguono il filtro anche quando cambia da fuori (istogramma, «Azzera», ricerca)
   scriviNota(true);
+}
+
+const emetti = () => document.dispatchEvent(new Event(EVENTO_FILTRO));
+
+// Tema magnitudo (overlay informativo): cerchi colorati per classe di magnitudo invece che per età e legenda con le
+// classi al posto delle fasce. La legenda passa in mappa, al posto di quella dell'età, e resta il filtro delle classi;
+// con il tema spento tornano i colori dell'età e la legenda se ne va dove la mette «Legende sulla mappa».
+function applicaTema() {
+  const tema = temaMagnitudoAttivo();
+  if (mappa?.getLayer(PUNTI)) {
+    const colore = tema ? espressioneColoreMagnitudo() : ['get', 'colore'];
+    mappa.setPaintProperty(PUNTI, 'circle-color', colore);
+    mappa.setPaintProperty(PUNTI, 'circle-stroke-color', colore);
+  }
+  if (!legenda) return;
+  titolo.textContent = tema ? t('tema.magnitudo.titoloStrato', { nome: tl('Terremoti in tempo reale') }) : tl('Terremoti in tempo reale');
+  bloccoFasce.hidden = tema;
+  classiFiltro.nodo.hidden = !tema;
+  if (tema) accendiTutteLeFasce(); // senza il comando in vista un filtro per età resterebbe invisibile
+  classiFiltro.sincronizza();
+  aggiornaLegendaInMappa();
+}
+
+// Con il tema magnitudo le fasce d'età non hanno più un comando in vista: tornano tutte accese.
+function accendiTutteLeFasce() {
+  if (fasceAccese.size >= FASCE.length) return;
+  fasceAccese.clear();
+  for (const f of FASCE) fasceAccese.add(f.colore);
+  for (const casella of bloccoFasce.querySelectorAll('input[type=checkbox]')) casella.checked = true;
+  applicaFiltro();
 }
 
 function creaLegenda() {
   legenda = el('div', 'legenda legenda-monumenti lg-terremoti');
   legenda.hidden = !acceso;
-  legenda.append(el('strong', null, 'Terremoti in tempo reale'));
+  titolo = el('strong', null, 'Terremoti in tempo reale');
+  bloccoFasce = el('div', 'legenda-fasce');
   for (const f of FASCE) {
     const chip = el('i', 'incendi-campione');
     chip.style.background = f.colore;
-    legenda.append(voceFiltro(chip, f.nome, acceso => {
+    bloccoFasce.append(voceFiltro(chip, f.nome, acceso => {
       acceso ? fasceAccese.add(f.colore) : fasceAccese.delete(f.colore);
       applicaFiltro();
     }));
   }
+  // tema magnitudo: al posto delle fasce d'età le classi di magnitudo, che filtrano la mappa come l'istogramma
+  classiFiltro = creaClassiFiltro({ accese: () => filtro.classi, suCambio: insieme => { filtro.classi = insieme; emetti(); } });
+  classiFiltro.nodo.append(el('p', 'legenda-magnitudo-nota', t('tema.magnitudo.filtro')));
   pannelloPf = pannelloFiltro(() => eventi);
-  legenda.append(pannelloPf.nodo, menuFiltro(), el('p', 'uffici-nota', t('terremoti.clicca')));
+  legenda.append(titolo, bloccoFasce, classiFiltro.nodo, pannelloPf.nodo, menuFiltro(), el('p', 'uffici-nota', t('terremoti.clicca')));
   nota = el('p', 'uffici-nota');
   const credito = el('p', 'uffici-nota');
   const link = el('a', null, 'INGV');
@@ -106,6 +146,7 @@ function creaLegenda() {
   credito.append(`${t('terremoti.dati')} `, link);
   legenda.append(nota, credito);
   document.getElementById('legende').append(legenda);
+  applicaTema();
 }
 
 // Eventi che si vedono in mappa: filtri di periodo e magnitudo, più le fasce d'età accese in legenda
@@ -177,7 +218,7 @@ export default {
       popup.apri(map, proprieta(f), e.point);
     });
     registraTooltipStrati(map, [{
-      layers: [PUNTI], icona: 'terremoto', sezione: 'Terremoti', colore: p => p.colore,
+      layers: [PUNTI], icona: 'terremoto', sezione: 'Terremoti', colore: p => (temaMagnitudoAttivo() ? coloreMagnitudo(p.mag) : p.colore),
       modello: p => {
         const m = modelloPopupTerremoto(p);
         const simbolo = simboliRighe(p);
@@ -187,6 +228,7 @@ export default {
     map.on('mouseenter', PUNTI, () => { map.getCanvas().style.cursor = 'pointer'; });
     map.on('mouseleave', PUNTI, () => { map.getCanvas().style.cursor = ''; });
     document.addEventListener(EVENTO_FILTRO, applicaFiltro);
+    document.addEventListener(EVENTO_TEMA_MAGNITUDO, applicaTema);
     document.addEventListener('visibilitychange', () => {
       if (acceso && !document.hidden && Date.now() - ultimo > INTERVALLO_MS) aggiorna();
       pianifica();
@@ -241,6 +283,7 @@ export default {
       if (attivo && Date.now() - ultimo > INTERVALLO_MS) aggiorna();
       if (!attivo) { popup.chiudi(); pannelloPf?.ferma(); }
       pianifica();
+      aggiornaLegendaInMappa(); // con il tema acceso la legenda in mappa è una sola: può essere un'altra
     },
   }],
   pannello: creaLegenda,

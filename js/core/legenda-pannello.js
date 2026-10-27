@@ -7,6 +7,16 @@ import { t } from './i18n.js';
 
 export const CHIAVE_SU_MAPPA = 'dt-legende-mappa';
 export const SOGLIA_VOCI = 6; // oltre questo numero di voci la legenda parte ripiegata
+export const EVENTO_LEGENDE = 'dt:legende'; // sul document: qualcuno ha cambiato dove sta una legenda, si riposiziona subito
+
+// Strati con la legenda in mappa anche con «Legende sulla mappa» spento: la legenda che non si può tenere nel pannello
+// (es. il tema magnitudo dei terremoti, che prende il posto di quella dell'età). Restituisce true se lo stato è cambiato.
+const forzate = new Set();
+export function forzaLegendaSuMappa(idStrato, forza) {
+  const aveva = forzate.has(idStrato);
+  if (forza) forzate.add(idStrato); else forzate.delete(idStrato);
+  return aveva !== Boolean(forza);
+}
 
 // Legende dichiarate dai moduli: [{ selettore, strati: [id…] }]. Lo strato può avere la sua legenda, altrimenti vale quella del modulo.
 export function raccogliLegende(moduli) {
@@ -62,7 +72,7 @@ export function collegaLegendePannello({ legende, contenitore, layer, occhio, st
     const casa = case_.get(nodo);
     const d = aperti.get(nodo);
     const primo = stratoDellaLegenda(voce.strati, acceso);
-    const strato = suMappa || stratoSuMappa(primo) ? null : primo;
+    const strato = suMappa || stratoSuMappa(primo) || forzate.has(primo) ? null : primo;
     const etichetta = strato && document.getElementById(`strato-${strato}`)?.closest('label');
     const riga = (etichetta?.parentElement?.classList.contains('rndt-gruppo-riga') ? etichetta.parentElement : etichetta)?.nextElementSibling; // nel gruppo RNDT la riga è un contenitore con il pulsante «Rimuovi»
     if (!riga) { // sulla mappa: il nodo torna dov'era, fuori dall'involucro
@@ -114,6 +124,7 @@ export function collegaLegendePannello({ legende, contenitore, layer, occhio, st
   let atteso = false;
   const rinvia = () => { if (atteso) return; atteso = true; queueMicrotask(() => { atteso = false; aggiorna(); }); };
   document.addEventListener('change', rinvia);
+  document.addEventListener(EVENTO_LEGENDE, rinvia);
   const osservatore = new MutationObserver(rinvia);
   osservatore.observe(contenitore, { childList: true, subtree: true, attributes: true, attributeFilter: ['hidden'] });
   osservatore.observe(layer ?? document.body, { subtree: true, attributes: true, attributeFilter: ['hidden'] });
