@@ -2987,7 +2987,7 @@
   "home.slide.traffico.titolo": "Traffic flow",
   "evidenza.terremoto": "Earthquake",
   "terremoti.periodo": "Period",
-  "terremoti.magMin": "Minimum magnitude",
+  "terremoti.magMin": "Magnitude",
   "terremoti.ultime24": "Last 24 hours",
   "terremoti.ultimiGiorni": "Last {n} days",
   "terremoti.altri.uno": "{n} other earthquake",

@@ -2655,3 +2655,7 @@ details.scheda-sez-evento .scheda-sez-testo { display: contents; }
 #cerca-pannello .terremoti-filtro { margin-top: 8px; }
 #cerca-pannello label { display: block; font-size: var(--fs-xs); color: var(--text-muted); }
 #cerca-pannello select { width: 100%; margin: 2px 0 8px; padding: 6px; }
+
+/* Legenda terremoti: `.legenda div` impone il flex, il filtro resta a tre colonne uguali e l'etichetta non sborda in quella accanto */
+.legenda .terremoti-filtri { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: 8px; }
+.legenda .terremoti-filtro > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
