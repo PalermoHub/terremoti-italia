@@ -3,7 +3,7 @@
 // Home, ricerca, zoom su una zona) è il centro della parte rimasta visibile, e si aggiorna quando un pannello si apre o si chiude.
 const ZERO = { top: 0, right: 0, bottom: 0, left: 0 };
 const SINISTRA = ['#barra-strati', '#pannello'];
-const DESTRA = ['#rail-pannelli', '#scheda', '#rndt-pannello', '#geoimage-pannello', '#tema-ui-pannello', '#chatbot-pannello'];
+const DESTRA = ['#rail-pannelli', '#scheda', '#rndt-pannello', '#geoimage-pannello', '#tema-ui-pannello', '#chatbot-pannello', '#storico-pannello'];
 const MOBILE = '(max-width: 720px)';
 
 const rettangolo = (doc, sel) => {

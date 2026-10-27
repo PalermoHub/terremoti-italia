@@ -98,7 +98,7 @@ function mostra(contenitore, lngLat, dati, chiusura, adattaVista, pref, tabInizi
   // visibile solo in stampa, sempre, anche se la nota legale è nascosta dalle preferenze
   const disclaimer = el('p', 'scheda-disclaimer', DISCLAIMER_STAMPA);
   // Schede (tab) per argomento: l'ordine è la gerarchia delle informazioni, dal luogo cliccato ai dati di contesto.
-  const SCHEDE = [['luogo', tr('scheda.tab.luogo')], ['storico', tr('scheda.tab.storico')], ['strumenti', tr('scheda.tab.strumenti')], ['mercato', tr('scheda.tab.mercato')], ['popolazione', tr('scheda.tab.popolazione')], ['terreno', tr('scheda.tab.terreno')], ['servizi', tr('scheda.tab.servizi')], ['pnrr', tr('scheda.tab.pnrr')], ['opere', tr('scheda.tab.opere')], ['piano', tr('scheda.tab.piano')], ['rndt', tr('scheda.tab.rndt')]];
+  const SCHEDE = [['luogo', tr('scheda.tab.luogo')], ['strumenti', tr('scheda.tab.strumenti')], ['mercato', tr('scheda.tab.mercato')], ['popolazione', tr('scheda.tab.popolazione')], ['terreno', tr('scheda.tab.terreno')], ['servizi', tr('scheda.tab.servizi')], ['pnrr', tr('scheda.tab.pnrr')], ['opere', tr('scheda.tab.opere')], ['piano', tr('scheda.tab.piano')], ['rndt', tr('scheda.tab.rndt')]];
   const tabDi = tabScheda;
   const tabs = el('div', 'scheda-tabs');
   const prev = el('button', 'scheda-tabs-freccia', '\u2039');
@@ -162,6 +162,7 @@ function mostra(contenitore, lngLat, dati, chiusura, adattaVista, pref, tabInizi
     }
     corpo.scrollTop = 0;
   };
+  let soloStorico = false; // il clic ha trovato solo eventi dell'archivio: la scheda resta chiusa e si apre il pannello Storico
   const aggiorna = () => {
     const visibili = applicaPreferenze(corrente, pref.leggi());
     corpo.replaceChildren(...visibili.sezioni.map(disegnaSezione));
@@ -209,6 +210,11 @@ function mostra(contenitore, lngLat, dati, chiusura, adattaVista, pref, tabInizi
     fissa.hidden = !fisse.length;
     for (const sz of fisse) sz.hidden = false;
     sezioni.splice(0, sezioni.length, ...sezioni.filter(sz => !fisse.includes(sz)));
+    // le sezioni dello storico vanno nel loro pannello (bottone nel rail), non tra le linguette della scheda
+    const storiche = sezioni.filter(sz => sz.dataset.tab === 'storico');
+    sezioni.splice(0, sezioni.length, ...sezioni.filter(sz => !storiche.includes(sz)));
+    soloStorico = !sezioni.length && storiche.length > 0;
+    document.dispatchEvent(new CustomEvent('scheda:storico', { detail: { sezioni: storiche } }));
     const presenti = SCHEDE.filter(([id]) => sezioni.some(sz => sz.dataset.tab === id));
     indice.replaceChildren(...presenti.map(([id, nome]) => {
       const b = el('button', null, nome);
@@ -220,7 +226,7 @@ function mostra(contenitore, lngLat, dati, chiusura, adattaVista, pref, tabInizi
       b.addEventListener('click', () => mostraTab(id));
       return b;
     }));
-    const soloUno = presenti.length < 2 && presenti[0]?.[0] !== 'storico'; // lo storico ha sempre la sua linguetta, anche da solo
+    const soloUno = presenti.length < 2;
     tabs.hidden = soloUno;
     if (soloUno) sezioni.forEach(sz => { sz.hidden = false; });
     else mostraTab(presenti.some(([id]) => id === attiva) ? attiva : presenti[0][0]);
@@ -278,7 +284,7 @@ function mostra(contenitore, lngLat, dati, chiusura, adattaVista, pref, tabInizi
   // annuncio breve per i lettori di schermo: la scheda intera non è una regione live
   contenitore.replaceChildren(maniglia, testata, corpo, piede, disclaimer, annuncio);
   contenitore.dataset.punto = `${lngLat.lng},${lngLat.lat}`; // per lo stralcio di mappa in stampa
-  contenitore.hidden = false;
+  contenitore.hidden = soloStorico;
   const selezionato = indice.querySelector('[aria-selected="true"]'); // a scheda ancora scollegata le linguette non hanno posizione: ora la linguetta attiva si porta in vista
   if (selezionato) indice.scrollLeft = Math.max(0, selezionato.offsetLeft - 24);
   frecce();

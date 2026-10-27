@@ -372,7 +372,7 @@ export function costruisciPannello(map, moduli, contenitore, barra) {
   // sotto STRETTO, quando a destra si apre un pannello si ripiega il gruppo a sinistra
   new MutationObserver(() => {
     if (window.innerWidth >= STRETTO) return;
-    const aperto = ['scheda', 'rndt-pannello', 'geoimage-pannello', 'tema-ui-pannello', 'chatbot-pannello'].some(id => { const p = document.getElementById(id); return p && !p.hidden && !p.classList.contains('collassato'); });
+    const aperto = ['scheda', 'rndt-pannello', 'geoimage-pannello', 'tema-ui-pannello', 'chatbot-pannello', 'storico-pannello'].some(id => { const p = document.getElementById(id); return p && !p.hidden && !p.classList.contains('collassato'); });
     if (aperto) chiudiGruppi();
   }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['hidden', 'class'] });
 }

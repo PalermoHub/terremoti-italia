@@ -542,15 +542,15 @@ dialog li { margin: 4px 0; }
    Scheda del luogo: pannello laterale a tutta altezza, una colonna,
    testata fissa e corpo scorrevole (su mobile: foglio dal basso)
    ========================================================================== */
-#scheda {
+#scheda, #storico-pannello {
   position: fixed; z-index: var(--z-mappa-ui); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm);
   top: auto; bottom: 120px; right: 8px; left: 8px; width: auto; max-height: 45%; overflow: hidden; padding: 0;
   display: flex; flex-direction: column; touch-action: pan-y;
 }
 /* mobile: a tutto schermo (pulsante nella testata) per leggere la scheda con comodo */
 #scheda.scheda-piena { top: 0; bottom: 0; left: 0; right: 0; max-height: none; border-radius: 0; border-width: 0; z-index: var(--z-foglio); }
-#scheda[hidden] { display: none; }
-#scheda h2 { font-size: var(--fs-md); margin: 0; }
+#scheda[hidden], #storico-pannello[hidden] { display: none; }
+#scheda h2, #storico-pannello h2 { font-size: var(--fs-md); margin: 0; }
 .scheda-testata { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
 .scheda-azioni { flex: none; display: flex; gap: 2px; }
 .scheda-x, .scheda-espandi, .scheda-personalizza { flex: none; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--text-muted); }
@@ -559,7 +559,7 @@ dialog li { margin: 4px 0; }
 .scheda-contesto { margin: 6px 0 4px; padding: 6px 8px; background: var(--avviso); border-radius: var(--r-sm); font-size: var(--fs-xs); font-weight: 600; }
 
 .scheda-intestazione { flex: none; padding: 14px 18px 10px; background: var(--surface-alt); border-bottom: 1px solid var(--border); }
-#scheda .scheda-intestazione h2 { font-size: var(--fs-lg); font-weight: 700; letter-spacing: -.01em; overflow-wrap: anywhere; }
+#scheda .scheda-intestazione h2, #storico-pannello .scheda-intestazione h2 { font-size: var(--fs-lg); font-weight: 700; letter-spacing: -.01em; overflow-wrap: anywhere; }
 .scheda-intestazione .scheda-contesto { margin: 10px 0 0; background: var(--avviso-scheda); color: var(--avviso-scheda-ink); border-left: 3px solid var(--accent-strong); border-radius: var(--r-xs) var(--r-sm) var(--r-sm) var(--r-xs); font-weight: 500; }
 .scheda-pref { margin-top: 10px; padding: 10px 12px; max-height: 40vh; overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); }
 .scheda-pref[hidden] { display: none; }
@@ -646,7 +646,7 @@ dialog li { margin: 4px 0; }
 .scheda-acc > summary:hover, .scheda-tipo > summary:hover, details.scheda-sez > summary:hover { background: var(--accent-soft); }
 
 @media (min-width: 721px) {
-  #scheda {
+  #scheda, #storico-pannello {
     top: 0; right: var(--rail-w); bottom: 0; left: auto; width: var(--scheda-w); max-height: none; padding: 0; overflow: hidden;
     display: flex; flex-direction: column; border-width: 0 0 0 1px; border-radius: 0;
     box-shadow: var(--ombra-pannello-dx);
@@ -655,7 +655,7 @@ dialog li { margin: 4px 0; }
   .scheda-espandi { display: none; }
   /* con la scheda aperta, barra strumenti, ricerca e fogli si centrano sulla parte di mappa rimasta visibile */
   body { --scheda-l: var(--rail-w); }
-  body:has(#scheda:not([hidden]):not(.collassato), #rndt-pannello:not([hidden]):not(.collassato), #geoimage-pannello:not([hidden]):not(.collassato), #tema-ui-pannello:not([hidden]):not(.collassato), #chatbot-pannello:not([hidden]):not(.collassato)) { --scheda-l: calc(var(--scheda-w) + var(--rail-w)); }
+  body:has(#scheda:not([hidden]):not(.collassato), #rndt-pannello:not([hidden]):not(.collassato), #geoimage-pannello:not([hidden]):not(.collassato), #tema-ui-pannello:not([hidden]):not(.collassato), #chatbot-pannello:not([hidden]):not(.collassato), #storico-pannello:not([hidden]):not(.collassato)) { --scheda-l: calc(var(--scheda-w) + var(--rail-w)); }
   #barra-strumenti, #area-ricerca, #pannello { left: calc((100% - var(--scheda-l)) / 2); transition: left var(--t-media) ease; }
   /* la barra non esce mai dalla mappa visibile: se non ci sta, scorre di lato */
   #barra-strumenti { max-width: calc(100% - var(--scheda-l) - 16px); overflow-x: auto; scrollbar-width: none; }
@@ -1203,7 +1203,7 @@ details.scheda-sez[open] > summary > .scheda-riassunto { display: none; }
 #rndt-pannello .ordt-detail-title { font-size: var(--fs-md); }
 
 /* barra verticale dei pannelli a destra: tab con testo ruotato, pannello attivo evidenziato */
-#scheda.collassato, #rndt-pannello.collassato, #geoimage-pannello.collassato, #tema-ui-pannello.collassato, #chatbot-pannello.collassato { display: none; }
+#scheda.collassato, #rndt-pannello.collassato, #geoimage-pannello.collassato, #tema-ui-pannello.collassato, #chatbot-pannello.collassato, #storico-pannello.collassato { display: none; }
 #rail-pannelli { display: none; }
 @media (min-width: 721px) {
   #rail-pannelli {
@@ -1710,7 +1710,7 @@ body:has(#crediti[open]) :is(.invito-clic, .invito-mai) { display: none; }
 @media (min-width: 721px) { #barra-gruppi .btn-pannello-mobile { display: none; } }
 @media (max-width: 720px) { body.strati-aperti #barra-gruppi .btn-pannello-mobile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; } }
 /* l'invito all'avvio non sta sopra un pannello aperto */
-body:has(#rndt-pannello:not([hidden]):not(.collassato), #geoimage-pannello:not([hidden]):not(.collassato), #tema-ui-pannello:not([hidden]):not(.collassato), #chatbot-pannello:not([hidden]):not(.collassato)) .invito-clic { display: none; }
+body:has(#rndt-pannello:not([hidden]):not(.collassato), #geoimage-pannello:not([hidden]):not(.collassato), #tema-ui-pannello:not([hidden]):not(.collassato), #chatbot-pannello:not([hidden]):not(.collassato), #storico-pannello:not([hidden]):not(.collassato)) .invito-clic { display: none; }
 
 /* Visore delle immagini della guida */
 .guida-figura img, img.dt-fig { cursor: zoom-in; }
@@ -1975,10 +1975,10 @@ body:has(#tabella-dati:not([hidden])) #area-ricerca { bottom: calc(40px + env(sa
 @media (max-width: 720px) {
   #tabella-dati { left: 0; right: 0; bottom: calc(var(--tab-h) + var(--footer-h)); max-height: min(60dvh, calc(100dvh - 64px - var(--tab-h) - var(--footer-h) - 8px)); }
   body:has(#tabella-dati:not([hidden])) #area-ricerca { bottom: auto; }
-  body:has(#tabella-dati:not([hidden])):not(.strati-aperti):not(.info-aperto):not(:has(#scheda:not([hidden]):not(.collassato), #rndt-pannello:not([hidden]):not(.collassato), #geoimage-pannello:not([hidden]):not(.collassato), #tema-ui-pannello:not([hidden]):not(.collassato), #chatbot-pannello:not([hidden]):not(.collassato))) :is(.maplibregl-ctrl-bottom-right, .maplibregl-ctrl-bottom-left) { bottom: calc(var(--tabella-h) + var(--tab-h)); }
+  body:has(#tabella-dati:not([hidden])):not(.strati-aperti):not(.info-aperto):not(:has(#scheda:not([hidden]):not(.collassato), #rndt-pannello:not([hidden]):not(.collassato), #geoimage-pannello:not([hidden]):not(.collassato), #tema-ui-pannello:not([hidden]):not(.collassato), #chatbot-pannello:not([hidden]):not(.collassato), #storico-pannello:not([hidden]):not(.collassato))) :is(.maplibregl-ctrl-bottom-right, .maplibregl-ctrl-bottom-left) { bottom: calc(var(--tabella-h) + var(--tab-h)); }
   body.strati-aperti #tabella-dati, body.info-aperto #tabella-dati,
-  body:has(#scheda:not([hidden]):not(.collassato), #rndt-pannello:not([hidden]):not(.collassato), #geoimage-pannello:not([hidden]):not(.collassato), #tema-ui-pannello:not([hidden]):not(.collassato), #chatbot-pannello:not([hidden]):not(.collassato)) #tabella-dati { display: none; }
-  body.strati-aperti, body.info-aperto, body:has(#scheda:not([hidden]):not(.collassato), #rndt-pannello:not([hidden]):not(.collassato), #geoimage-pannello:not([hidden]):not(.collassato), #tema-ui-pannello:not([hidden]):not(.collassato), #chatbot-pannello:not([hidden]):not(.collassato)) { --tabella-h: 0px !important; }
+  body:has(#scheda:not([hidden]):not(.collassato), #rndt-pannello:not([hidden]):not(.collassato), #geoimage-pannello:not([hidden]):not(.collassato), #tema-ui-pannello:not([hidden]):not(.collassato), #chatbot-pannello:not([hidden]):not(.collassato), #storico-pannello:not([hidden]):not(.collassato)) #tabella-dati { display: none; }
+  body.strati-aperti, body.info-aperto, body:has(#scheda:not([hidden]):not(.collassato), #rndt-pannello:not([hidden]):not(.collassato), #geoimage-pannello:not([hidden]):not(.collassato), #tema-ui-pannello:not([hidden]):not(.collassato), #chatbot-pannello:not([hidden]):not(.collassato), #storico-pannello:not([hidden]):not(.collassato)) { --tabella-h: 0px !important; }
   .tabella-barra { flex-wrap: wrap; overflow-x: visible; }
   .tabella-barra > .tabella-filtro { flex: 1 1 170px; width: auto; }
   .tabella-barra > .tabella-esporti { margin-left: 0; }
@@ -2593,8 +2593,11 @@ details.scheda-sez-evento .scheda-sez-testo { display: contents; }
 .terremoti-archivio-istogramma > div { flex: 1 1 0; display: flex; flex-direction: column; gap: 2px; }
 .terremoti-archivio-barre { display: flex; align-items: flex-end; gap: 2px; height: 56px; }
 .terremoti-archivio-barre i { flex: 1 1 0; display: block; min-width: 0; border-radius: 2px 2px 0 0; }
-.terremoti-archivio-a { background: var(--text-muted); }
-.terremoti-archivio-b { background: var(--accent); }
+.terremoti-archivio-a { background: #0ea5e9; }
+.terremoti-archivio-b { background: #f97316; }
+.terremoti-confronto-chiave { display: flex; gap: 12px; font-size: var(--fs-xs); }
+.terremoti-confronto-chiave > span { display: inline-flex; align-items: center; gap: 5px; }
+.terremoti-confronto-chiave i { width: 10px; height: 10px; border-radius: 50%; display: block; }
 .terremoti-archivio .terremoti-archivio-larga { grid-column: 1 / -1; }
 .terremoti-archivio select { width: 100%; min-width: 0; padding-inline: 4px; }
 .legenda .terremoti-archivio .terremoti-filtri { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }

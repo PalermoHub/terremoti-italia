@@ -4,6 +4,7 @@ import { collegaScheda } from './core/scheda.js';
 import { collegaPaddingMappa } from './core/padding-mappa.js';
 import { collegaTooltipScheda } from './core/tooltip-scheda.js';
 import { collegaRail } from './core/rail.js';
+import { collegaStorico } from './core/scheda-storico.js';
 import { collegaStrumenti } from './core/strumenti.js';
 import { collegaStampa } from './core/stampa.js';
 import { creaDifferiti } from './core/differiti.js';
@@ -16,6 +17,7 @@ import eventi from './layers/eventi.js';
 import allerte from './layers/allerte.js';
 import terremoti from './layers/terremoti.js';
 import terremotiStorico from './layers/terremoti-storico.js';
+import terremotiConfronto from './layers/terremoti-confronto.js';
 import base from './layers/base.js';
 
 // telefono: barra di tab e foglio degli strati; la legenda si può ridurre
@@ -35,7 +37,7 @@ riduciLegenda.addEventListener('click', () => {
 });
 
 // ordine = ordine di sovrapposizione dei layer (il primo sta sotto); «eventi» precede i moduli che mettono i loro strati nel suo gruppo
-const MODULI = [base, eventi, allerte, terremoti, terremotiStorico];
+const MODULI = [base, eventi, allerte, terremoti, terremotiStorico, terremotiConfronto];
 traduciModuli(MODULI);
 
 const map = creaMappa('mappa', () => segnala(t('app.basemap.errore')));
@@ -62,7 +64,11 @@ map.once('style.load', async () => {
   costruisciPannello(map, MODULI, document.getElementById('pannello'), document.getElementById('barra-gruppi'));
   collegaTooltipScheda(map, MODULI);
   collegaScheda(map, MODULI, document.getElementById('scheda'), {});
-  collegaRail(document.getElementById('rail-pannelli'), [{ id: 'scheda', etichetta: t('app.rail.scheda'), pannello: document.getElementById('scheda') }]);
+  collegaStorico(document.getElementById('storico-pannello'));
+  collegaRail(document.getElementById('rail-pannelli'), [
+    { id: 'scheda', etichetta: t('app.rail.scheda'), pannello: document.getElementById('scheda') },
+    { id: 'storico', etichetta: t('scheda.tab.storico'), pannello: document.getElementById('storico-pannello') },
+  ]);
   document.addEventListener('scheda:mostra', () => document.getElementById('scheda').hidden = false);
 
   // coordinate sotto il puntatore e zoom nel piè di pagina

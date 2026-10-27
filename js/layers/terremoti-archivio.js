@@ -30,16 +30,13 @@ function scelta(etichetta, valori, predefinito, testoValore = String) {
 
 const numero = (n, d = 0) => n.toLocaleString(localeIntl(), { minimumFractionDigits: d, maximumFractionDigits: d });
 
-// `caricaPeriodo(periodo, magMin)` e `tornaAlTempoReale()` arrivano // `carica(periodo, magMin)` mostra l'anno in mappa e risponde { n, troncato }; restituisce { nodo, annoMappa, magMappa }
-export function pannelloArchivio({ carica, annoIniziale, magIniziale = MAG_PREDEFINITA }) {
-  const nodo = el('div', 'terremoti-pannello terremoti-archivio');
-  const adesso = new Date().getUTCFullYear();
-  const anni = Array.from({ length: adesso - ANNO_INIZIO + 1 }, (_, i) => adesso - i);
+// Stato di un pannello: bottoni occupati durante lo scarico e, se l'archivio non risponde, errore con «Riprova»
+function stato() {
   const messaggio = el('p', 'uffici-nota');
   messaggio.setAttribute('role', 'status');
-  const occupato = vero => nodo.querySelectorAll('button').forEach(b => { b.disabled = vero; });
-  const eseguiGuarda = async (azione, riprova) => {
-    occupato(true);
+  const esegui = async (nodo, azione, riprova) => {
+    const bottoni = nodo.querySelectorAll('button');
+    bottoni.forEach(b => { b.disabled = true; });
     messaggio.textContent = '';
     try { await azione(); } catch {
       messaggio.textContent = t('terremoti.arc.errore');
@@ -47,25 +44,36 @@ export function pannelloArchivio({ carica, annoIniziale, magIniziale = MAG_PREDE
       b.type = 'button';
       b.addEventListener('click', riprova);
       messaggio.append(' ', b);
-    } finally { occupato(false); }
+    } finally { nodo.querySelectorAll('button').forEach(x => { x.disabled = false; }); }
   };
+  return { messaggio, esegui };
+}
 
-  // --- mostra in mappa
+const anniArchivio = () => {
+  const adesso = new Date().getUTCFullYear();
+  return { adesso, anni: Array.from({ length: adesso - ANNO_INIZIO + 1 }, (_, i) => adesso - i) };
+};
+const giorno = ts => new Date(ts).toLocaleDateString(localeIntl(), { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+
+// Strato «Terremoti storici»: `carica(periodo, magMin)` mostra l'anno in mappa e risponde { n, troncato } (null se superata da una richiesta più recente)
+export function pannelloArchivio({ carica, annoIniziale, magIniziale = MAG_PREDEFINITA }) {
+  const nodo = el('div', 'terremoti-pannello terremoti-archivio');
+  const { adesso, anni } = anniArchivio();
+  const { messaggio, esegui } = stato();
   const annoMappa = scelta(t('terremoti.arc.anno'), anni, annoIniziale ?? adesso - 1);
   const magMappa = scelta(t('terremoti.arc.magMin'), MAGNITUDO_ARCHIVIO, magIniziale, m => `≥ ${m}`);
   const mostra = el('button', 'terremoti-archivio-btn', t('terremoti.arc.mostraBtn'));
   mostra.type = 'button';
-  const stato = el('p', 'uffici-nota');
-  const giorno = ts => new Date(ts).toLocaleDateString(localeIntl(), { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+  const nota = el('p', 'uffici-nota');
   const vaiMostra = () => {
     const p = periodoAnno(annoMappa.valore());
     const errore = periodoValido(p);
     if (errore) { messaggio.textContent = t(errore); return; }
     const mag = magMappa.valore();
-    eseguiGuarda(async () => {
+    esegui(nodo, async () => {
       const r = await carica(p, mag);
       if (!r) return;
-      stato.textContent = r.n
+      nota.textContent = r.n
         ? [t('terremoti.arc.nota', { n: r.n, da: giorno(p.da), a: giorno(p.a), mag }), r.troncato ? t('terremoti.troncato', { n: r.n }) : ''].filter(Boolean).join(' ')
         : t('terremoti.arc.nessunEvento');
     }, vaiMostra);
@@ -73,29 +81,39 @@ export function pannelloArchivio({ carica, annoIniziale, magIniziale = MAG_PREDE
   mostra.addEventListener('click', vaiMostra);
   const filtri = el('div', 'terremoti-filtri');
   filtri.append(annoMappa.nodo, magMappa.nodo);
+  nodo.append(el('strong', null, t('terremoti.arc.mostra')), filtri, mostra, nota, messaggio, el('p', 'uffici-nota', t('terremoti.arc.utc')));
+  return { nodo, mostra: vaiMostra };
+}
 
-  // --- confronto
+// Strato «Confronto»: `carica(periodoA, periodoB, magMin)` mette in mappa gli eventi dei due anni e risponde { a, b } con { n, troncato } (null se superata)
+export function pannelloConfronto({ carica }) {
+  const nodo = el('div', 'terremoti-pannello terremoti-archivio');
+  const { adesso, anni } = anniArchivio();
+  const { messaggio, esegui } = stato();
   const annoA = scelta(t('terremoti.arc.periodoA'), anni, adesso - 2);
   const annoB = scelta(t('terremoti.arc.periodoB'), anni, adesso - 1);
-  const magConfronto = scelta(t('terremoti.arc.magMin'), MAGNITUDO_ARCHIVIO, MAG_PREDEFINITA, m => `≥ ${m}`);
+  const mag = scelta(t('terremoti.arc.magMin'), MAGNITUDO_ARCHIVIO, MAG_PREDEFINITA, m => `≥ ${m}`);
+  mag.nodo.classList.add('terremoti-archivio-larga');
   const confronta = el('button', 'terremoti-archivio-btn', t('terremoti.arc.confronta'));
   confronta.type = 'button';
+  const nota = el('p', 'uffici-nota');
   const esito = el('div', 'terremoti-archivio-esito');
   const vaiConfronta = () => {
     const pa = periodoAnno(annoA.valore()), pb = periodoAnno(annoB.valore());
-    const mag = magConfronto.valore();
-    eseguiGuarda(async () => {
-      const [ra, rb] = await Promise.all([scaricaRiepilogo(pa, mag), scaricaRiepilogo(pb, mag)]);
+    const m = mag.valore();
+    esegui(nodo, async () => {
+      // conteggi dal server (esatti anche oltre il tetto della mappa) ed eventi sulla mappa, insieme
+      const [ra, rb, mappa] = await Promise.all([scaricaRiepilogo(pa, m), scaricaRiepilogo(pb, m), carica(pa, pb, m)]);
+      if (!mappa) return;
       esito.replaceChildren(...disegnaConfronto(confrontaPeriodi(ra, rb, giorniPeriodo(pa), giorniPeriodo(pb)), annoA.valore(), annoB.valore(), adesso));
+      nota.textContent = mappa.a.troncato || mappa.b.troncato ? t('terremoti.troncato', { n: Math.max(mappa.a.n, mappa.b.n) }) : '';
     }, vaiConfronta);
   };
   confronta.addEventListener('click', vaiConfronta);
-  const filtriConfronto = el('div', 'terremoti-filtri');
-  magConfronto.nodo.classList.add('terremoti-archivio-larga');
-  filtriConfronto.append(annoA.nodo, annoB.nodo, magConfronto.nodo);
-
-  nodo.append(el('strong', null, t('terremoti.arc.mostra')), filtri, mostra, stato, el('strong', null, t('terremoti.arc.confrontaTitolo')), filtriConfronto, confronta, messaggio, esito, el('p', 'uffici-nota', t('terremoti.arc.utc')));
-  return { nodo, mostra: vaiMostra };
+  const filtri = el('div', 'terremoti-filtri');
+  filtri.append(annoA.nodo, annoB.nodo, mag.nodo);
+  nodo.append(el('strong', null, t('terremoti.arc.confrontaTitolo')), filtri, confronta, nota, messaggio, esito, el('p', 'uffici-nota', t('terremoti.arc.utc')));
+  return { nodo, confronta: vaiConfronta };
 }
 
 // Differenza con segno; un valore che arrotondato è zero si scrive «0», mai «-0.0»
