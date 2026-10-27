@@ -40,9 +40,15 @@ export function collegaStorico(pannello) {
   const chiudi = () => { pannello.hidden = true; };
   x.addEventListener('click', chiudi);
   document.addEventListener('scheda:chiusa', chiudi);
+  let conSezioni = false; // il pannello mostra un evento dell'archivio (non le istruzioni)
   document.addEventListener('scheda:storico', e => {
     const sezioni = e.detail.sezioni;
-    if (!sezioni.length) return; // una scheda normale non deve svuotare il pannello né chiuderlo
+    if (!sezioni.length) {
+      // una scheda normale non svuota le istruzioni appena aperte; ma se c'era un evento storico, non lo lascia appeso
+      if (conSezioni) { conSezioni = false; corpo.replaceChildren(vuoto); pannello.hidden = true; }
+      return;
+    }
+    conSezioni = true;
     for (const sz of sezioni) sz.hidden = false;
     corpo.replaceChildren(...sezioni);
     corpo.scrollTop = 0;
