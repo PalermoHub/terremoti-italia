@@ -6,6 +6,7 @@ import { collegaTooltipScheda } from './core/tooltip-scheda.js';
 import { collegaRail } from './core/rail.js';
 import { collegaStorico } from './core/scheda-storico.js';
 import { collegaStrumenti } from './core/strumenti.js';
+import { collegaTabellaDati } from './core/tabella-dati.js';
 import { collegaStampa } from './core/stampa.js';
 import { collegaRicerca } from './core/ricerca.js';
 import { creaDifferiti } from './core/differiti.js';
@@ -100,6 +101,11 @@ map.once('style.load', async () => {
 
   collegaRicerca(map, { terremoti, storico: terremotiStorico, comuni });
   collegaStrumenti(map);
+  // Tabella dei dati: righe degli strati accesi, esportabili in CSV e JSON
+  collegaTabellaDati({
+    bottone: document.getElementById('btn-tabella'),
+    fornitori: [terremoti.tabella, terremotiStorico.tabella, terremotiConfronto.tabella].filter(Boolean),
+  });
   collegaStampa(map, document.getElementById('btn-stampa'), document.getElementById('stampa-menu'));
   window.dt.pronto = true;
 });

@@ -1,10 +1,11 @@
 import { tl, t } from '../core/i18n.js';
 import { AREA_EVENTI } from '../core/config.js';
-import { scaricaEventi, scaricaEventiTutti, eventoDaIngv, modelloPopupTerremoto, voceTerremoto, voceSerie, voceAltri, filtro, profonditaDaFiltro } from './scheda-terremoti.js';
+import { scaricaEventi, scaricaEventiTutti, eventoDaIngv, modelloPopupTerremoto, voceTerremoto, voceSerie, voceAltri, filtro, profonditaDaFiltro, colonneTabellaTerremoti } from './scheda-terremoti.js';
 import { EVENTO_FILTRO, barraEventi, graficoSerie, elencoAltri } from './scheda-terremoti-dom.js';
 import { ANNO_INIZIO, periodoAnno } from './scheda-archivio.js';
 import { pannelloArchivio } from './terremoti-archivio.js';
 import { creaPopupTerremoti, simboliRighe } from './terremoti-popup.js';
+import { EVENTO_TABELLA } from '../core/tabella-dati.js';
 import { registraTooltipStrati } from '../core/tooltip.js';
 import { clicSu } from '../core/scheda-navigazione.js';
 import { espressioneClassiMagnitudo, espressioneColoreMagnitudo } from '../core/magnitudo.js';
@@ -55,6 +56,7 @@ function mostraEventi() {
   const visibili = inAreaScelta ? features.filter(f => inAreaScelta(proprieta(f))) : features;
   eventi = visibili.map(proprieta);
   mappa?.getSource(SRC)?.setData({ type: 'FeatureCollection', features: visibili });
+  document.dispatchEvent(new Event(EVENTO_TABELLA));
 }
 
 // Mostra in mappa gli eventi del periodo con magnitudo ≥ magMin; risponde { n, troncato }, o null se nel frattempo è partita un'altra richiesta
@@ -81,6 +83,7 @@ async function carica(periodo, magMin, profondita = null) {
 function applicaFiltroClassi() {
   const espr = espressioneClassiMagnitudo(filtro.classi);
   for (const id of [PUNTI, ANNI, HIT]) if (mappa?.getLayer(id)) mappa.setFilter(id, espr);
+  document.dispatchEvent(new Event(EVENTO_TABELLA));
 }
 
 // Tema magnitudo: i cerchi prendono il colore della classe (invece del viola dell'archivio) e la legenda mostra le
@@ -212,6 +215,7 @@ export default {
       periodoMostrato = null;
       popup.chiudi();
       mappa?.getSource(SRC)?.setData(VUOTO);
+      document.dispatchEvent(new Event(EVENTO_TABELLA));
       return null;
     }
     return carica(periodoAnno(anno), Math.max(magMin, 2), profondita);
@@ -224,7 +228,18 @@ export default {
       if (!attivo) { popup.chiudi(); }
       else if (primaVolta && pannello) { primaVolta = false; pannello.mostra(); } // la prima volta si vede subito l'anno scorso
       aggiornaLegendaInMappa(); // con il tema acceso la legenda in mappa è una sola: può essere questa
+      document.dispatchEvent(new Event(EVENTO_TABELLA));
     },
   }],
+  tabella: {
+    id: 'terremoti-storico',
+    etichetta: t('tabella.layer.terremotiStorico'),
+    fonte: t('tabella.fonte.ingvLocale'),
+    licenza: 'CC BY 4.0',
+    colonne: () => colonneTabellaTerremoti({ anno: true }),
+    righe: () => eventi.filter(p => !filtro.classi || filtro.classi.has(p.classeMag)),
+    attivo: () => acceso,
+    apri: p => vaiAEvento(p),
+  },
   pannello: creaLegenda,
 };

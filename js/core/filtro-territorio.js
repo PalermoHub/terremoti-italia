@@ -1,15 +1,9 @@
 // Filtri Regione → Provincia → Comune per una scheda (il confronto tra due anni): stessa cascata della ricerca, ma con scelta propria.
 // `prepara` inquadra l'area scelta, attende i tile dei comuni e risponde con la funzione che dice se un evento ci sta dentro.
-import { urlDati } from './config.js';
 import { t } from './i18n.js';
-import { LIVELLI, SCELTA_VUOTA, cambia, creaIndice, haScelta, opzioni, puntoInGeometrie, voceScelta, filtroArea } from './aree.js';
+import { caricaIndiceComuni } from './indice-comuni.js';
+import { LIVELLI, SCELTA_VUOTA, cambia, haScelta, opzioni, puntoInGeometrie, voceScelta, filtroArea } from './aree.js';
 import { SRC, STRATO_COMUNI } from './ricerca.js';
-
-let caricamento = null;
-const caricaIndice = () => caricamento ??= fetch(urlDati('indice-comuni.json'))
-  .then(r => { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
-  .then(creaIndice)
-  .catch(e => { caricamento = null; throw e; });
 
 const el = (tag, classe, testo) => {
   const e = document.createElement(tag);
@@ -43,7 +37,7 @@ export function creaFiltroTerritorio(map) {
     nodo.append(lab);
   }
   // le tre select si riempiono alla prima apertura, senza scaricare l'indice se il confronto non si usa
-  const pronto = () => indice ? Promise.resolve(indice) : caricaIndice().then(i => { indice = i; disegna(); return i; });
+  const pronto = () => indice ? Promise.resolve(indice) : caricaIndiceComuni().then(i => { indice = i; disegna(); return i; });
   nodo.addEventListener('focusin', () => { pronto().catch(() => {}); }, { once: true });
   nodo.addEventListener('pointerenter', () => { pronto().catch(() => {}); }, { once: true });
 

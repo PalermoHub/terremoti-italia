@@ -1,5 +1,6 @@
 import { righe } from '../core/scheda-util.js';
 import { t, tl, tn, localeIntl } from '../core/i18n.js';
+import { amministrazioneDi } from '../core/territorio.js';
 import { posizioneIn } from '../core/scheda-navigazione.js';
 import { CLASSI_MAGNITUDO, classeMagnitudo, raggioMagnitudo } from '../core/magnitudo.js';
 export { classeMagnitudo, raggioMagnitudo }; // API pubblica del modulo: grafici, popup e scheda li importano da qui
@@ -96,6 +97,47 @@ export function prossimaFinestra(finestra, larghezza = 3) {
 
 
 const num = (n, d = 1) => n.toLocaleString(localeIntl(), { minimumFractionDigits: d, maximumFractionDigits: d });
+
+// Colonne della Tabella dei dati (js/core/tabella-dati.js): le stesse proprietà della scheda, in forma tabellare.
+// `valore` serve per ordinare e per il JSON, `testo` per la tabella e il CSV, `json` per il tipo di dato esportato.
+const annoTabella = ts => Number(new Date(ts).toLocaleDateString('en-CA', { timeZone: 'Europe/Rome', year: 'numeric' }));
+const dataOraTabella = ts => {
+  const d = new Date(ts);
+  return `${d.toLocaleDateString(localeIntl(), { timeZone: 'Europe/Rome', day: '2-digit', month: '2-digit', year: 'numeric' })} ${d.toLocaleTimeString(localeIntl(), { timeZone: 'Europe/Rome', hour: '2-digit', minute: '2-digit' })}`;
+};
+const misuraTabella = n => (n == null || !Number.isFinite(n) ? '—' : num(n, 1));
+const coordinataTabella = n => (Number.isFinite(n) ? n.toLocaleString(localeIntl(), { minimumFractionDigits: 4, maximumFractionDigits: 4 }) : '—');
+// Regione, provincia, comune e ISTAT vengono dal luogo INGV (core/territorio.js): la cella vuota resta
+// vuota nel CSV e mostra un trattino nella tabella.
+const territorioTabella = p => amministrazioneDi(p);
+const colonnaTerritorio = (id, chiave) => ({
+  id,
+  etichetta: t(`tabella.col.${chiave}`),
+  valore: p => territorioTabella(p)[chiave],
+  testo: p => territorioTabella(p)[chiave] ?? '',
+  display: p => territorioTabella(p)[chiave] ?? '—',
+  visibile: true,
+});
+
+export function colonneTabellaTerremoti({ anno = false } = {}) {
+  return [
+    { id: 'ora', etichetta: t('tabella.col.ora'), valore: p => p.ts, testo: p => dataOraTabella(p.ts), json: p => new Date(p.ts).toISOString(), visibile: true, numerica: true },
+    { id: 'mag', etichetta: t('tabella.col.mag'), valore: p => p.mag, testo: p => misuraTabella(p.mag), visibile: true, numerica: true },
+    { id: 'prof', etichetta: t('tabella.col.prof'), valore: p => p.prof ?? null, testo: p => misuraTabella(p.prof), visibile: true, numerica: true },
+    { id: 'luogo', etichetta: t('tabella.col.luogo'), valore: p => p.luogo ?? '', testo: p => p.luogo || '—', visibile: true },
+    colonnaTerritorio('regione', 'regione'),
+    colonnaTerritorio('provincia', 'provincia'),
+    colonnaTerritorio('comune', 'comune'),
+    colonnaTerritorio('istat', 'istat'),
+    { id: 'anno', etichetta: t('tabella.col.anno'), valore: p => p.anno ?? annoTabella(p.ts), testo: p => String(p.anno ?? annoTabella(p.ts)), visibile: anno, numerica: true },
+    { id: 'lat', etichetta: t('tabella.col.lat'), valore: p => (Number.isFinite(p.lat) ? p.lat : null), testo: p => coordinataTabella(p.lat), visibile: true, numerica: true },
+    { id: 'lon', etichetta: t('tabella.col.lon'), valore: p => (Number.isFinite(p.lon) ? p.lon : null), testo: p => coordinataTabella(p.lon), visibile: true, numerica: true },
+    { id: 'tipoMag', etichetta: t('tabella.col.tipoMag'), valore: p => p.tipoMag ?? '', testo: p => p.tipoMag || '—', visibile: false },
+    { id: 'autore', etichetta: t('tabella.col.autore'), valore: p => p.autore ?? '', testo: p => p.autore || '—', visibile: false },
+    { id: 'fascia', etichetta: t('tabella.col.fascia'), valore: p => p.fascia ?? '', testo: p => p.fascia || '—', visibile: false },
+    { id: 'id', etichetta: t('tabella.col.id'), valore: p => p.id ?? '', testo: p => p.id ?? '', visibile: false },
+  ];
+}
 
 // INGV scrive l'ora UTC senza «Z» e con microsecondi: "2026-10-23T10:19:15.470000"
 export const oraEvento = testo => Date.parse(`${String(testo).slice(0, 23)}Z`);

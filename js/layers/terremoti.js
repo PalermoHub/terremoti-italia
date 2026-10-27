@@ -2,7 +2,7 @@ import { tl, t, localeIntl } from '../core/i18n.js';
 import { AREA_EVENTI, HIT_COMUNI, SRC_COMUNI, STRATO_COMUNI } from '../core/config.js';
 import { filtroInsieme, voceFiltro } from '../core/legenda.js';
 import { primo } from '../core/scheda-util.js';
-import { FASCE, GIORNI_MAX, scaricaEventi, filtro, FILTRO_INIZIALE, profonditaDaFiltro, passaFiltro, espressioneFiltro, eventoDaIngv, modelloPopupTerremoto, voceTerremoto, voceSerie, voceAltri, riassuntoTerremoti, proprietaStorico } from './scheda-terremoti.js';
+import { FASCE, GIORNI_MAX, scaricaEventi, filtro, FILTRO_INIZIALE, profonditaDaFiltro, passaFiltro, espressioneFiltro, eventoDaIngv, modelloPopupTerremoto, voceTerremoto, voceSerie, voceAltri, riassuntoTerremoti, proprietaStorico, colonneTabellaTerremoti } from './scheda-terremoti.js';
 import { voceComune } from './scheda-comune.js';
 import { EVENTO_FILTRO, menuFiltro, menuMagnitudo, menuProfondita, elencoAltri, graficoSerie, testoGiorni, barraEventi } from './scheda-terremoti-dom.js';
 import { pannelloFiltro } from './terremoti-pannello.js';
@@ -11,6 +11,7 @@ import { clicSu } from '../core/scheda-navigazione.js';
 import { coloreMagnitudo, espressioneColoreMagnitudo } from '../core/magnitudo.js';
 import { aggiornaLegendaInMappa, creaClassiFiltro, EVENTO_TEMA_MAGNITUDO, temaMagnitudoAttivo } from '../core/tema-magnitudo.js';
 import { creaPopupTerremoti, simboliRighe } from './terremoti-popup.js';
+import { EVENTO_TABELLA } from '../core/tabella-dati.js';
 
 // Terremoti in tempo reale in Italia: gli eventi degli ultimi 30 giorni dal nostro archivio (GET /terremoti), che il server tiene allineato al servizio FDSN dell'INGV.
 // Cerchio = un evento: più grande è la magnitudo, più grande il cerchio; il colore dice da quanto è successo. Si rinnova ogni 2 minuti finché lo strato è acceso.
@@ -87,6 +88,7 @@ function applicaFiltro() {
   for (const id of [PUNTI, HIT]) mappa?.getLayer(id) && mappa.setFilter(id, espr);
   classiFiltro?.sincronizza(); // le caselle seguono il filtro anche quando cambia da fuori (istogramma, «Azzera», ricerca)
   scriviNota(true);
+  document.dispatchEvent(new Event(EVENTO_TABELLA));
 }
 
 const emetti = () => document.dispatchEvent(new Event(EVENTO_FILTRO));
@@ -284,7 +286,18 @@ export default {
       if (!attivo) { popup.chiudi(); pannelloPf?.ferma(); }
       pianifica();
       aggiornaLegendaInMappa(); // con il tema acceso la legenda in mappa è una sola: può essere un'altra
+      document.dispatchEvent(new Event(EVENTO_TABELLA));
     },
   }],
+  tabella: {
+    id: 'terremoti',
+    etichetta: t('tabella.layer.terremoti'),
+    fonte: t('tabella.fonte.ingvLocale'),
+    licenza: 'CC BY 4.0',
+    colonne: () => colonneTabellaTerremoti(),
+    righe: () => visibili(),
+    attivo: () => acceso,
+    apri: p => vaiAEvento(p),
+  },
   pannello: creaLegenda,
 };

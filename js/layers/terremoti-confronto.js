@@ -1,9 +1,10 @@
 import { tl, t } from '../core/i18n.js';
 import { AREA_EVENTI } from '../core/config.js';
-import { scaricaEventi, scaricaEventiTutti, eventoDaIngv, modelloPopupTerremoto, voceTerremoto, voceSerie, voceAltri, filtro } from './scheda-terremoti.js';
+import { scaricaEventi, scaricaEventiTutti, eventoDaIngv, modelloPopupTerremoto, voceTerremoto, voceSerie, voceAltri, filtro, colonneTabellaTerremoti } from './scheda-terremoti.js';
 import { EVENTO_FILTRO, barraEventi, graficoSerie, elencoAltri } from './scheda-terremoti-dom.js';
 import { pannelloConfronto } from './terremoti-archivio.js';
 import { creaPopupTerremoti, simboliRighe } from './terremoti-popup.js';
+import { EVENTO_TABELLA } from '../core/tabella-dati.js';
 import { registraTooltipStrati } from '../core/tooltip.js';
 import { clicSu } from '../core/scheda-navigazione.js';
 import { creaFiltroTerritorio } from '../core/filtro-territorio.js';
@@ -75,6 +76,7 @@ async function carica(periodoA, periodoB, magMin, area = null, profondita = null
   eventi = features.map(proprieta);
   periodoMostrato = { da: Math.min(periodoA.da, periodoB.da), a: Math.max(periodoA.a, periodoB.a) };
   mappa?.getSource(SRC)?.setData({ type: 'FeatureCollection', features });
+  document.dispatchEvent(new Event(EVENTO_TABELLA));
   popup.chiudi();
   chiave?.update(periodoA, periodoB);
   return { a: { n: a.features.length, troncato: a.troncato, eventi: a.eventi }, b: { n: b.features.length, troncato: b.troncato, eventi: b.eventi } };
@@ -122,6 +124,7 @@ function creaChiave() {
 function applicaFiltroClassi() {
   const espr = espressioneClassiMagnitudo(filtro.classi);
   for (const id of [PUNTI, ANNI, HIT]) if (mappa?.getLayer(id)) mappa.setFilter(id, espr);
+  document.dispatchEvent(new Event(EVENTO_TABELLA));
 }
 
 // Tema magnitudo: il colore del cerchio diventa la classe di magnitudo e l'anno resta il bordo (più spesso, per
@@ -239,7 +242,18 @@ export default {
       if (!attivo) { popup.chiudi(); }
       else if (primaVolta && pannello) { primaVolta = false; pannello.confronta(); } // la prima volta si vede subito il confronto tra gli ultimi due anni
       aggiornaLegendaInMappa(); // con il tema acceso la legenda in mappa è una sola: può essere questa
+      document.dispatchEvent(new Event(EVENTO_TABELLA));
     },
   }],
+  tabella: {
+    id: 'terremoti-confronto',
+    etichetta: t('tabella.layer.terremotiConfronto'),
+    fonte: t('tabella.fonte.ingvLocale'),
+    licenza: 'CC BY 4.0',
+    colonne: () => colonneTabellaTerremoti({ anno: true }),
+    righe: () => eventi.filter(p => !filtro.classi || filtro.classi.has(p.classeMag)),
+    attivo: () => acceso,
+    apri: p => vaiAEvento(p),
+  },
   pannello: creaLegenda,
 };

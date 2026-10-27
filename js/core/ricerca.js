@@ -2,11 +2,12 @@
 // I nomi vengono da dati/indice-comuni.json (letto alla prima interazione), i confini da comuni.pmtiles: la scelta zooma sull'area
 // e ne evidenzia il confine; con l'interruttore «solo eventi in quest'area» restringe anche i terremoti in tempo reale
 // e, a Live Zoom acceso, inquadra quelli rimasti.
-import { HIT_COMUNI, SRC_COMUNI, STRATO_COMUNI as STRATO, VISTA_ITALIA, urlDati, sorgenteComuni } from './config.js';
+import { HIT_COMUNI, SRC_COMUNI, STRATO_COMUNI as STRATO, VISTA_ITALIA, sorgenteComuni } from './config.js';
+import { caricaIndiceComuni } from './indice-comuni.js';
 import { t } from './i18n.js';
 import { segnala } from './pannello.js';
 import { liveZoomAttivo, riquadroDa } from './live-zoom.js';
-import { LIVELLI, MIN_LETTERE, SCELTA_VUOTA, cambia, cerca, contesto, creaIndice, filtroArea, haScelta, opzioni, puntoInGeometrie, sceltaDaVoce, voceScelta } from './aree.js';
+import { LIVELLI, MIN_LETTERE, SCELTA_VUOTA, cambia, cerca, contesto, filtroArea, haScelta, opzioni, puntoInGeometrie, sceltaDaVoce, voceScelta } from './aree.js';
 
 export const SRC = SRC_COMUNI;
 const RIEMPIMENTO = 'aree-riempimento';
@@ -31,7 +32,6 @@ export function collegaRicerca(map, { terremoti = null, storico = null, comuni =
   if (!campo || !elenco || !bottoneFiltri || !pannello || !azzera) return;
 
   let indice = null;
-  let caricamento = null;
   let scelta = { ...SCELTA_VUOTA };
   let soloEventi = false;
   let giro = 0; // ogni scelta annulla le attese di quella prima
@@ -52,10 +52,9 @@ export function collegaRicerca(map, { terremoti = null, storico = null, comuni =
   const inquadra = (riquadro, opz = {}) => map.fitBounds(riquadro, { padding: margini(), maxZoom: ZOOM_MAX_AREA, duration: 700, ...opz });
 
   // ---- indice dei nomi ----
-  const caricaIndice = () => caricamento ??= fetch(urlDati('indice-comuni.json'))
-    .then(r => { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
-    .then(j => { indice = creaIndice(j); disegnaMenu(); return indice; })
-    .catch(() => { caricamento = null; segnala(t('ricerca.errore')); return null; });
+  const caricaIndice = () => indice ? Promise.resolve(indice) : caricaIndiceComuni()
+    .then(i => { indice = i; disegnaMenu(); return i; })
+    .catch(() => { segnala(t('ricerca.errore')); return null; });
 
   // ---- suggerimenti ----
   let suggeriti = [];
