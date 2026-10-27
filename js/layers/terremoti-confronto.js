@@ -1,6 +1,6 @@
 import { tl, t } from '../core/i18n.js';
 import { AREA_EVENTI } from '../core/config.js';
-import { scaricaEventi, scaricaEventiTutti, eventoDaIngv, modelloPopupTerremoto, voceTerremoto, voceSerie, voceAltri, filtro, colonneTabellaTerremoti } from './scheda-terremoti.js';
+import { scaricaEventiTutti, eventoDaIngv, modelloPopupTerremoto, voceTerremoto, voceSerie, voceAltri, filtro, colonneTabellaTerremoti } from './scheda-terremoti.js';
 import { EVENTO_FILTRO, barraEventi, graficoSerie, elencoAltri } from './scheda-terremoti-dom.js';
 import { pannelloConfronto } from './terremoti-archivio.js';
 import { creaPopupTerremoti, simboliRighe } from './terremoti-popup.js';
@@ -17,6 +17,8 @@ const SRC = 'terremoti-confronto';
 const PUNTI = 'terremoti-confronto-punti';
 const ANNI = 'terremoti-confronto-anni'; // l'anno scritto accanto al cerchio
 const HIT = 'terremoti-confronto-hit'; // cerchi trasparenti per il clic, sempre presenti
+const GRIGLIA = 'terremoti-confronto-griglia'; // celle esagonali della differenza di densità tra i due anni
+const GRIGLIA_FILL = 'terremoti-confronto-griglia-fill';
 export const COLORE_A = '#0ea5e9';
 export const COLORE_B = '#f97316';
 const TESTO_A = '#075985';
@@ -39,6 +41,7 @@ const popup = creaPopupTerremoti();
 let titolo = null; // intestazione della legenda: cambia col tema magnitudo
 let classiFiltro = null; // classi di magnitudo della legenda, quando il tema è acceso
 let notaAnno = null; // con il tema il colore è la magnitudo: l'anno resta il bordo
+let grigliaDati = null; // celle della differenza di densità, mostrate solo a strato acceso
 
 const annoRoma = ts => Number(new Date(ts).toLocaleDateString('en-CA', { timeZone: 'Europe/Rome', year: 'numeric' }));
 const proprieta = f => ({ ...f.properties, lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] });
@@ -53,17 +56,30 @@ const vaiAEvento = p => clicSu(mappa, [p.lon, p.lat], () => { scelto = { id: p.i
 const MASSIMO_MAPPA = 5000; // eventi disegnati; i conteggi del territorio usano anche quelli oltre il tetto
 
 async function scaricaLato(lato, periodo, magMin, area, profondita = null) {
-  // Con un territorio o una profondità si leggono tutti gli eventi (formato testo, senza il tetto della mappa):
-  // il tetto di 5000 resta solo per i cerchi, così magnitudo e profondità valgono per tutta Italia e per ogni singolo territorio.
+  // Gli eventi si leggono tutti (formato testo, senza il tetto della mappa): servono anche alla griglia di densità e ai conteggi
+  // di un territorio. Il tetto di 5000 resta solo per i cerchi, così la mappa non si appesantisce.
   const riquadro = area ? { minlon: area.riquadro[0], minlat: area.riquadro[1], maxlon: area.riquadro[2], maxlat: area.riquadro[3] } : AREA;
-  const conTutti = Boolean(area) || profondita?.min != null;
-  const scarico = conTutti
-    ? await scaricaEventiTutti({ da: periodo.da, a: periodo.a, magMin, profMin: profondita?.min, profMax: profondita?.max, area: riquadro })
-    : await scaricaEventi({ da: periodo.da, a: periodo.a, magMin, area: riquadro });
+  const scarico = await scaricaEventiTutti({ da: periodo.da, a: periodo.a, magMin, profMin: profondita?.min, profMax: profondita?.max, area: riquadro });
   const colore = lato === 'a' ? COLORE_A : COLORE_B;
   const nelTerritorio = scarico.eventi.map(f => eventoDaIngv(f, Infinity)).filter(Boolean).filter(f => !area || area.dentro({ lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] }));
   const features = nelTerritorio.slice(0, MASSIMO_MAPPA).map(f => ({ ...f, properties: { ...f.properties, colore, lato, fascia: 'Confronto', anno: annoRoma(f.properties.ts) } }));
-  return { features, troncato: scarico.troncato || nelTerritorio.length > features.length, eventi: nelTerritorio.map(f => f.properties) };
+  return {
+    features,
+    troncato: scarico.troncato || nelTerritorio.length > features.length,
+    eventi: nelTerritorio.map(f => ({ ...f.properties, lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] })),
+  };
+}
+
+function aggiornaVisibilitaGriglia() {
+  if (!mappa?.getLayer(GRIGLIA_FILL)) return;
+  mappa.setLayoutProperty(GRIGLIA_FILL, 'visibility', acceso && grigliaDati?.features?.length ? 'visible' : 'none');
+}
+
+// Celle della differenza di densità (o null per toglierle): la visibilità segue lo strato e il suo interruttore
+function mostraGriglia(dati) {
+  grigliaDati = dati;
+  mappa?.getSource(GRIGLIA)?.setData(dati ?? VUOTO);
+  aggiornaVisibilitaGriglia();
 }
 
 // Mostra in mappa gli eventi dei due periodi con magnitudo ≥ magMin e profondità nell'intervallo scelto (dentro `area`, se c'è:
@@ -158,7 +174,7 @@ function creaLegenda() {
   nota.className = 'legenda-magnitudo-nota';
   nota.textContent = t('tema.magnitudo.filtro');
   classiFiltro.nodo.append(nota);
-  pannello = pannelloConfronto({ carica, territorio: creaFiltroTerritorio(mappa) });
+  pannello = pannelloConfronto({ carica, territorio: creaFiltroTerritorio(mappa), griglia: mostraGriglia });
   chiave = creaChiave();
   notaAnno = document.createElement('p');
   notaAnno.className = 'legenda-magnitudo-nota';
@@ -184,9 +200,15 @@ export default {
   argomento: { titolo: 'Confronto terremoti', descrizione: 'I terremoti di due anni a confronto, dall\'archivio locale dei dati INGV: gli eventi dell\'anno A e dell\'anno B insieme in mappa, in colori diversi, con la tabella delle differenze.' },
   aggiungiSorgenti(map) {
     map.addSource(SRC, { type: 'geojson', data: VUOTO, attribution: '<a href="https://terremoti.ingv.it/" target="_blank" rel="noopener">INGV</a>' });
+    map.addSource(GRIGLIA, { type: 'geojson', data: VUOTO });
   },
   aggiungiLayer(map) {
     mappa = map;
+    // Differenza di densità: sotto i cerchi, spenta finché il pannello non la chiede
+    map.addLayer({
+      id: GRIGLIA_FILL, type: 'fill', source: GRIGLIA, layout: { visibility: 'none' },
+      paint: { 'fill-color': ['get', 'colore'], 'fill-opacity': ['get', 'opacita'], 'fill-outline-color': 'rgba(15, 23, 42, .18)' },
+    });
     // i più forti sopra gli altri; spento all'avvio (visibilità esplicita: i moduli del nucleo la leggono)
     map.addLayer({
       id: PUNTI, type: 'circle', source: SRC, layout: { visibility: 'none', 'circle-sort-key': ['get', 'mag'] },
@@ -241,6 +263,7 @@ export default {
       if (legenda) legenda.hidden = !attivo;
       if (!attivo) { popup.chiudi(); }
       else if (primaVolta && pannello) { primaVolta = false; pannello.confronta(); } // la prima volta si vede subito il confronto tra gli ultimi due anni
+      aggiornaVisibilitaGriglia();
       aggiornaLegendaInMappa(); // con il tema acceso la legenda in mappa è una sola: può essere questa
       document.dispatchEvent(new Event(EVENTO_TABELLA));
     },

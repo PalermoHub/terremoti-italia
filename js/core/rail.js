@@ -37,9 +37,9 @@ export function collegaRail(rail, voci) {
       const b = bottoni.get(v.id);
       const esiste = !v.pannello.hidden;
       // come la barra a sinistra, i tab ci sono sempre; quello della scheda è spento finché non c'è una scheda
-      const spento = (v.id === 'scheda' || v.id === 'storico') && !esiste;
+      const spento = v.id === 'scheda' && !esiste; // lo Storico si può aprire sempre: senza evento mostra come arrivarci
       b.setAttribute('aria-disabled', String(spento));
-      b.title = spento ? t(v.id === 'storico' ? 'rail.storicoSpento' : 'rail.schedaSpenta') : v.etichetta;
+      b.title = spento ? t('rail.schedaSpenta') : v.etichetta;
       const attivo = esiste && !v.pannello.classList.contains('collassato');
       b.setAttribute('aria-pressed', String(attivo));
       b.classList.toggle('attivo', attivo);

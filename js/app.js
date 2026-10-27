@@ -72,12 +72,12 @@ map.once('style.load', async () => {
   costruisciPannello(map, MODULI, document.getElementById('pannello'), document.getElementById('barra-gruppi'));
   collegaTooltipScheda(map, MODULI);
   collegaScheda(map, MODULI, document.getElementById('scheda'), {});
-  collegaStorico(document.getElementById('storico-pannello'));
+  const storico = collegaStorico(document.getElementById('storico-pannello'));
   const confrontoPannello = document.getElementById('confronto-pannello');
   collegaConfronto(confrontoPannello, nodoConfronto());
   collegaRail(document.getElementById('rail-pannelli'), [
     { id: 'scheda', etichetta: t('app.rail.scheda'), pannello: document.getElementById('scheda') },
-    { id: 'storico', etichetta: t('scheda.tab.storico'), pannello: document.getElementById('storico-pannello') },
+    { id: 'storico', etichetta: t('scheda.tab.storico'), pannello: document.getElementById('storico-pannello'), apri: () => storico.apri() },
     { id: 'confronto', etichetta: t('rail.confronto'), pannello: confrontoPannello, apri: () => apriConfronto(confrontoPannello) },
   ]);
   document.addEventListener('scheda:mostra', () => document.getElementById('scheda').hidden = false);

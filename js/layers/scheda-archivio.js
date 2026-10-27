@@ -2,6 +2,9 @@ import { URL_ARCHIVIO, CLASSI_MAG, classeMagnitudo, marcaSciami, momentoSismico,
 
 // Modello puro dell'archivio storico: periodi (anni UTC), serie annuale e confronto tra due periodi, a partire dai riepiloghi di GET /terremoti/riepilogo.
 export const ANNO_INIZIO = 1985;
+// Dal 2005 la rete del Bollettino Sismico Italiano registra molti più eventi piccoli: prima, a M < 3, un confronto con anni recenti
+// premierebbe gli anni nuovi solo perché il catalogo è migliorato (completezza diversa), non perché la sismicità sia cambiata.
+export const ANNO_RETE_COMPLETA = 2005;
 const GIORNO_MS = 86400000;
 
 export const periodoAnno = anno => ({ da: Date.UTC(anno, 0, 1), a: Date.UTC(anno + 1, 0, 1) - 1 });
@@ -12,6 +15,12 @@ export function periodoValido({ da, a }, adesso = Date.now()) {
   if (da < periodoAnno(ANNO_INIZIO).da) return 'terremoti.arc.errPrima';
   if (da > adesso) return 'terremoti.arc.errFuturo';
   return null;
+}
+
+// null = confronto accettabile; altrimenti la chiave i18n dell'avviso. Prima del 2005 il catalogo è completo solo dalle magnitudo
+// più alte: confrontare a M ≥ 2 un anno di allora con uno recente farebbe sembrare il passato meno sismico di quanto fosse.
+export function avvisoCompletezza(annoA, annoB, magMin) {
+  return Math.min(annoA, annoB) < ANNO_RETE_COMPLETA && magMin < 3 ? 'terremoti.arc.completezza' : null;
 }
 
 export const riepilogoVuoto = () => ({ totale: 0, perMagnitudo: [], perMese: [] });
@@ -32,6 +41,25 @@ export function serieAnnuale(perMese, adesso = Date.now()) {
   return { unita: 'anno', barre, sequenze, soglia, totale: barre.reduce((s, b) => s + b.n, 0) };
 }
 
+// Mese con più eventi e quanto pesa sul totale: un anno può essere gonfiato dalle repliche di una sequenza concentrata in poche settimane.
+function meseDominante(perMese, totale) {
+  if (!perMese?.length || !totale) return null;
+  let max = perMese[0];
+  for (const m of perMese) if (m.n > max.n) max = m;
+  return { mese: max.mese, n: max.n, quota: max.n / totale * 100 };
+}
+
+// Cumulata mese per mese dell'anno (12 valori, anche per i mesi senza eventi): serve al grafico che confronta due anni
+function cumulataMensile(perMese) {
+  const mesi = Array(12).fill(0);
+  for (const m of perMese ?? []) {
+    const i = Number(String(m.mese).slice(5, 7)) - 1;
+    if (i >= 0 && i < 12) mesi[i] += m.n;
+  }
+  let totale = 0;
+  return mesi.map((n, i) => ({ mese: i + 1, n, cumulati: (totale += n) }));
+}
+
 function statistiche(r, giorni) {
   const perClasse = Array(CLASSI_MAG.length).fill(0);
   let momento = 0, magMax = null;
@@ -40,7 +68,7 @@ function statistiche(r, giorni) {
     momento += momentoSismico(mag) * n;
     if (magMax == null || mag > magMax) magMax = mag;
   }
-  return { n: r.totale, magMax, perGiorno: r.totale / giorni, perClasse, magEquivalente: r.totale ? magnitudoDaMomento(momento) : null };
+  return { n: r.totale, magMax, perGiorno: r.totale / giorni, perClasse, energia: momento, meseMax: meseDominante(r.perMese, r.totale), cumulata: cumulataMensile(r.perMese), magEquivalente: r.totale ? magnitudoDaMomento(momento) : null };
 }
 
 // Confronto tra due riepiloghi; `giorni*` = giorni davvero trascorsi nel periodo (un anno in corso è parziale)
@@ -52,6 +80,8 @@ export function confrontaPeriodi(a, b, giorniA, giorniB) {
       n: sb.n - sa.n,
       nPercento: sa.n ? (sb.n - sa.n) / sa.n * 100 : null,
       magMax: sa.magMax != null && sb.magMax != null ? Math.round((sb.magMax - sa.magMax) * 10) / 10 : null,
+      magEquivalente: sa.magEquivalente != null && sb.magEquivalente != null ? Math.round((sb.magEquivalente - sa.magEquivalente) * 10) / 10 : null,
+      energia: sa.energia && sb.energia ? sb.energia / sa.energia : null,
       perGiorno: sa.n ? sb.perGiorno - sa.perGiorno : null,
     },
   };
@@ -95,4 +125,70 @@ export async function scaricaRiepilogo(periodo, magMin, fetchFn = fetch) {
   const s = await fetchFn(`${URL_ARCHIVIO}riepilogo-${m}.json`).catch(() => null);
   if (!s?.ok) throw new Error(`archivio ${s?.status ?? r?.status ?? 'non raggiungibile'}`);
   return riepilogoDaStatico(await s.json(), periodo, magMin);
+}
+
+// Griglia esagonale («pointy-top») della densità degli eventi, con la differenza tra i due periodi.
+// Le celle sono uguali per A e B: il colore dice in quale anno ci sono stati più eventi, l'opacità quanto è netta la differenza.
+export const RAGGIO_GRIGLIA = 0.15; // gradi: celle di circa 17 km in latitudine
+const RADICE3 = Math.sqrt(3);
+const COLORE_PIU_A = '#0ea5e9';
+const COLORE_PIU_B = '#f97316';
+
+// Cella esagonale che contiene il punto: coordinate cube arrotondate alla cella più vicina
+function cellaEsagonale(lon, lat, raggio) {
+  const q = (RADICE3 / 3 * lon - lat / 3) / raggio;
+  const r = (2 / 3 * lat) / raggio;
+  const x = q, z = r, y = -x - z;
+  let rx = Math.round(x), ry = Math.round(y), rz = Math.round(z);
+  const dx = Math.abs(rx - x), dy = Math.abs(ry - y), dz = Math.abs(rz - z);
+  if (dx > dy && dx > dz) rx = -ry - rz;
+  else if (dy > dz) ry = -rx - rz;
+  else rz = -rx - ry;
+  return { q: rx, r: rz };
+}
+
+// Anello chiuso del poligono esagonale (6 vertici + il primo ripetuto)
+export function anelloEsagono(q, r, raggio = RAGGIO_GRIGLIA) {
+  const cx = raggio * RADICE3 * (q + r / 2), cy = raggio * 1.5 * r;
+  const anello = Array.from({ length: 6 }, (_, i) => {
+    const angolo = Math.PI / 3 * i + Math.PI / 6;
+    return [cx + raggio * Math.cos(angolo), cy + raggio * Math.sin(angolo)];
+  });
+  anello.push(anello[0]);
+  return anello;
+}
+
+// Eventi dei due periodi → FeatureCollection di celle con conteggi, differenza B − A e colore divergente.
+// Gli eventi possono essere proprietà ({ lon, lat }) o feature GeoJSON.
+export function grigliaDensita(eventiA, eventiB, raggio = RAGGIO_GRIGLIA) {
+  const celle = new Map();
+  const aggiungi = (e, lato) => {
+    const lon = e?.lon ?? e?.geometry?.coordinates?.[0];
+    const lat = e?.lat ?? e?.geometry?.coordinates?.[1];
+    if (!Number.isFinite(lon) || !Number.isFinite(lat)) return;
+    const { q, r } = cellaEsagonale(lon, lat, raggio);
+    const k = `${q},${r}`;
+    const c = celle.get(k) ?? { q, r, a: 0, b: 0 };
+    c[lato] += 1;
+    celle.set(k, c);
+  };
+  for (const e of eventiA) aggiungi(e, 'a');
+  for (const e of eventiB) aggiungi(e, 'b');
+  const diverse = [...celle.values()].filter(c => c.a !== c.b);
+  const massimo = Math.max(1, ...diverse.map(c => Math.abs(c.b - c.a)));
+  return {
+    type: 'FeatureCollection',
+    features: diverse.map(c => {
+      const differenza = c.b - c.a;
+      return {
+        type: 'Feature',
+        geometry: { type: 'Polygon', coordinates: [anelloEsagono(c.q, c.r, raggio)] },
+        properties: {
+          a: c.a, b: c.b, differenza,
+          colore: differenza > 0 ? COLORE_PIU_B : COLORE_PIU_A,
+          opacita: 0.12 + 0.5 * Math.sqrt(Math.abs(differenza) / massimo),
+        },
+      };
+    }),
+  };
 }
