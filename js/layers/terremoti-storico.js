@@ -1,11 +1,12 @@
 import { tl, t } from '../core/i18n.js';
 import { AREA_EVENTI } from '../core/config.js';
-import { scaricaEventi, scaricaEventiTutti, eventoDaIngv, modelloPopupTerremoto, voceTerremoto, voceSerie, voceAltri, filtro, profonditaDaFiltro, colonneTabellaTerremoti, espressioneMagnitudo, passaMagnitudo } from './scheda-terremoti.js';
+import { scaricaEventi, scaricaEventiTutti, eventoDaIngv, quantoTempoFa, distanzaKm, modelloPopupTerremoto, voceTerremoto, voceSerie, voceAltri, filtro, profonditaDaFiltro, colonneTabellaTerremoti, espressioneMagnitudo, passaMagnitudo } from './scheda-terremoti.js';
 import { EVENTO_FILTRO, apriDialogoPeriodo, barraEventi, graficoSerie, elencoAltri } from './scheda-terremoti-dom.js';
 import { ANNO_INIZIO, periodoAnno } from './scheda-archivio.js';
 import { pannelloArchivio } from './terremoti-archivio.js';
 import { creaPopupTerremoti, simboliRighe } from './terremoti-popup.js';
 import { EVENTO_TABELLA } from '../core/tabella-dati.js';
+import { raggioAttivo, EVENTO_RAGGIO } from '../core/raggio-vicini.js';
 import { registraTooltipStrati } from '../core/tooltip.js';
 import { clicSu } from '../core/scheda-navigazione.js';
 import { espressioneClassiMagnitudo, espressioneColoreMagnitudo } from '../core/magnitudo.js';
@@ -165,6 +166,7 @@ export default {
       }, ATTESA_FILTRO_MS);
     });
     document.addEventListener(EVENTO_FILTRO, applicaFiltroMappa);
+    document.addEventListener(EVENTO_RAGGIO, () => { if (raggioAttivo()) popup.chiudi(); });
     document.addEventListener(EVENTO_TEMA_MAGNITUDO, applicaTema);
     // i più forti sopra gli altri; spento all'avvio (visibilità esplicita: i moduli del nucleo la leggono)
     map.addLayer({
@@ -178,6 +180,7 @@ export default {
     map.addLayer({ id: HIT, type: 'circle', source: SRC, paint: { 'circle-radius': ['max', 10, ['get', 'raggio']], 'circle-opacity': 0 } });
     map.on('click', e => {
       if (map.getLayoutProperty(PUNTI, 'visibility') === 'none') return;
+      if (raggioAttivo()) { popup.chiudi(); return; } // la scheda del raggio mostra già evento e vicini
       const f = evento(map.queryRenderedFeatures(e.point, { layers: [PUNTI] }));
       if (f) popup.apri(map, proprieta(f), e.point);
     });
@@ -195,6 +198,16 @@ export default {
   },
   scheda: {
     layers: [HIT],
+    // «Cerca eventi attorno a un punto» (core/raggio-vicini.js): gli eventi dell'anno in mappa entro il raggio
+    eventiVicini(lngLat, raggioM) {
+      if (!acceso) return [];
+      const raggioKm = raggioM / 1000;
+      return eventi
+        .filter(p => passaMagnitudo(p) && (!filtro.classi || filtro.classi.has(p.classeMag)))
+        .map(p => ({ p, km: distanzaKm([lngLat.lng, lngLat.lat], [p.lon, p.lat]) }))
+        .filter(({ km: d }) => d <= raggioKm)
+        .map(({ p, km: d }) => ({ id: p.id, mag: p.mag, luogo: p.luogo, colore: p.colore, quando: quantoTempoFa(p.ts), distanzaM: d * 1000, apri: () => vaiAEvento(p) }));
+    },
     voci(trovati) {
       const primo = evento(trovati.filter(f => f.layer.id === HIT));
       if (!primo) return [];

@@ -14,6 +14,13 @@ passando il mouse su un comune si leggono nome, provincia, regione, codice ISTAT
 si evidenzia, e un clic apre la scheda dei suoi terremoti. Le stesse cose (tooltip ed evidenza) valgono sull'area scelta nella
 ricerca per regione, provincia o comune, anche con lo strato spento.
 
+**Cerca eventi attorno a un punto**: in fondo alla legenda in mappa l'interruttore accende la ricerca e mostra il cursore del
+raggio (200 m – 50 km, 10 km all'avvio) con l'interruttore «Mostra il cerchio in mappa». Da acceso, un clic sulla mappa disegna
+il cerchio e apre la scheda con i terremoti entro il raggio, dal più vicino, prendendoli dagli strati accesi (tempo reale e
+archivio storico) e rispettandone i filtri; le righe sono cliccabili e aprono la scheda dell'evento. La lista si ferma ai 50
+eventi più vicini (il totale è nel badge), il cerchio si inquadra per intero e lo stato resta nel browser. Spento, il clic
+torna ad aprire la scheda del punto come prima.
+
 Come aggiungere un layer: un modulo in `js/layers/` con `id, titolo, gruppo, aggiungiSorgenti, aggiungiLayer, strati, scheda`
 (vedi `js/layers/allerte.js`), poi aggiungerlo a `MODULI` in `js/app.js`; i testi nuovi vanno in `js/locales/it.json` e `en.json`
 (`npm run test:js` dice cosa manca). Un layer acceso di default deve avere `visibility: 'visible'` esplicita.

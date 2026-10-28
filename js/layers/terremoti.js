@@ -2,7 +2,7 @@ import { tl, t, localeIntl } from '../core/i18n.js';
 import { AREA_EVENTI, HIT_COMUNI, SRC_COMUNI, STRATO_COMUNI } from '../core/config.js';
 import { filtroInsieme, voceFiltro } from '../core/legenda.js';
 import { primo } from '../core/scheda-util.js';
-import { FASCE, GIORNI_MAX, scaricaEventi, filtro, FILTRO_INIZIALE, profonditaDaFiltro, passaFiltro, espressioneFiltro, eventoDaIngv, modelloPopupTerremoto, voceTerremoto, voceSerie, voceAltri, riassuntoTerremoti, proprietaStorico, colonneTabellaTerremoti } from './scheda-terremoti.js';
+import { FASCE, GIORNI_MAX, scaricaEventi, filtro, FILTRO_INIZIALE, profonditaDaFiltro, passaFiltro, espressioneFiltro, eventoDaIngv, quantoTempoFa, distanzaKm, modelloPopupTerremoto, voceTerremoto, voceSerie, voceAltri, riassuntoTerremoti, proprietaStorico, colonneTabellaTerremoti } from './scheda-terremoti.js';
 import { voceComune } from './scheda-comune.js';
 import { EVENTO_FILTRO, menuFiltro, menuMagnitudo, menuProfondita, elencoAltri, graficoSerie, testoPeriodo, barraEventi } from './scheda-terremoti-dom.js';
 import { pannelloFiltro } from './terremoti-pannello.js';
@@ -13,6 +13,7 @@ import { aggiornaLegendaInMappa, EVENTO_TEMA_MAGNITUDO, temaMagnitudoAttivo } fr
 import { legendaMagnitudo } from './legenda-magnitudo.js';
 import { creaPopupTerremoti, simboliRighe } from './terremoti-popup.js';
 import { EVENTO_TABELLA } from '../core/tabella-dati.js';
+import { raggioAttivo, EVENTO_RAGGIO } from '../core/raggio-vicini.js';
 
 // Terremoti in tempo reale in Italia: gli eventi degli ultimi 30 giorni dal nostro archivio (GET /terremoti), che il server tiene allineato al servizio FDSN dell'INGV.
 // Cerchio = un evento: più grande è la magnitudo, più grande il cerchio; il colore dice da quanto è successo. Si rinnova ogni 2 minuti finché lo strato è acceso.
@@ -271,6 +272,8 @@ export default {
     map.on('click', e => {
       if (map.getLayoutProperty(PUNTI, 'visibility') === 'none') return;
       popup.chiudi();
+      // con «Cerca eventi attorno a un punto» acceso la scheda mostra già l'evento e i vicini: il popup coprirebbe il cerchio
+      if (raggioAttivo()) return;
       const f = evento(map.queryRenderedFeatures(e.point, { layers: [PUNTI] }));
       if (!f) return;
       popup.apri(map, proprieta(f), e.point);
@@ -286,6 +289,7 @@ export default {
     map.on('mouseenter', PUNTI, () => { map.getCanvas().style.cursor = 'pointer'; });
     map.on('mouseleave', PUNTI, () => { map.getCanvas().style.cursor = ''; });
     document.addEventListener(EVENTO_FILTRO, applicaFiltro);
+    document.addEventListener(EVENTO_RAGGIO, () => { if (raggioAttivo()) popup.chiudi(); });
     document.addEventListener(EVENTO_FILTRO, sincronizzaPeriodo);
     document.addEventListener(EVENTO_TEMA_MAGNITUDO, applicaTema);
     document.addEventListener('visibilitychange', () => {
@@ -296,6 +300,15 @@ export default {
   scheda: {
     // HIT: i cerchi degli eventi; HIT_COMUNI: il confine comunale sotto il clic (lo aggiunge js/core/ricerca.js)
     layers: [HIT, HIT_COMUNI],
+    // «Cerca eventi attorno a un punto» (core/raggio-vicini.js): gli eventi in mappa entro il raggio, dal più vicino
+    eventiVicini(lngLat, raggioM) {
+      if (!acceso) return [];
+      const raggioKm = raggioM / 1000;
+      return visibili()
+        .map(p => ({ p, km: distanzaKm([lngLat.lng, lngLat.lat], [p.lon, p.lat]) }))
+        .filter(({ km: d }) => d <= raggioKm)
+        .map(({ p, km: d }) => ({ id: p.id, mag: p.mag, luogo: p.luogo, colore: p.colore, quando: quantoTempoFa(p.ts), distanzaM: d * 1000, apri: () => vaiAEvento(p) }));
+    },
     // prima l'evento cliccato (il più forte sotto il cerchio, in evidenza), poi tutti gli altri che passano il filtro, anche quelli sovrapposti;
     // senza un evento sotto il dito, la card dei terremoti del comune (se il clic è caduto su un comune)
     voci(trovati) {

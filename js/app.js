@@ -14,6 +14,7 @@ import { creaAvvisoAttesa } from './core/avviso-attesa.js';
 import { collegaTabMobile } from './core/tab-mobile.js';
 import { traduciModuli } from './core/traduci-moduli.js';
 import { caricaLiveZoom, collegaLiveZoom, creaInterruttoreLegenda as interruttoreLiveZoomLegenda } from './core/live-zoom.js';
+import { creaRegolatoreRaggio } from './core/raggio-vicini.js';
 import { caricaTemaMagnitudo } from './core/tema-magnitudo.js';
 import { t } from './core/i18n.js';
 import eventi from './layers/eventi.js';
@@ -34,8 +35,8 @@ document.getElementById('corpo').append(tab.barra);
 document.getElementById('chiudi-strati').addEventListener('click', () => tab.imposta(null));
 caricaLiveZoom(localStorage);
 caricaTemaMagnitudo(localStorage);
-// riquadro in fondo alla legenda in mappa: l'interruttore di Live Zoom (si nasconde con la legenda ridotta)
-document.getElementById('legende-raggio').append(interruttoreLiveZoomLegenda(localStorage));
+// riquadro in fondo alla legenda in mappa: Live Zoom e «Cerca eventi attorno a un punto» (si nasconde con la legenda ridotta)
+document.getElementById('legende-raggio').append(interruttoreLiveZoomLegenda(localStorage), creaRegolatoreRaggio(localStorage));
 const riduciLegenda = document.getElementById('legende-riduci');
 riduciLegenda.addEventListener('click', () => {
   const ridotta = document.getElementById('legende-box').classList.toggle('ridotta');

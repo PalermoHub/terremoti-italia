@@ -11,7 +11,7 @@ import { el, icona, sincronizzaStrato, acceseDaScheda, spegniStratiDaScheda, cre
 import { ICONA_INGRANAGGIO, ICONA_X, creaPannelloPreferenze } from './scheda-pannello-preferenze.js';
 import { t as tr, tl } from './i18n.js';
 import { mostraCerchio, nascondiCerchio } from './cerchio-raggio.js';
-import { raggioVicini, cerchioVisibile, EVENTO_RAGGIO } from './raggio-vicini.js';
+import { raggioVicini, raggioAttivo, cerchioVisibile, EVENTO_RAGGIO, eventiVicini, voceEventiVicini } from './raggio-vicini.js';
 import { inModoEmergenza, moduliAlClic } from './modo-emergenza.js';
 import { ICONE_RAIL } from './rail.js';
 import { paroleScheda } from './scheda-parole.js';
@@ -301,14 +301,14 @@ function mostra(contenitore, lngLat, dati, chiusura, adattaVista, pref, tabInizi
 }
 
 // Il margine segue i pannelli (padding-mappa.js): il centro dello spostamento è il centro della parte visibile.
-// `centro` = punto da portare lì; senza, si riallinea solo il margine. Con il cerchio dei vicini (`raggio` in metri) lo zoom lo
+// `centro` = punto da portare lì; senza, si riallinea solo il margine. Con il cerchio della ricerca (`raggio` in metri) lo zoom lo
 // inquadra per intero (barra strumenti in alto, ricerca in basso); senza, si avvicina a ZOOM_SCHEDA se serve.
-// Lo zoom c'è solo con Live Zoom acceso: spento, il clic centra il punto e lascia lo zoom com'è.
+// Lo zoom del punto c'è solo con Live Zoom acceso; la ricerca nel raggio invece inquadra sempre il suo cerchio.
 const MARGINE_CERCHIO = { top: 70, right: 20, bottom: 90, left: 20 };
 function adattaVistaMappa(map, centro, raggio) {
   if (!centro) return allineaPadding(map);
   let zoom = liveZoomAttivo() ? Math.max(map.getZoom(), ZOOM_SCHEDA) : map.getZoom();
-  if (raggio && liveZoomAttivo()) {
+  if (raggio) { // il cerchio della ricerca si vede per intero anche con Live Zoom spento
     const tela = map.getContainer();
     const dimensioni = { larghezza: tela.clientWidth, altezza: tela.clientHeight };
     zoom = Math.min(zoomPerCerchio(dimensioni, calcolaPadding(document, tela, matchMedia('(max-width: 720px)').matches), MARGINE_CERCHIO, raggio, centro.lat), 18);
@@ -458,7 +458,11 @@ export function collegaScheda(map, moduli, contenitore, opzioni = {}) {
   let attesaRaggio = null;
   document.addEventListener(EVENTO_RAGGIO, () => {
     clearTimeout(attesaRaggio);
-    attesaRaggio = setTimeout(() => { if (ultimoClic && !contenitore.hidden) map.fire('click', { point: map.project(ultimoClic), lngLat: ultimoClic }); }, 120);
+    attesaRaggio = setTimeout(() => {
+      // accesa o spenta, se una scheda è aperta si rifà sullo stesso punto: la lista e il cerchio seguono il nuovo stato
+      if (ultimoClic && !contenitore.hidden) map.fire('click', { point: map.project(ultimoClic), lngLat: ultimoClic });
+      else if (!raggioAttivo()) nascondiCerchio(map);
+    }, 120);
   });
   map.on('click', async e => {
     const fuori = false; // la mappa copre tutta l'Italia: nessun confine comunale oltre il quale la scheda non si apre
@@ -499,6 +503,14 @@ export function collegaScheda(map, moduli, contenitore, opzioni = {}) {
       if (esatti.length && e.originalEvent) tabIniziale ??= (m.scheda.tabAlClic ? m.scheda.tabAlClic(map) : stratoAcceso(map, m) ? tabDedicato(vociM) : null) ?? null;
       voci.push(...vociM);
     }
+    // La ricerca nel raggio (core/raggio-vicini.js) mette in scheda gli eventi entro il cerchio; se il clic ha preso
+    // un evento, la lista gli sta subito sotto, così la sua scheda resta la prima cosa che si legge.
+    if (raggioAttivo()) {
+      const raggio = raggioVicini();
+      const voce = voceEventiVicini(eventiVicini(conScheda, lngLat, raggio), raggio);
+      const iEvento = voci.findIndex(v => v.evento);
+      voci.splice(iEvento >= 0 ? iEvento + 1 : 0, 0, voce);
+    }
     // dalla vista «Strati in 3D» il clic dice quali strati ha toccato: la scheda si apre sul tab del primo che ha dati qui
     // (PRG e vincoli: «Strumenti urbanistici»)
     const daStrato = e.strati?.map(id => voci.find(v => v.strato === id)).find(Boolean);
@@ -521,9 +533,12 @@ export function collegaScheda(map, moduli, contenitore, opzioni = {}) {
     const base = soloCliccato(sceltePerLayer(trovatiTutti, lngLat));
     for (const m of conScheda) m.scheda.suEvidenza?.(base); // chi ridisegna l'evidenza dopo il clic (es. percorso di una linea) tiene anche questa
     const scelte = [...base, ...extra];
-    // fuori dal Comune (terremoti, aerei, navi…) il cerchio non serve: l'oggetto cliccato è già evidenziato
-    if (!fuori && cerchioVisibile() && conScheda.some(m => m.scheda.vicini)) { raggioCerchio = raggioVicini(); mostraCerchio(map, lngLat, raggioCerchio); } // il cerchio dei punti vicini, sotto all'evidenza
-    else nascondiCerchio(map);
+    // Ricerca nel raggio accesa: il cerchio resta sotto all'evidenza; spenta, si toglie e la scheda torna quella del punto
+    if (!fuori && raggioAttivo()) {
+      raggioCerchio = raggioVicini();
+      if (cerchioVisibile()) mostraCerchio(map, lngLat, raggioCerchio);
+      else nascondiCerchio(map);
+    } else nascondiCerchio(map);
     evidenzia(map, scelte);
     document.dispatchEvent(new CustomEvent('scheda:evidenzia-gruppo', { detail: null })); // il vincolo scelto nella scheda precedente non vale più
     const scheda = mostra(contenitore, lngLat, dati, chiudiScheda, adattaVista, pref, tabIniziale);

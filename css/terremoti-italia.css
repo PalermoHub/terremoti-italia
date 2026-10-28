@@ -70,3 +70,31 @@
 .lg-terremoti .legenda-aggiorna:disabled { cursor: default; }
 .lg-terremoti .legenda-aggiorna:focus-visible { outline: 2px solid var(--focus, currentColor); outline-offset: 1px; }
 .lg-terremoti .legenda-aggiorna[hidden] { display: none; }
+/* «Cerca eventi attorno a un punto» (js/core/raggio-vicini.js): interruttore, raggio e cerchio in fondo alla legenda.
+   Con la ricerca spenta il cursore e l'interruttore del cerchio spariscono, resta solo la riga che la accende. */
+.legende-raggio { display: flex; flex-direction: column; gap: 3px; }
+.legende-raggio-opzioni { display: flex; flex-direction: column; gap: 2px; }
+.legende-raggio-opzioni[hidden] { display: none; }
+.legende-raggio-testo { line-height: 1.35; }
+.legende-raggio input[type=range] { margin: 2px 0 0; }
+
+/* Righe degli eventi nel raggio, nella scheda: magnitudo, distanza, luogo e tempo; tutta la riga apre l'evento. */
+.raggio-elenco { margin: 4px 0 2px; }
+.raggio-lista { display: flex; flex-direction: column; gap: 3px; margin: 0; padding: 0; list-style: none; }
+.raggio-evento { display: grid; grid-template-columns: 10px auto auto minmax(0, 1fr) auto; align-items: center; gap: 7px; box-sizing: border-box; width: 100%; padding: 6px 8px; border: 1px solid var(--border-ui); border-radius: var(--r-sm); background: var(--surface); color: var(--text); font: inherit; font-size: var(--fs-xs); text-align: left; cursor: pointer; transition: background var(--t-rapida), border-color var(--t-rapida); }
+.raggio-evento:hover { border-color: var(--accent); background: var(--accent-soft); }
+.raggio-evento:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.raggio-punto { width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 0 1px var(--surface); }
+.raggio-mag { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.raggio-distanza { color: var(--text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.raggio-luogo { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.raggio-quando { color: var(--text-muted); font-size: var(--fs-3xs); white-space: nowrap; }
+.raggio-nota { margin: 6px 0 0; }
+/* Il riquadro con Live Zoom e ricerca nel raggio sta sopra la barra di ricerca: altrimenti la coprirebbe (e la
+   barra coprirebbe cursore e interruttore del cerchio). */
+@media (min-width: 721px) {
+  #legende-box { --legende-bottom: 100px; bottom: 100px; }
+}
+/* Il riquadro in fondo alla legenda ospita i comandi globali (Live Zoom e ricerca nel raggio): resta visibile
+   anche quando nessuna legenda è rimasta sulla mappa, perché le altre stanno sotto gli strati nel pannello Layer. */
+#legende-box:not(:has(#legende > :not([hidden]):not(.legenda-vuota))):has(#legende-raggio > *) { display: flex; }
