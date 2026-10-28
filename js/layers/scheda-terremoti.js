@@ -246,8 +246,9 @@ export function modelloEvento(p) {
       { chiave: t('terremoti.ev.oraUtc'), valore: dataOra(p.ts, 'UTC') },
       { chiave: t('terremoti.ev.oraItaliana'), valore: dataOra(p.ts, 'Europe/Rome') },
       { chiave: t('terremoti.ev.posizione'), valore: coordinateEvento(p) },
-      { chiave: t('terremoti.ev.id'), valore: p.id == null ? '' : String(p.id), ...(haShakeMap(p) ? { link: { testo: 'ShakeMap INGV', url: LINK_SHAKEMAP + p.id } } : {}) },
+      { chiave: t('terremoti.ev.id'), valore: p.id == null ? '' : String(p.id) },
       { chiave: t('terremoti.ev.localizzatoDa'), valore: p.autore ?? '' },
+      ...(haShakeMap(p) ? [{ chiave: 'ShakeMap', valore: 'shakemap.ingv.it', url: LINK_SHAKEMAP + p.id }] : []),
     ].filter(c => c.valore),
     legende: [
       { titolo: t('terremoti.ev.legendaMagnitudo'), voci: CLASSI_MAGNITUDO.map((c, i) => ({ testo: t(`terremoti.ev.mag.${c.chiave}`), raggio: c.raggio, attiva: i === classe, badge: `M ${num(p.mag)}` })) },

@@ -188,8 +188,8 @@ function disegnaEvento(e) {
     const cella = el('div', 'scheda-evento-campo');
     const chiave = tx('span', 'scheda-evento-chiave', c.chiave);
     if (c.nota) chiave.append(' ', tx('small', null, c.nota));
-    cella.append(chiave, tx('span', 'scheda-evento-valore', c.valore));
-    if (c.link) cella.append(Object.assign(tx('a', 'scheda-evento-link', c.link.testo), { href: c.link.url, target: '_blank', rel: 'noopener' }));
+    const valore = c.url ? Object.assign(tx('a', 'scheda-evento-valore', c.valore), { href: c.url, target: '_blank', rel: 'noopener' }) : tx('span', 'scheda-evento-valore', c.valore);
+    cella.append(chiave, valore);
     griglia.append(cella);
   }
   box.append(griglia);
