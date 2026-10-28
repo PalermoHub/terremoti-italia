@@ -7,6 +7,7 @@ import { collegaRail } from './core/rail.js';
 import { collegaStorico } from './core/scheda-storico.js';
 import { collegaStrumenti } from './core/strumenti.js';
 import { collegaTabellaDati } from './core/tabella-dati.js';
+import { collegaInfo } from './core/info.js';
 import { collegaStampa } from './core/stampa.js';
 import { collegaRicerca } from './core/ricerca.js';
 import { creaDifferiti } from './core/differiti.js';
@@ -116,6 +117,7 @@ map.once('style.load', async () => {
     bottone: document.getElementById('btn-tabella'),
     fornitori: [terremoti.tabella, terremotiStorico.tabella, terremotiConfronto.tabella].filter(Boolean),
   });
+  collegaInfo({ bottone: document.getElementById('btn-info') });
   collegaStampa(map, document.getElementById('btn-stampa'), document.getElementById('stampa-menu'));
   window.dt.pronto = true;
 });

@@ -131,8 +131,64 @@
   #mappa-info #piede-coord .piede-zoom { color: var(--text-muted); }
 }
 @media (max-width: 720px) {
-  #mappa-info #piede-coord { display: inline; }
-  #mappa-info #piede-coord .piede-zoom::before { content: ' · '; }
+  #mappa-info #piede-coord { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.15; }
+  #mappa-info #piede-coord .piede-zoom { color: var(--text-muted); }
 }
 @media (max-width: 720px) { #minimappa-panoramica { display: none; } }
 @media print { #minimappa-panoramica { display: none !important; } }
+/* Modale Info (js/core/info.js): sale dal basso tra i due pannelli. Sta tra --sx (barra/pannello di sinistra) e --scheda-l
+   (scheda e rail di destra), come la tabella dei dati: left/right in transizione la fanno seguire i pannelli quando si aprono. */
+#info-modale {
+  position: fixed; z-index: var(--z-foglio); left: var(--sx); right: var(--scheda-l); bottom: var(--footer-h, 0px);
+  box-sizing: border-box; display: flex; flex-direction: column; align-items: center; width: auto; max-width: 1100px; margin-inline: auto;
+  height: min(80dvh, calc(100dvh - 72px - var(--footer-h, 0px))); outline: none;
+  transform: translateY(100%); transition: transform .42s cubic-bezier(.22, 1, .36, 1), left var(--t-media) ease, right var(--t-media) ease;
+}
+#info-modale[hidden] { display: none; }
+#info-modale.aperto { transform: translateY(0); }
+#info-linguetta {
+  flex: none; width: 60px; height: 20px; padding: 0; display: flex; align-items: center; justify-content: center; cursor: pointer;
+  background: var(--surface); color: var(--text-muted); border: 1px solid var(--border-ui); border-bottom: 0; border-radius: var(--r-md) var(--r-md) 0 0; box-shadow: var(--ombra);
+}
+#info-linguetta:hover { color: var(--accent-strong); background: var(--surface-hover); }
+.info-corpo {
+  position: relative; flex: 1; min-height: 0; width: 100%; display: flex; flex-direction: column; overflow: hidden;
+  background: var(--surface); color: var(--text); border: 1px solid var(--border-ui); border-bottom: 0; box-shadow: var(--ombra); font-size: var(--fs-sm);
+}
+.info-testata { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 8px 0 16px; flex: none; }
+.info-titolo { font-size: var(--fs-md, 1rem); }
+#info-chiudi { display: flex; align-items: center; justify-content: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--text-muted); cursor: pointer; }
+#info-chiudi:hover { color: var(--accent-strong); background: var(--surface-hover); }
+.info-schede { display: flex; gap: 2px; padding: 4px 12px 0; border-bottom: 1px solid var(--border-ui); flex: none; overflow-x: auto; scrollbar-width: none; }
+.info-scheda {
+  padding: 8px 16px; margin-bottom: -1px; border: 0; border-bottom: 3px solid transparent; background: none; color: var(--text-muted);
+  font: inherit; font-weight: 600; white-space: nowrap; cursor: pointer;
+}
+.info-scheda:hover { color: var(--text); }
+.info-scheda[aria-selected="true"] { color: var(--text); border-bottom-color: var(--accent); }
+.info-pannello { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; padding: 8px 20px 32px; line-height: 1.55; scrollbar-width: thin; }
+.info-pannello[hidden] { display: none; }
+.info-pannello h3 { margin: 18px 0 6px; font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
+.info-pannello h3:first-child { margin-top: 8px; }
+.info-pannello p, .info-pannello ul { margin: 0 0 8px; }
+.info-pannello ul { padding-left: 20px; }
+.info-pannello a { color: var(--accent-strong); }
+.info-pannello code { font-size: .92em; }
+.info-pannello kbd { display: inline-block; min-width: 18px; padding: 1px 5px; border: 1px solid var(--border-ui); border-bottom-width: 2px; border-radius: var(--r-sm); background: var(--surface-alt); font: inherit; font-size: var(--fs-xs); text-align: center; }
+.info-tasti { display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; margin: 0; }
+.info-tasti dt, .info-tasti dd { margin: 0; }
+.info-nota { padding: 8px 12px; border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: var(--r-sm); }
+#info-torna-su {
+  position: absolute; right: 18px; bottom: 18px; width: 36px; height: 36px; padding: 0; display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--accent); border-radius: 50%; background: var(--surface); color: var(--text); box-shadow: var(--ombra); cursor: pointer;
+  opacity: 0; pointer-events: none; transform: translateY(6px); transition: opacity var(--t-media), transform var(--t-media);
+}
+#info-torna-su.visibile { opacity: 1; pointer-events: auto; transform: none; }
+#info-torna-su:hover { background: var(--accent); color: var(--accent-ink); }
+#info-linguetta:focus-visible, #info-chiudi:focus-visible, .info-scheda:focus-visible, #info-torna-su:focus-visible, .info-pannello:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+@media (prefers-reduced-motion: reduce) { #info-modale, #info-torna-su { transition: none; } }
+/* telefono: a tutta larghezza sopra la barra a tab */
+@media (max-width: 720px) {
+  #info-modale { left: 0; right: 0; max-width: none; bottom: calc(var(--tab-h) + var(--footer-h, 0px)); height: min(80dvh, calc(100dvh - var(--tab-h) - var(--footer-h, 0px) - 12px)); }
+  body:has(#info-modale:not([hidden])) #barra-strumenti { z-index: calc(var(--z-foglio) + 1); }
+}

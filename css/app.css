@@ -1644,8 +1644,10 @@ body { grid-auto-rows: 0; } /* righe in più, se ce ne sono, non rubano spazio *
 }
 #menu-info-toggle { display: none; margin-left: auto; width: 44px; height: 44px; padding: 0; align-items: center; justify-content: center; border: 0; border-radius: var(--r-sm); background: none; color: var(--text); cursor: pointer; }
 #menu-info-toggle:hover { background: var(--surface-hover); }
-/* lingua IT/EN nella barra degli strumenti: pillola della stessa altezza delle icone tonde */
-#barra-strumenti > #switch-lingua { display: inline-flex; align-items: center; gap: 4px; width: auto; min-width: 36px; height: 36px; padding: 0 10px; border: 1px solid var(--border); border-radius: var(--r-pill); background: var(--surface); box-shadow: var(--ombra); color: var(--text); font: inherit; font-size: .8125rem; font-weight: 600; cursor: pointer; }
+/* lingua IT/EN nella barra degli strumenti: tondo come le altre icone, globo con la sigla sotto */
+#barra-strumenti > #switch-lingua { display: inline-flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px; width: 36px; min-width: 0; height: 36px; padding: 0; border: 1px solid var(--border); border-radius: 50%; background: var(--surface); box-shadow: var(--ombra); color: var(--text); font: inherit; cursor: pointer; }
+#barra-strumenti > #switch-lingua .lingua-sigla { font-size: .5625rem; font-weight: 700; line-height: 1; letter-spacing: .02em; }
+#barra-strumenti > #switch-lingua svg { width: 15px; height: 15px; }
 #barra-strumenti > #switch-lingua:hover { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-strong); }
 #barra-strumenti > #switch-lingua:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 #barra-strumenti > #switch-lingua svg { flex: none; }
@@ -1796,7 +1798,9 @@ body:has(#rndt-pannello:not([hidden]):not(.collassato), #geoimage-pannello:not([
   /* strumenti della mappa: colonna a destra sotto la ricerca; il catalogo RNDT sta nei tab */
   #barra-strumenti { top: 68px; right: 12px; left: auto; flex-direction: column; align-items: center; gap: 8px; }
   #barra-strumenti > #btn-rndt { display: none; }
-  #barra-strumenti > #switch-lingua { width: auto; min-width: 44px; height: 44px; padding: 0 12px; }
+  #barra-strumenti > #switch-lingua { width: 44px; height: 44px; }
+  #barra-strumenti > #switch-lingua svg { width: 18px; height: 18px; }
+  #barra-strumenti > #switch-lingua .lingua-sigla { font-size: .625rem; }
 
   /* modalità emergenza (Piano di emergenza acceso): barra con Mappa, Home, GPS, Talia ed Esci, nessuno strumento sulla mappa, solo la scheda dell'area */
   #barra-tab button:is([data-tab="home"], [data-tab="gps"], [data-tab="condividi"], [data-tab="talia"], [data-tab="esci"]) { display: none; }
@@ -2613,7 +2617,7 @@ details.scheda-sez-evento .scheda-sez-testo { display: contents; }
 #mappa-info { position: fixed; z-index: var(--z-mappa-ui); right: calc(var(--scheda-l) + 68px); bottom: calc(var(--footer-h, 0px) + 56px); display: flex; flex-direction: column; align-items: flex-end; gap: 2px; padding: 6px 10px; background: color-mix(in srgb, var(--surface) 88%, transparent); border: 1px solid var(--border-ui); border-radius: var(--r-md); box-shadow: var(--ombra); font-size: var(--fs-xs); color: var(--text-muted); pointer-events: none; transition: right var(--t-rapida); }
 #mappa-info #app-logo { font-size: var(--fs-sm); font-weight: 700; line-height: 1.2; color: var(--text); }
 #mappa-info #piede-coord { margin: 0; }
-@media (max-width: 720px) { #mappa-info { right: 8px; bottom: calc(var(--tab-h, 60px) + var(--footer-h, 0px) + 8px); } #mappa-info #piede-coord { display: inline; } }
+@media (max-width: 720px) { #mappa-info { right: 8px; bottom: calc(var(--tab-h, 60px) + var(--footer-h, 0px) + 8px); } }
 
 #mappa-info { flex-direction: row; align-items: center; gap: 10px; pointer-events: auto; }
 #mappa-info .mappa-info-testi { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; pointer-events: none; }
