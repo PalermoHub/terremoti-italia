@@ -50,6 +50,15 @@ function nascondi(map) {
   if (mioCursore) { map.getCanvas().style.cursor = ''; mioCursore = false; }
 }
 
+// Chiude tutti i popup aperti con un clic (non il tooltip del passaggio): i grafici lo chiamano appena il
+// puntatore tocca un evento, perché la scheda del popup coprirebbe proprio il punto da evidenziare.
+export function chiudiPopupAperti() {
+  for (const p of [...aperti]) {
+    try { p.remove(); } catch { /* già chiuso o mappa sparita */ }
+  }
+  aperti.clear();
+}
+
 // Il contenuto del tooltip per un punto della mappa ({ point, lngLat }, come un evento del mouse): lo usa anche la vista
 // «Strati in 3D», che lo mostra sopra la pila. null se sotto il punto non c'è nulla.
 export function contenutoTooltip(e) {

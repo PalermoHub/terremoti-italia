@@ -7,8 +7,15 @@ Stesso stile e stesso motore di Digital Twin Palermo, copiati (non modificati) d
     npm run test:js  # test della webapp e del server
     node scripts/chiusura.mjs js/app.js   # elenca i file raggiunti dall'app; esce 1 se manca un import
 
-Cosa c'è: strato terremoti (filtri, scheda con 4 grafici, popup grande, minimappa), strato allerte DPC (187 zone, Oggi/Domani),
+Cosa c'è: strato terremoti (filtri, scheda con i grafici degli eventi, popup grande, minimappa), strato allerte DPC (187 zone, Oggi/Domani),
 strumenti in mappa (vista Italia, posizione, schermo intero, stampa, tema, zoom), italiano e inglese.
+
+**Grafici interattivi**: nelle schede degli eventi ogni grafico è dinamico. Passando il mouse (o portando il focus con Tab)
+su un evento, su una barra o su una sequenza, l'evento o il gruppo di eventi si accende in mappa con un alone; se c'è un
+popup aperto, si chiude da solo per non coprire il punto. I grafici molto fitti (unità «anno», migliaia di eventi) usano
+un unico rilevatore del puntatore invece di un nodo per evento, così restano reattivi. Il codice sta in
+`js/core/evidenza-eventi.js` e in `js/layers/scheda-terremoti-dom.js`.
+
 Nel pannello Strati, sezione **Territorio**, lo strato **Confini comunali** (spento all'avvio) disegna i bordi dei comuni:
 passando il mouse su un comune si leggono nome, provincia, regione, codice ISTAT e il totale dei terremoti dal 1985, il confine
 si evidenzia, e un clic apre la scheda dei suoi terremoti. Le stesse cose (tooltip ed evidenza) valgono sull'area scelta nella

@@ -3050,6 +3050,7 @@
   "terremoti.cum.titolo": "Eventi accumulati nel tempo",
   "terremoti.cum.nota": "Numero di eventi accumulati (M ≥ {mag}): {n} nella finestra. Un cambio di pendenza segnala un aumento di attività.",
   "terremoti.barre.titolo": "Terremoti per giorno, mese o anno",
+  "terremoti.grafici.aiuto": "Passa il mouse (o porta il focus con Tab) su un evento o su una barra: in mappa si accende quel punto e l'evento, e il popup aperto si chiude da solo.",
   "info.sezione.cosa": "Cosa rappresenta",
   "info.sezione.come": "Come funziona",
   "info.sezione.leggere": "Come leggerlo",

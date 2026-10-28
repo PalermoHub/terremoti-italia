@@ -384,15 +384,56 @@ function creaSync(apri) {
   };
 }
 
-// Rende un elemento del grafico sensibile: nella scheda il clic apre l'evento in mappa; nel popup (con `sync`) lo evidenzia anche nella minimappa
-function rendiApribile(gruppo, p, apri, sync) {
-  if (!Number.isFinite(p.lon) || !(apri || sync)) return false;
+// L'evento sotto il puntatore (o col focus da tastiera) resta evidenziato in mappa finché non si passa a un altro.
+// La pausa di 70 ms evita di spegnere e riaccendere l'evidenza mentre il puntatore va da un elemento al successivo.
+function creaInterazione({ evidenzia, nascondi } = {}) {
+  if (typeof evidenzia !== 'function') return null;
+  let corrente = null;
+  let attesa = null;
+  const ferma = () => {
+    clearTimeout(attesa);
+    attesa = null;
+    corrente = null;
+    nascondi?.();
+  };
+  return {
+    mostra(eventi, nodo) {
+      clearTimeout(attesa);
+      attesa = null;
+      const validi = (eventi ?? []).filter(p => Number.isFinite(p?.lon) && Number.isFinite(p?.lat));
+      if (!validi.length) { ferma(); return; }
+      corrente = nodo;
+      evidenzia(validi);
+    },
+    pulisci(nodo) {
+      if (corrente !== nodo) return;
+      clearTimeout(attesa);
+      attesa = setTimeout(() => {
+        attesa = null;
+        if (corrente !== nodo) return;
+        corrente = null;
+        nascondi?.();
+      }, 70);
+    },
+    ferma,
+  };
+}
+
+// Rende un elemento del grafico sensibile: nella scheda il clic apre l'evento in mappa; nel popup (con `sync`) lo evidenzia anche nella minimappa.
+// In entrambi i casi il passaggio del mouse (o il focus) lo evidenzia in mappa tramite `interazione`.
+function rendiApribile(gruppo, p, apri, sync, interazione) {
+  const coordinate = Number.isFinite(p.lon) && Number.isFinite(p.lat);
+  if (!coordinate || !(apri || sync || interazione)) return false;
   gruppo.classList.add('apribile');
-  gruppo.setAttribute('tabindex', '0');
-  gruppo.setAttribute('role', 'button');
-  const azione = sync ? () => sync.seleziona(p) : () => apri(p);
-  gruppo.addEventListener('click', azione);
-  gruppo.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); azione(); } });
+  const azione = sync ? () => sync.seleziona(p) : apri ? () => { interazione?.ferma(); apri(p); } : null;
+  if (azione) {
+    gruppo.setAttribute('tabindex', '0');
+    gruppo.setAttribute('role', 'button');
+    gruppo.addEventListener('click', azione);
+    gruppo.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); azione(); } });
+  } else {
+    gruppo.setAttribute('tabindex', '0');
+  }
   if (sync) {
     sync.gruppi.set(idEvento(p), gruppo);
     gruppo.addEventListener('pointerenter', () => sync.passa(p));
@@ -400,7 +441,26 @@ function rendiApribile(gruppo, p, apri, sync) {
     gruppo.addEventListener('focus', () => sync.passa(p));
     gruppo.addEventListener('blur', () => sync.passa(null));
   }
+  if (interazione) {
+    gruppo.addEventListener('pointerenter', () => interazione.mostra([p], gruppo));
+    gruppo.addEventListener('pointerleave', () => interazione.pulisci(gruppo));
+    gruppo.addEventListener('focus', () => interazione.mostra([p], gruppo));
+    gruppo.addEventListener('blur', () => interazione.pulisci(gruppo));
+  }
   return true;
+}
+
+// Una barra, un punto della legge di Omori o una sequenza: ognuno rappresenta un gruppo di eventi.
+// Al passaggio del mouse (o col focus) il gruppo si accende in mappa; il clic non serve.
+function rendiGruppo(nodo, eventi, interazione, etichetta = null) {
+  if (!interazione || !eventi?.some(p => Number.isFinite(p?.lon) && Number.isFinite(p?.lat))) return;
+  nodo.classList.add('interattivo');
+  nodo.tabIndex = 0;
+  if (etichetta) nodo.setAttribute('aria-label', etichetta);
+  nodo.addEventListener('pointerenter', () => interazione.mostra(eventi, nodo));
+  nodo.addEventListener('pointerleave', () => interazione.pulisci(nodo));
+  nodo.addEventListener('focus', () => interazione.mostra(eventi, nodo));
+  nodo.addEventListener('blur', () => interazione.pulisci(nodo));
 }
 
 // Minimappa accanto al grafico: tessere OpenStreetMap standard inquadrate su tutti gli eventi del grafico, un cerchio per evento
@@ -542,14 +602,65 @@ function aggiungiMappa(blocco, sync, punti, forte) {
   blocco.append(mappa.aiuto, mappa.quadro, mappa.scheda, mappa.apri, mappa.dettaglio); // grafico | minimappa | scheda dell'evento, ognuno con una riga sopra e una sotto
 }
 
-// Un marcatore per evento sulla curva (solo nel popup), come gli steli di magnitudo-tempo: tooltip al passaggio, clic = apre l'evento in mappa.
-// `testo(i)` = riga in più del tooltip, `quota(i)` = ordinata del marcatore nel grafico.
-function marcatori(svg, g, apri, sync, px, py, quota, testo) {
+// Sopra queste soglie non si crea un nodo (e un ascoltatore) per evento: il grafico disegna un solo tracciato
+// e l'evento si trova con un unico movimento del puntatore. Serve all'unità «anno»: cinque anni sono migliaia di eventi.
+const MAX_MARCATORI = 500; // punti visibili sulle curve cumulative e di energia
+const MAX_GRUPPI = 1200; // steli di magnitudo-tempo e punti spazio-tempo con un gruppo ciascuno
+
+// Un solo ascoltatore sul grafico per tutti gli eventi troppo numerosi per avere un nodo ciascuno: si cerca
+// il punto più vicino al puntatore (l'ascissa è ordinata, quindi bastano i vicini) e si evidenzia quello.
+function agganciaPunti(svg, punti, apri, sync, px, py, quota, interazione) {
+  if (!interazione || !punti.length) return;
+  const n = punti.length, xs = punti.map(p => px(p.x));
+  let sopra = null;
+  const vicino = ev => {
+    const r = svg.getBoundingClientRect();
+    if (!r.width || !r.height) return null;
+    const vb = svg.viewBox.baseVal;
+    const L = vb.width || r.width, A = vb.height || r.height;
+    const x = (ev.clientX - r.left) * L / r.width, y = (ev.clientY - r.top) * A / r.height;
+    const soglia = Math.max(8, 10 * L / r.width); // 10 px sullo schermo
+    let i = 0, j = n;
+    while (i < j) { const k = (i + j) >> 1; if (xs[k] < x) i = k + 1; else j = k; }
+    let migliore = null, distanza = Infinity;
+    const guarda = k => {
+      const d = Math.hypot(px(punti[k].x) - x, py(quota(k)) - y);
+      if (d < distanza) { distanza = d; migliore = punti[k]; }
+    };
+    for (let k = i; k < n && xs[k] - x <= soglia; k++) guarda(k);
+    for (let k = i - 1; k >= 0 && x - xs[k] <= soglia; k--) guarda(k);
+    return distanza <= soglia ? migliore : null;
+  };
+  const esci = () => { if (sopra) { sopra = null; sync?.passa(null); interazione.pulisci(svg); } };
+  svg.classList.add('punti-interattivi');
+  svg.addEventListener('pointermove', ev => {
+    if (ev.pointerType === 'touch' || ev.buttons) return;
+    const p = vicino(ev);
+    if (!p) { esci(); return; }
+    if (p === sopra) return;
+    sopra = p;
+    sync?.passa(p);
+    interazione.mostra([p], svg);
+  });
+  svg.addEventListener('pointerleave', esci);
+  svg.addEventListener('click', ev => {
+    const p = vicino(ev);
+    if (!p) return;
+    interazione.ferma();
+    if (sync) sync.seleziona(p); else apri?.(p);
+  });
+}
+
+// Un marcatore per evento sulla curva (nella scheda e nel popup), come gli steli di magnitudo-tempo: tooltip al passaggio,
+// evidenza in mappa, clic = apre l'evento. `testo(i)` = riga in più del tooltip, `quota(i)` = ordinata del marcatore.
+function marcatori(svg, g, apri, sync, px, py, quota, testo, grande, interazione) {
+  if (interazione && g.punti.length > MAX_MARCATORI) { agganciaPunti(svg, g.punti, apri, sync, px, py, quota, interazione); return; }
   g.punti.forEach((p, i) => {
     const forte = p === g.mainshock;
     const gruppo = nodoSvg('g', { class: forte ? 'forte' : 'evento' }, `M ${mag1(p.mag)} · ${dataEvento(p.ts)} · ${testo(i)}`);
-    gruppo.append(nodoSvg('circle', { cx: px(p.x), cy: py(quota(i)), r: forte ? 5 : 3 }));
-    rendiApribile(gruppo, p, apri, sync);
+    const cx = px(p.x), cy = py(quota(i));
+    gruppo.append(nodoSvg('circle', { cx, cy, r: forte ? (grande ? 5 : 3.5) : (grande ? 3 : 2) }));
+    if (rendiApribile(gruppo, p, apri, sync, interazione)) gruppo.append(nodoSvg('circle', { cx, cy, r: grande ? 9 : 7, class: 'zona-punto' }));
     svg.append(gruppo);
   });
 }
@@ -581,11 +692,11 @@ function nodoSvg(tag, attributi, titolo) {
 }
 const dataEvento = ts => new Date(ts).toLocaleString(localeIntl(), { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
 
-function disegnaMagnitudoTempo(g, apri, grande = false, origine = g) {
+function disegnaMagnitudoTempo(g, apri, grande = false, origine = g, interazione = null) {
   const { L, A, MS, MD, MA, MB } = dimensioni(grande);
   const sync = grande ? creaSync(apri) : null;
   const blocco = el('div', 'terremoti-serie');
-  blocco.append(intestazione(t('terremoti.mt.titolo'), 'mt', grande, chiudi => disegnaMagnitudoTempo(g, apri && (p => { chiudi(); apri(p); }), true)));
+  blocco.append(intestazione(t('terremoti.mt.titolo'), 'mt', grande, chiudi => disegnaMagnitudoTempo(g, apri && (p => { chiudi(); apri(p); }), true, g, interazione)));
   if (!g.punti.length) {
     blocco.append(el('p', 'scheda-nota', t('terremoti.serie.vuota')));
     return blocco;
@@ -600,14 +711,23 @@ function disegnaMagnitudoTempo(g, apri, grande = false, origine = g) {
   }
   asseDate(svg, g, grande);
   titoliAssi(svg, grande, null, 'terremoti.asse.mag');
-  for (const p of g.punti) {
-    const forte = p === g.mainshock;
-    const x = px(p.x), y = py(p.y);
-    const gruppo = nodoSvg('g', { class: forte ? 'forte' : 'evento' }, `M ${p.mag.toLocaleString(localeIntl(), { minimumFractionDigits: 1 })} · ${dataEvento(p.ts)}`);
-    gruppo.append(nodoSvg('line', { x1: x, x2: x, y1: py(0), y2: y }), nodoSvg('circle', { cx: x, cy: y, r: (forte ? 4 : 2) * (grande ? 1.5 : 1) }));
-    // clic su uno stelo: l'evento si apre in mappa, o nel popup si evidenzia in minimappa (la zona sensibile è larga 8 px)
-    if (rendiApribile(gruppo, p, apri, sync)) gruppo.append(nodoSvg('line', { x1: x, x2: x, y1: py(0), y2: y - 3, class: 'zona' }));
-    svg.append(gruppo);
+  if (interazione && g.punti.length > MAX_GRUPPI) {
+    // troppi steli per un nodo e un ascoltatore ciascuno: un solo tracciato, e il puntatore trova l'evento
+    svg.append(nodoSvg('path', { d: g.punti.map(p => `M${px(p.x).toFixed(1)},${py(0).toFixed(1)}V${py(p.y).toFixed(1)}`).join(''), class: 'steli' }));
+    const forte = g.mainshock;
+    const x = px(forte.x);
+    svg.append(nodoSvg('line', { x1: x, x2: x, y1: py(0), y2: py(forte.y), class: 'stelo-forte' }), nodoSvg('circle', { cx: x, cy: py(forte.y), r: grande ? 6 : 4, class: 'punto-forte' }));
+    agganciaPunti(svg, g.punti, apri, sync, px, py, i => g.punti[i].y, interazione);
+  } else {
+    for (const p of g.punti) {
+      const forte = p === g.mainshock;
+      const x = px(p.x), y = py(p.y);
+      const gruppo = nodoSvg('g', { class: forte ? 'forte' : 'evento' }, `M ${p.mag.toLocaleString(localeIntl(), { minimumFractionDigits: 1 })} · ${dataEvento(p.ts)}`);
+      gruppo.append(nodoSvg('line', { x1: x, x2: x, y1: py(0), y2: y }), nodoSvg('circle', { cx: x, cy: y, r: (forte ? 4 : 2) * (grande ? 1.5 : 1) }));
+      // clic su uno stelo: l'evento si apre in mappa, o nel popup si evidenzia in minimappa (la zona sensibile è larga 8 px)
+      if (rendiApribile(gruppo, p, apri, sync, interazione)) gruppo.append(nodoSvg('line', { x1: x, x2: x, y1: py(0), y2: y - 3, class: 'zona' }));
+      svg.append(gruppo);
+    }
   }
   const m = g.mainshock;
   const dx = px(m.x);
@@ -616,18 +736,18 @@ function disegnaMagnitudoTempo(g, apri, grande = false, origine = g) {
   svg.append(et);
   blocco.append(svg, el('p', 'scheda-nota', t('terremoti.mt.nota', { n: num(g.punti.length), mag: g.base, forte: m.mag.toLocaleString(localeIntl(), { minimumFractionDigits: 1 }), data: dataEvento(m.ts), repliche: num(g.repliche) })));
   if (grande) aggiungiMappa(blocco, sync, g.punti, g.mainshock);
-  if (grande) zoomGrande(blocco, svg, g, origine, gw => disegnaMagnitudoTempo(gw, apri, true, origine));
+  if (grande) zoomGrande(blocco, svg, g, origine, gw => disegnaMagnitudoTempo(gw, apri, true, origine, interazione));
   return blocco;
 }
 
 // Curva cumulativa: scala degli eventi accumulati; l'asse verticale va da 0 al totale
-function disegnaCurva(g, apri, grande = false, origine = g) {
+function disegnaCurva(g, apri, grande = false, origine = g, interazione = null) {
   const c = curvaCumulativa(g);
   if (!c.totale) return el('div'); // senza eventi la nota del grafico precedente basta
   const { L, A, MS, MD, MA, MB } = dimensioni(grande);
   const sync = grande ? creaSync(apri) : null;
   const blocco = el('div', 'terremoti-serie');
-  blocco.append(intestazione(t('terremoti.cum.titolo'), 'cum', grande, chiudi => disegnaCurva(g, apri && (p => { chiudi(); apri(p); }), true)));
+  blocco.append(intestazione(t('terremoti.cum.titolo'), 'cum', grande, chiudi => disegnaCurva(g, apri && (p => { chiudi(); apri(p); }), true, g, interazione)));
   const px = x => MS + x * (L - MS - MD), py = n => A - MB - n / c.totale * (A - MB - MA);
   const svg = nodoSvg('svg', { viewBox: `0 0 ${L} ${A}`, class: `terremoti-mt terremoti-cum${grande ? ' grande' : ''}`, role: 'img', 'aria-label': t('terremoti.cum.titolo') });
   for (const n of grande ? [0, 1, 2, 3, 4].map(k => Math.round(c.totale * k / 4)).concat(c.totale).filter((v, i, a) => a.indexOf(v) === i) : [0, c.totale]) {
@@ -644,21 +764,21 @@ function disegnaCurva(g, apri, grande = false, origine = g) {
     nodoSvg('polygon', { points: `${px(0)},${py(0)} ${vertici.join(' ')} ${px(1)},${py(0)}`, class: 'area' }),
     nodoSvg('polyline', { points: vertici.join(' '), class: 'curva' }),
   );
-  if (grande) marcatori(svg, g, apri, sync, px, py, i => i + 1, i => tn('terremoti.nEventi', i + 1, { n: num(i + 1) }));
+  marcatori(svg, g, apri, sync, px, py, i => i + 1, i => tn('terremoti.nEventi', i + 1, { n: num(i + 1) }), grande, interazione);
   blocco.append(svg, el('p', 'scheda-nota', t('terremoti.cum.nota', { n: num(c.totale), mag: g.base })));
   if (grande) aggiungiMappa(blocco, sync, g.punti, g.mainshock);
-  if (grande) zoomGrande(blocco, svg, g, origine, gw => disegnaCurva(gw, apri, true, origine));
+  if (grande) zoomGrande(blocco, svg, g, origine, gw => disegnaCurva(gw, apri, true, origine, interazione));
   return blocco;
 }
 
 // Legge di Omori: repliche per giorno dopo la mainshock, assi logaritmici (decadimento ≈ retta)
-function disegnaOmori(g, grande = false) {
+function disegnaOmori(g, grande = false, interazione = null) {
   const o = omori(g);
   const v = o.giorni.filter(d => d.n > 0);
   if (!o.mainshock || !v.length) return el('div');
   const { L, A, MS, MD, MA, MB } = dimensioni(grande);
   const blocco = el('div', 'terremoti-serie');
-  blocco.append(intestazione(t('terremoti.omori.titolo'), 'omori', grande, () => disegnaOmori(g, true)));
+  blocco.append(intestazione(t('terremoti.omori.titolo'), 'omori', grande, () => disegnaOmori(g, true, interazione)));
   const tMax = Math.max(10, o.giorni.length + 0.5), nMax = Math.max(10, ...v.map(d => d.n));
   const decT = Math.ceil(Math.log10(tMax)), decN = Math.ceil(Math.log10(nMax));
   const x0 = Math.log10(0.5), px = tt => MS + (Math.log10(tt) - x0) / (decT - x0) * (L - MS - MD);
@@ -693,19 +813,28 @@ function disegnaOmori(g, grande = false) {
       svg.append(e);
     }
   }
-  for (const d of v) svg.append(nodoSvg('circle', { cx: px(d.t), cy: py(d.n), r: grande ? 4 : 2.5, class: 'punto' }, `${t('terremoti.omori.giorno', { n: Math.ceil(d.t) })}: ${tn('terremoti.nEventi', d.n, { n: num(d.n) })}`));
+  for (const d of v) {
+    const testo = `${t('terremoti.omori.giorno', { n: Math.ceil(d.t) })}: ${tn('terremoti.nEventi', d.n, { n: num(d.n) })}`;
+    const gruppo = nodoSvg('g', { class: 'punto-giorno' }, testo);
+    gruppo.append(
+      nodoSvg('circle', { cx: px(d.t), cy: py(d.n), r: grande ? 4 : 2.5, class: 'punto' }),
+      nodoSvg('circle', { cx: px(d.t), cy: py(d.n), r: grande ? 10 : 7, class: 'zona-punto' }),
+    );
+    rendiGruppo(gruppo, d.eventi, interazione, testo); // il punto è un giorno di repliche: sotto il mouse si vedono tutte
+    svg.append(gruppo);
+  }
   blocco.append(svg, el('p', 'scheda-nota', t(o.fit ? 'terremoti.omori.nota' : 'terremoti.omori.notaPoca', { forte: o.mainshock.mag.toLocaleString(localeIntl(), { minimumFractionDigits: 1 }), data: dataEvento(o.mainshock.ts), p: o.fit ? o.fit.p.toLocaleString(localeIntl(), { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '' })));
   return blocco;
 }
 
 // Rilascio cumulativo di energia (momento sismico): quota del totale, dominata dagli eventi grandi
-function disegnaRilascio(g, apri, grande = false, origine = g) {
+function disegnaRilascio(g, apri, grande = false, origine = g, interazione = null) {
   const r = rilascioCumulativo(g);
   if (!r.totale) return el('div');
   const { L, A, MS, MD, MA, MB } = dimensioni(grande);
   const sync = grande ? creaSync(apri) : null;
   const blocco = el('div', 'terremoti-serie');
-  blocco.append(intestazione(t('terremoti.energia.titolo'), 'energia', grande, chiudi => disegnaRilascio(g, apri && (p => { chiudi(); apri(p); }), true)));
+  blocco.append(intestazione(t('terremoti.energia.titolo'), 'energia', grande, chiudi => disegnaRilascio(g, apri && (p => { chiudi(); apri(p); }), true, g, interazione)));
   const px = x => MS + x * (L - MS - MD), py = f => A - MB - f * (A - MB - MA);
   const svg = nodoSvg('svg', { viewBox: `0 0 ${L} ${A}`, class: `terremoti-mt terremoti-cum terremoti-energia${grande ? ' grande' : ''}`, role: 'img', 'aria-label': t('terremoti.energia.titolo') });
   for (const f of grande ? [0, 0.25, 0.5, 0.75, 1] : [0, 0.5, 1]) {
@@ -719,21 +848,21 @@ function disegnaRilascio(g, apri, grande = false, origine = g) {
   lineaForte(svg, g, grande, px);
   const vertici = r.passi.map(p => `${px(p.x).toFixed(1)},${py(p.f).toFixed(1)}`);
   svg.append(nodoSvg('polygon', { points: `${px(0)},${py(0)} ${vertici.join(' ')} ${px(1)},${py(0)}`, class: 'area' }), nodoSvg('polyline', { points: vertici.join(' '), class: 'curva' }));
-  if (grande) marcatori(svg, g, apri, sync, px, py, i => r.passi[2 * i + 2].f, i => `${(r.passi[2 * i + 2].f * 100).toLocaleString(localeIntl(), { maximumFractionDigits: 1 })}%`);
+  marcatori(svg, g, apri, sync, px, py, i => r.passi[2 * i + 2].f, i => `${(r.passi[2 * i + 2].f * 100).toLocaleString(localeIntl(), { maximumFractionDigits: 1 })}%`, grande, interazione);
   blocco.append(svg, el('p', 'scheda-nota', t('terremoti.energia.nota', { mag: r.magEquiv.toLocaleString(localeIntl(), { maximumFractionDigits: 1 }), forte: g.mainshock.mag.toLocaleString(localeIntl(), { minimumFractionDigits: 1 }), quota: Math.round(r.quotaMax * 100), n: num(g.punti.length) })));
   if (grande) aggiungiMappa(blocco, sync, g.punti, g.mainshock);
-  if (grande) zoomGrande(blocco, svg, g, origine, gw => disegnaRilascio(gw, apri, true, origine));
+  if (grande) zoomGrande(blocco, svg, g, origine, gw => disegnaRilascio(gw, apri, true, origine, interazione));
   return blocco;
 }
 
 // Tempi tra eventi successivi: istogramma delle attese, da brevissime (sciame) a lunghe (attività di fondo)
 const nomeAttesa = min => (min < 60 ? `${min}${t('terremoti.attesa.min')}` : min < 1440 ? `${min / 60}${t('terremoti.attesa.ore')}` : min < 525600 ? `${min / 1440}${t('terremoti.attesa.giorni')}` : `1${t('terremoti.attesa.anni')}`);
 const intervalloAttesa = c => (c.a === Infinity ? `> ${nomeAttesa(c.da)}` : c.da ? `${nomeAttesa(c.da)} – ${nomeAttesa(c.a)}` : `< ${nomeAttesa(c.a)}`);
-function disegnaAttese(g, grande = false) {
+function disegnaAttese(g, grande = false, interazione = null) {
   const a = tempiTraEventi(g);
   if (!a) return el('div');
   const blocco = el('div', 'terremoti-serie');
-  blocco.append(intestazione(t('terremoti.attese.titolo'), 'attese', grande, () => disegnaAttese(g, true)));
+  blocco.append(intestazione(t('terremoti.attese.titolo'), 'attese', grande, () => disegnaAttese(g, true, interazione)));
   const barre = el('div', `terremoti-barre${grande ? ' grande' : ''}`);
   for (const c of a.classi) {
     const colonna = el('div', 'terremoti-barra');
@@ -742,6 +871,7 @@ function disegnaAttese(g, grande = false) {
     asta.style.height = `${c.n ? Math.max(c.n / a.max * 100, 3) : 0}%`;
     if (grande) colonna.append(el('b', null, num(c.n))); // numero di attese sopra ogni barra
     colonna.append(asta, el('span', null, c.da ? nomeAttesa(c.da) : `<${nomeAttesa(c.a)}`));
+    rendiGruppo(colonna, c.eventi, interazione, colonna.title); // la classe raggruppa gli eventi con quell'attesa
     barre.append(colonna);
   }
   const med = a.mediana < 60 ? `${num(Math.round(a.mediana))} ${t('terremoti.attesa.min')}` : a.mediana < 1440 ? `${num(Math.round(a.mediana / 60))} ${t('terremoti.attesa.ore')}` : `${num(Math.round(a.mediana / 1440))} ${t('terremoti.attesa.giorni')}`;
@@ -750,13 +880,13 @@ function disegnaAttese(g, grande = false) {
 }
 
 // Diagramma spazio-tempo: latitudine contro tempo, un cerchio per evento
-function disegnaSpazioTempo(g, apri, grande = false, origine = g) {
+function disegnaSpazioTempo(g, apri, grande = false, origine = g, interazione = null) {
   const st = spazioTempo(g);
   if (!st) return el('div');
   const { L, A, MS, MD, MA, MB } = dimensioni(grande);
   const sync = grande ? creaSync(apri) : null;
   const blocco = el('div', 'terremoti-serie');
-  blocco.append(intestazione(t('terremoti.st.titolo'), 'spaziotempo', grande, chiudi => disegnaSpazioTempo(g, apri && (p => { chiudi(); apri(p); }), true)));
+  blocco.append(intestazione(t('terremoti.st.titolo'), 'spaziotempo', grande, chiudi => disegnaSpazioTempo(g, apri && (p => { chiudi(); apri(p); }), true, g, interazione)));
   const px = x => MS + x * (L - MS - MD), py = y => A - MB - y * (A - MB - MA);
   const svg = nodoSvg('svg', { viewBox: `0 0 ${L} ${A}`, class: `terremoti-mt terremoti-st${grande ? ' grande' : ''}`, role: 'img', 'aria-label': t('terremoti.st.titolo') });
   for (const y of grande ? [0, 0.25, 0.5, 0.75, 1] : [0, 0.5, 1]) {
@@ -768,22 +898,28 @@ function disegnaSpazioTempo(g, apri, grande = false, origine = g) {
   asseDate(svg, g, grande);
   titoliAssi(svg, grande, null, 'terremoti.asse.lat');
   lineaForte(svg, g, grande, px);
-  for (const p of st.punti) {
-    const forte = p === st.mainshock;
-    const gruppo = nodoSvg('g', { class: forte ? 'forte' : 'evento' }, `M ${p.mag.toLocaleString(localeIntl(), { minimumFractionDigits: 1 })} · ${dataEvento(p.ts)}`);
-    gruppo.append(nodoSvg('circle', { cx: px(p.x), cy: py(p.y), r: Math.max(1.5, (p.mag - 1) * 1.6) * (grande ? 1.8 : 1), class: 'pt' }));
-    rendiApribile(gruppo, p, apri, sync);
-    svg.append(gruppo);
+  if (interazione && st.punti.length > MAX_GRUPPI) {
+    // troppi punti per un gruppo e un ascoltatore ciascuno: cerchi senza nodi e un solo rilevatore del puntatore
+    for (const p of st.punti) svg.append(nodoSvg('circle', { cx: px(p.x), cy: py(p.y), r: Math.max(1.5, (p.mag - 1) * 1.6) * (grande ? 1.8 : 1), class: p === st.mainshock ? 'pt forte' : 'pt' }));
+    agganciaPunti(svg, st.punti, apri, sync, px, py, i => st.punti[i].y, interazione);
+  } else {
+    for (const p of st.punti) {
+      const forte = p === st.mainshock;
+      const gruppo = nodoSvg('g', { class: forte ? 'forte' : 'evento' }, `M ${p.mag.toLocaleString(localeIntl(), { minimumFractionDigits: 1 })} · ${dataEvento(p.ts)}`);
+      gruppo.append(nodoSvg('circle', { cx: px(p.x), cy: py(p.y), r: Math.max(1.5, (p.mag - 1) * 1.6) * (grande ? 1.8 : 1), class: 'pt' }));
+      if (rendiApribile(gruppo, p, apri, sync, interazione)) gruppo.append(nodoSvg('circle', { cx: px(p.x), cy: py(p.y), r: grande ? 10 : 7, class: 'zona-punto' }));
+      svg.append(gruppo);
+    }
   }
   blocco.append(svg, el('p', 'scheda-nota', t('terremoti.st.nota', { n: num(st.punti.length) })));
   if (grande) aggiungiMappa(blocco, sync, st.punti, st.mainshock);
-  if (grande) zoomGrande(blocco, svg, g, origine, gw => disegnaSpazioTempo(gw, apri, true, origine));
+  if (grande) zoomGrande(blocco, svg, g, origine, gw => disegnaSpazioTempo(gw, apri, true, origine, interazione));
   return blocco;
 }
 
-function disegnaSerie(serie, grande = false) {
+function disegnaSerie(serie, grande = false, interazione = null) {
   const blocco = el('div', 'terremoti-serie');
-  blocco.append(intestazione(t('terremoti.barre.titolo'), 'barre', grande, () => disegnaSerie(serie, true)));
+  blocco.append(intestazione(t('terremoti.barre.titolo'), 'barre', grande, () => disegnaSerie(serie, true, interazione)));
   const barre = el('div', `terremoti-barre${grande ? ' grande' : ''}`);
   const ogni = grande ? (serie.unita === 'giorno' ? 2 : 1) : serie.unita === 'giorno' ? 5 : serie.unita === 'mese' ? 3 : 1; // etichette sotto una barra ogni tanto: nella scheda lo spazio è poco
   serie.barre.forEach((b, i) => {
@@ -794,6 +930,7 @@ function disegnaSerie(serie, grande = false) {
     asta.style.height = `${b.n ? Math.max(b.quota, 3) : 0}%`;
     if (grande) colonna.append(el('b', null, b.n ? num(b.n) : '')); // numero di eventi sopra ogni barra
     colonna.append(asta, el('span', null, (serie.barre.length - 1 - i) % ogni === 0 ? breve : ''));
+    rendiGruppo(colonna, b.punti, interazione, colonna.title); // la barra è un gruppo: sotto il mouse si vedono tutti i suoi eventi
     barre.append(colonna);
   });
   blocco.append(barre);
@@ -808,10 +945,10 @@ function disegnaSerie(serie, grande = false) {
     elenco.append(el('h4', null, t('terremoti.sequenze')));
     for (const s of serie.sequenze.slice(0, grande ? 15 : 5)) {
       const riga = el('div', 'terremoti-sequenza');
-      riga.append(
-        el('strong', null, periodoSequenza(s, serie.unita)),
-        el('span', null, `${s.barre > 1 ? t('terremoti.sequenza') : t('terremoti.sciame')} · ${tn('terremoti.nEventi', s.n, { n: num(s.n) })} · ${t('terremoti.magMax', { mag: s.magMax.toLocaleString(localeIntl(), { minimumFractionDigits: 1 }) })}`),
-      );
+      const testo = `${s.barre > 1 ? t('terremoti.sequenza') : t('terremoti.sciame')} · ${tn('terremoti.nEventi', s.n, { n: num(s.n) })} · ${t('terremoti.magMax', { mag: s.magMax.toLocaleString(localeIntl(), { minimumFractionDigits: 1 }) })}`;
+      riga.append(el('strong', null, periodoSequenza(s, serie.unita)), el('span', null, testo));
+      riga.title = `${periodoSequenza(s, serie.unita)}: ${testo}`;
+      rendiGruppo(riga, s.punti, interazione, riga.title); // anche una sequenza è un gruppo di eventi
       elenco.append(riga);
     }
     blocco.append(elenco);
@@ -822,9 +959,10 @@ function disegnaSerie(serie, grande = false) {
 // Contenuto della sezione: menu giorno/mese/anno (o periodo personalizzato) e barre; si ridisegna al cambio di unità,
 // di periodo e di magnitudo minima. `area` = riquadro per il servizio INGV.
 // Per lo storico: `sorgente()` dà gli eventi già in mappa e `adesso()` la fine del periodo mostrato, a cui ancorare le finestre dei grafici.
-export function graficoSerie(area, apri, { sorgente = null, adesso = null } = {}) {
+export function graficoSerie(area, apri, { sorgente = null, adesso = null, evidenzia = null, nascondi = null } = {}) {
   const radice = el('div', 'terremoti-elenco');
   const corpo = el('div');
+  const interazione = creaInterazione({ evidenzia, nascondi });
   let eventi = null; // serie di base: ultimi 5 anni, oppure gli eventi dello storico
   let eventiCustom = null; // eventi del periodo scelto nel menu «Eventi per»
   let periodoCustom = null;
@@ -853,15 +991,38 @@ export function graficoSerie(area, apri, { sorgente = null, adesso = null } = {}
     b.addEventListener('click', riprova);
     corpo.replaceChildren(el('p', 'scheda-nota', t('terremoti.serie.errore')), b);
   };
+  // Le barre annuali vengono dai riepiloghi di tutta la storia (1985+), senza eventi: per gli anni che abbiamo
+  // già in memoria (gli ultimi cinque) riattacca i loro eventi, così anche quelle barre si accendono in mappa.
+  const collegaEventiBarre = (serie, dati) => {
+    const min = Math.max(filtro.magMin, MAG_STORICO);
+    for (const b of serie.barre) b.punti = [];
+    for (const e of dati) {
+      if (e.mag < min) continue;
+      const b = serie.barre.find(x => e.ts >= x.da && e.ts < x.a);
+      if (b) b.punti.push(e);
+    }
+    for (const s of serie.sequenze) s.punti = serie.barre.filter(b => b.da >= s.da && b.a <= s.a).flatMap(b => b.punti);
+  };
   const disegna = () => {
     const dati = periodoCustom ? eventiCustom : eventi;
     if (!dati) return;
+    interazione?.ferma(); // il grafico cambia: l'evidenza del punto precedente non vale più
     const u = unitaCorrente();
     const fine = fineCorrente();
     const g = puntiMagnitudo(dati, u, filtro.magMin, fine, periodoCustom);
     const archivio = !sorgente && !periodoCustom && u === 'anno' ? riepilogoArchivio(Math.max(filtro.magMin, MAG_STORICO), disegna) : null;
     const serie = archivio ? serieAnnuale(archivio.perMese) : serieEventi(dati, u, filtro.magMin, fine, periodoCustom);
-    corpo.replaceChildren(disegnaSerie(serie), ...(archivio ? [el('p', 'scheda-nota', t('terremoti.serie.altriCinqueAnni'))] : []), disegnaMagnitudoTempo(g, apri), disegnaCurva(g, apri), disegnaRilascio(g, apri), disegnaOmori(g), disegnaAttese(g), disegnaSpazioTempo(g, apri));
+    if (archivio) collegaEventiBarre(serie, dati);
+    corpo.replaceChildren(
+      disegnaSerie(serie, false, interazione),
+      ...(archivio ? [el('p', 'scheda-nota', t('terremoti.serie.altriCinqueAnni'))] : []),
+      disegnaMagnitudoTempo(g, apri, false, g, interazione),
+      disegnaCurva(g, apri, false, g, interazione),
+      disegnaRilascio(g, apri, false, g, interazione),
+      disegnaOmori(g, false, interazione),
+      disegnaAttese(g, false, interazione),
+      disegnaSpazioTempo(g, apri, false, g, interazione),
+    );
   };
   const caricaBase = () => {
     if (baseInCorso) return;
@@ -926,7 +1087,7 @@ export function graficoSerie(area, apri, { sorgente = null, adesso = null } = {}
   });
   lab.append(el('span', null, t('terremoti.perUnita')), sel, nota);
   scelta.append(lab);
-  radice.append(scelta, corpo);
+  radice.append(scelta, ...(interazione ? [el('p', 'scheda-nota terremoti-grafici-aiuto', t('terremoti.grafici.aiuto'))] : []), corpo);
   const segui = () => (radice.isConnected ? disegna() : document.removeEventListener(EVENTO_FILTRO, segui));
   document.addEventListener(EVENTO_FILTRO, segui);
   allinea();

@@ -14,6 +14,7 @@ import { legendaMagnitudo } from './legenda-magnitudo.js';
 import { creaPopupTerremoti, simboliRighe } from './terremoti-popup.js';
 import { EVENTO_TABELLA } from '../core/tabella-dati.js';
 import { raggioAttivo, EVENTO_RAGGIO } from '../core/raggio-vicini.js';
+import { creaEvidenzaMappa } from '../core/evidenza-eventi.js';
 
 // Terremoti in tempo reale in Italia: gli eventi degli ultimi 30 giorni dal nostro archivio (GET /terremoti), che il server tiene allineato al servizio FDSN dell'INGV.
 // Cerchio = un evento: più grande è la magnitudo, più grande il cerchio; il colore dice da quanto è successo. Si rinnova ogni 2 minuti finché lo strato è acceso.
@@ -315,7 +316,7 @@ export default {
       const voci = [];
       const primoEvento = evento(trovati.filter(f => f.layer.id === HIT));
       if (primoEvento) {
-        voci.push(voceTerremoto(proprieta(primoEvento), Date.now(), () => barraEventi(primoEvento.properties.id, visibili, vaiAEvento)), voceSerie(() => graficoSerie(AREA, apriDaGrafico)), voceAltri(() => elencoAltri(() => eventi, new Set([primoEvento.properties.id]))));
+        voci.push(voceTerremoto(proprieta(primoEvento), Date.now(), () => barraEventi(primoEvento.properties.id, visibili, vaiAEvento)), voceSerie(() => graficoSerie(AREA, apriDaGrafico, creaEvidenzaMappa(mappa))), voceAltri(() => elencoAltri(() => eventi, new Set([primoEvento.properties.id]))));
         return voci;
       }
       const comune = primo(trovati, HIT_COMUNI);

@@ -531,8 +531,8 @@ export function marcaSciami(barre) {
   for (const b of barre) {
     if (!b.sciame) continue;
     const ultima = sequenze.at(-1);
-    if (ultima && ultima.a === b.da) { ultima.a = b.a; ultima.n += b.n; ultima.barre++; ultima.magMax = Math.max(ultima.magMax, b.magMax); }
-    else sequenze.push({ da: b.da, a: b.a, n: b.n, barre: 1, magMax: b.magMax });
+    if (ultima && ultima.a === b.da) { ultima.a = b.a; ultima.n += b.n; ultima.barre++; ultima.magMax = Math.max(ultima.magMax, b.magMax); ultima.punti.push(...(b.punti ?? [])); }
+    else sequenze.push({ da: b.da, a: b.a, n: b.n, barre: 1, magMax: b.magMax, punti: [...(b.punti ?? [])] });
   }
   return { sequenze: sequenze.sort((x, y) => y.n - x.n), soglia };
 }
@@ -547,15 +547,15 @@ export function serieEventi(eventi, unita, magMin = MAG_STORICO, adesso = Date.n
     let da = inizioBarra(intervallo.da, unita);
     while (da <= fine && barre.length < 600) { // il tetto protegge da un intervallo enorme con l'unità sbagliata
       const a = inizioBarra(da, unita, 1);
-      barre.push({ da, a, n: 0, magMax: null, sciame: false });
+      barre.push({ da, a, n: 0, magMax: null, sciame: false, punti: [] });
       da = a;
     }
-    if (!barre.length) barre.push({ da: inizioBarra(fine, unita), a: inizioBarra(fine, unita, 1), n: 0, magMax: null, sciame: false });
+    if (!barre.length) barre.push({ da: inizioBarra(fine, unita), a: inizioBarra(fine, unita, 1), n: 0, magMax: null, sciame: false, punti: [] });
   } else {
     const n = FINESTRE[unita];
     for (let i = n - 1; i >= 0; i--) {
       const da = inizioBarra(inizioBarra(adesso, unita), unita, -i);
-      barre.push({ da, a: inizioBarra(da, unita, 1), n: 0, magMax: null, sciame: false });
+      barre.push({ da, a: inizioBarra(da, unita, 1), n: 0, magMax: null, sciame: false, punti: [] });
     }
   }
   const primo = intervallo ? intervallo.da : barre[0].da;
@@ -565,6 +565,7 @@ export function serieEventi(eventi, unita, magMin = MAG_STORICO, adesso = Date.n
     const b = barre.find(x => e.ts >= x.da && e.ts < x.a);
     if (!b) continue;
     b.n++;
+    b.punti.push(e); // gli eventi della barra: passando il mouse su una barra si evidenziano tutti in mappa
     if (b.magMax == null || e.mag > b.magMax) b.magMax = e.mag;
   }
   const { sequenze, soglia } = marcaSciami(barre);
@@ -616,11 +617,12 @@ export function omori(g) {
   if (!m) return { giorni: [], fit: null, mainshock: null };
   const completi = Math.floor((g.a - m.ts) / GIORNO_MS);
   const n = Array(completi).fill(0);
+  const perGiorno = Array.from({ length: completi }, () => []); // le repliche di ogni bin: servono all'evidenza in mappa
   for (const p of g.punti) {
     const i = Math.floor((p.ts - m.ts) / GIORNO_MS);
-    if (p.ts > m.ts && i >= 0 && i < completi) n[i]++;
+    if (p.ts > m.ts && i >= 0 && i < completi) { n[i]++; perGiorno[i].push(p); }
   }
-  const giorni = n.map((c, i) => ({ t: i + 0.5, n: c }));
+  const giorni = n.map((c, i) => ({ t: i + 0.5, n: c, eventi: perGiorno[i] }));
   const v = giorni.filter(d => d.n > 0);
   let fit = null;
   if (v.length >= 3) {
@@ -688,8 +690,12 @@ export function tempiTraEventi(g) {
   const ts = g.punti.map(p => p.ts);
   if (ts.length < 3) return null;
   const attese = ts.slice(1).map((x, i) => (x - ts[i]) / 60000);
-  const classi = CLASSI_ATTESA.map((da, i) => ({ da, a: CLASSI_ATTESA[i + 1] ?? Infinity, n: 0 }));
-  for (const a of attese) classi[classi.findLastIndex(c => a >= c.da)].n++;
+  const classi = CLASSI_ATTESA.map((da, i) => ({ da, a: CLASSI_ATTESA[i + 1] ?? Infinity, n: 0, eventi: [] }));
+  attese.forEach((a, i) => {
+    const classe = classi[classi.findLastIndex(c => a >= c.da)];
+    classe.n++;
+    classe.eventi.push(g.punti[i + 1]); // l'evento arrivato dopo quell'attesa: è quello da mostrare in mappa
+  });
   const media = attese.reduce((s, a) => s + a, 0) / attese.length;
   const ord = [...attese].sort((a, b) => a - b);
   const mediana = (ord[Math.floor((ord.length - 1) / 2)] + ord[Math.ceil((ord.length - 1) / 2)]) / 2;

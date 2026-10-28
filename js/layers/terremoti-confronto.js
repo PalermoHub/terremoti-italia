@@ -6,6 +6,7 @@ import { pannelloConfronto } from './terremoti-archivio.js';
 import { etichettaPeriodo } from './scheda-archivio.js';
 import { creaPopupTerremoti, simboliRighe } from './terremoti-popup.js';
 import { EVENTO_TABELLA } from '../core/tabella-dati.js';
+import { creaEvidenzaMappa } from '../core/evidenza-eventi.js';
 import { registraTooltipStrati } from '../core/tooltip.js';
 import { clicSu } from '../core/scheda-navigazione.js';
 import { creaFiltroTerritorio } from '../core/filtro-territorio.js';
@@ -239,7 +240,7 @@ export default {
     voci(trovati) {
       const primo = evento(trovati.filter(f => f.layer.id === HIT));
       if (!primo) return [];
-      const grafici = graficoSerie(AREA, p => { const trovato = eventi.find(v => v.id === String(p.id)); if (trovato) vaiAEvento(trovato); }, { sorgente: () => eventi, adesso: () => periodoMostrato?.a ?? Date.now() });
+      const grafici = graficoSerie(AREA, p => { const trovato = eventi.find(v => v.id === String(p.id)); if (trovato) vaiAEvento(trovato); }, { sorgente: () => eventi, adesso: () => periodoMostrato?.a ?? Date.now(), ...creaEvidenzaMappa(mappa) });
       return [
         { ...voceTerremoto(proprieta(primo), Date.now(), () => barraEventi(primo.properties.id, () => eventi, vaiAEvento)), chiave: `terremoto-confronto-${primo.properties.id}` }, // nella scheda principale, con le altre sezioni del luogo: non nel pannello Storico
         { ...voceSerie(() => grafici), chiave: 'terremoto-confronto-serie' },

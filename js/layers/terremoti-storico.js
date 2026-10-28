@@ -7,6 +7,7 @@ import { pannelloArchivio } from './terremoti-archivio.js';
 import { creaPopupTerremoti, simboliRighe } from './terremoti-popup.js';
 import { EVENTO_TABELLA } from '../core/tabella-dati.js';
 import { raggioAttivo, EVENTO_RAGGIO } from '../core/raggio-vicini.js';
+import { creaEvidenzaMappa } from '../core/evidenza-eventi.js';
 import { registraTooltipStrati } from '../core/tooltip.js';
 import { clicSu } from '../core/scheda-navigazione.js';
 import { espressioneClassiMagnitudo, espressioneColoreMagnitudo } from '../core/magnitudo.js';
@@ -211,7 +212,7 @@ export default {
     voci(trovati) {
       const primo = evento(trovati.filter(f => f.layer.id === HIT));
       if (!primo) return [];
-      const grafici = graficoSerie(AREA, p => { const trovato = eventi.find(v => v.id === String(p.id)); if (trovato) vaiAEvento(trovato); }, { sorgente: () => eventi, adesso: () => periodoMostrato?.a ?? Date.now() });
+      const grafici = graficoSerie(AREA, p => { const trovato = eventi.find(v => v.id === String(p.id)); if (trovato) vaiAEvento(trovato); }, { sorgente: () => eventi, adesso: () => periodoMostrato?.a ?? Date.now(), ...creaEvidenzaMappa(mappa) });
       return [
         voceTerremoto(proprieta(primo), Date.now(), () => barraEventi(primo.properties.id, () => eventi, vaiAEvento), true),
         { ...voceSerie(() => grafici), chiave: 'terremoto-storico-serie' },

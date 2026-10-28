@@ -3050,6 +3050,7 @@
   "terremoti.cum.titolo": "Cumulative events over time",
   "terremoti.cum.nota": "Number of events accumulated (M ≥ {mag}): {n} in the window. A change of slope signals an increase in activity.",
   "terremoti.barre.titolo": "Earthquakes per day, month or year",
+  "terremoti.grafici.aiuto": "Hover (or tab to) an event or a bar: the map highlights that point and event, and any open popup closes automatically.",
   "info.sezione.cosa": "What it shows",
   "info.sezione.come": "How it works",
   "info.sezione.leggere": "How to read it",

@@ -2352,7 +2352,7 @@ a.scheda-badge-tinta:hover, a.scheda-badge-tinta:focus-visible { background: col
 .terremoti-mt .evento circle { fill: var(--accent); }
 .terremoti-mt .apribile { cursor: pointer; outline: none; }
 .terremoti-mt .apribile .zona { stroke: transparent; stroke-width: 8; pointer-events: stroke; }
-.terremoti-mt .apribile:hover circle:not(.pt), .terremoti-mt .apribile:focus-visible circle:not(.pt) { r: 5; stroke: var(--text, #222); stroke-width: 1.5; }
+.terremoti-mt .apribile:hover circle:not(.pt):not(.zona-punto), .terremoti-mt .apribile:focus-visible circle:not(.pt):not(.zona-punto) { r: 5; stroke: var(--text, #222); stroke-width: 1.5; }
 .terremoti-mt .forte line { stroke: #e03131; stroke-width: 1.5; }
 .terremoti-mt .forte circle { fill: #e03131; }
 .terremoti-mt .asse.fine { stroke-opacity: .45; stroke-dasharray: 2 3; }
@@ -2511,8 +2511,8 @@ a.scheda-tel { min-height: 40px; }
 .minimappa-punti .forte circle { fill: #e03131; fill-opacity: .85; stroke: #fff; stroke-width: 1.2; cursor: pointer; }
 .minimappa-punti .sel circle { fill-opacity: 1; stroke: #111; stroke-width: 2; r: 8; }
 .minimappa-punti .fissato circle { stroke: #f08c00; stroke-width: 3; }
-.terremoti-mt .sel circle { stroke: var(--text, #222); stroke-width: 2; opacity: 1; }
-.terremoti-mt .sel circle:not(.pt) { r: 6; } /* i cerchi del diagramma spazio-tempo (.pt) tengono il loro raggio: cambiarlo sotto il mouse faceva uscire e rientrare il puntatore (sfarfallio) */
+.terremoti-mt .sel circle:not(.zona-punto) { stroke: var(--text, #222); stroke-width: 2; opacity: 1; }
+.terremoti-mt .sel circle:not(.pt):not(.zona-punto) { r: 6; } /* i cerchi del diagramma spazio-tempo (.pt) tengono il loro raggio: cambiarlo sotto il mouse faceva uscire e rientrare il puntatore (sfarfallio) */
 .zoom-icona { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: var(--r-sm); background: transparent; color: var(--text); cursor: pointer; vertical-align: middle; }
 .zoom-icona svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 .zoom-icona:hover, .zoom-icona:focus-visible { color: var(--accent); background: rgba(127, 127, 127, .15); }
@@ -2525,7 +2525,26 @@ a.scheda-tel { min-height: 40px; }
 .terremoti-serie.con-mappa > .zoom-freccia.sx { justify-self: start; }
 .terremoti-serie.con-mappa > .zoom-freccia.dx { justify-self: end; }
 .terremoti-mt .sel line:not(.zona) { stroke-width: 2.5; opacity: 1; }
-.terremoti-mt .fissato circle { stroke: #f08c00; stroke-width: 3; }
+.terremoti-mt .fissato circle:not(.zona-punto) { stroke: #f08c00; stroke-width: 3; }
+/* grafici molto fitti (unità «anno»): un solo tracciato per gli steli, e un unico rilevatore del puntatore */
+.terremoti-mt .steli { stroke: var(--accent); stroke-width: 1; opacity: .6; fill: none; }
+.terremoti-mt .stelo-forte { stroke: #e03131; stroke-width: 1.5; }
+.terremoti-mt .punto-forte { fill: #e03131; }
+.terremoti-st .pt.forte { fill: #e03131; stroke: #e03131; opacity: 1; }
+.terremoti-mt.punti-interattivi { cursor: crosshair; }
+/* zone invisibili ma larghe: rendono toccabili anche i punti più piccoli (marche della curva, spazio-tempo, Omori) */
+.terremoti-mt .apribile > .zona-punto, .terremoti-mt .punto-giorno > .zona-punto { fill: transparent; stroke: none; pointer-events: all; }
+.terremoti-mt .zona-punto { cursor: crosshair; }
+/* Omori: ogni punto è un giorno di repliche; sotto il mouse si accende quel gruppo in mappa */
+.terremoti-omori .punto-giorno { cursor: crosshair; outline: none; }
+.terremoti-omori .punto-giorno:hover .punto, .terremoti-omori .punto-giorno:focus-visible .punto { r: 6; stroke: var(--text, #222); stroke-width: 1.5; }
+/* barre e sequenze: gruppi di eventi; il passaggio del mouse li evidenzia in mappa */
+.terremoti-barra.interattivo, .terremoti-sequenza.interattivo { cursor: crosshair; outline: none; }
+.terremoti-barra.interattivo:hover, .terremoti-barra.interattivo:focus-visible,
+.terremoti-sequenza.interattivo:hover, .terremoti-sequenza.interattivo:focus-visible { background: rgba(127, 127, 127, .12); border-radius: 3px; }
+.terremoti-barra.interattivo:hover i, .terremoti-barra.interattivo:focus-visible i { opacity: 1; }
+.terremoti-barra.interattivo:focus-visible, .terremoti-sequenza.interattivo:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.terremoti-grafici-aiuto { margin: 2px 0 8px; }
 .minimappa-attr { position: absolute; right: 0; bottom: 0; padding: 0 3px; font-size: 9px; background: rgba(255, 255, 255, .8); color: #333; }
 .minimappa-scheda { display: flex; flex-direction: column; gap: 3px; margin-top: 6px; font-size: var(--fs-sm, 13px); }
 .minimappa-scheda span { color: var(--text-muted); }
