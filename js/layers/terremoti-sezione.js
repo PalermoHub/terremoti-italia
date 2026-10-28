@@ -148,7 +148,7 @@ async function carica(periodo, magMin, semilarghezza, nota, grafico) {
     nota.textContent = t('terremoti.sez.nessunEvento');
     return;
   }
-  grafico.replaceChildren(graficoSezione(disegnati, lunghezza, { interazione }));
+  grafico.replaceChildren(graficoSezione(disegnati, lunghezza, { interazione, semilarghezza }));
   nota.textContent = [
     t('terremoti.sez.nota', { n: numero(dentro.length), km: numero(lunghezza), larghezza: numero(semilarghezza * 2), mag: numero(magMin, magMin % 1 ? 1 : 0) }),
     dentro.length > disegnati.length ? t('terremoti.sez.troncato', { n: numero(disegnati.length) }) : '',

@@ -3632,5 +3632,12 @@
   "info.sezione-verticale.cosa": "La profondità dei terremoti lungo una linea A–B tracciata sulla mappa, come se si tagliasse la crosta terrestre.",
   "info.sezione-verticale.come": "In orizzontale c'è la distanza da A lungo la linea, in verticale la profondità (verso il basso). Ogni cerchio è un terremoto dentro la fascia attorno alla linea: il colore dice la profondità, la grandezza la magnitudo. Passando sopra un cerchio si vedono magnitudo, profondità, data e luogo, e l'evento si accende in mappa.",
   "info.sezione-verticale.leggere": "Una nuvola di eventi che scende in modo regolare da un lato all'altro indica un piano inclinato, come una subduzione o una faglia estesa. Eventi tutti superficiali indicano crosta rigida e poco profonda. Da ingrandito, trascina o usa la rotella per guardare un tratto della linea.",
-  "terremoti.sez.zoomAiuto": "Trascina sul grafico o usa la rotella del mouse per ingrandire un tratto della linea; doppio clic per tornare a tutta la linea. Da ingrandito, trascina per spostarti (Maiusc + trascinamento per una nuova selezione)."
+  "terremoti.sez.zoomAiuto": "Trascina sul grafico o usa la rotella del mouse per ingrandire un tratto della linea; doppio clic per tornare a tutta la linea. Da ingrandito, trascina per spostarti (Maiusc + trascinamento per una nuova selezione).",
+  "terremoti.sez.aria3d": "Vista 3D della sezione: distanza lungo la linea A–B, scostamento dalla linea e profondità degli eventi",
+  "terremoti.sez.vista3d": "Vista 3D",
+  "terremoti.sez.vista2d": "Vista 2D",
+  "terremoti.sez.superficie": "Superficie stimata",
+  "terremoti.sez.esagerazione": "Scala verticale",
+  "terremoti.sez.azzeraVista": "Azzera vista",
+  "terremoti.sez.aiuto3d": "Trascina per ruotare la nuvola, usa la rotella per ingrandire. La superficie è stimata dagli eventi sotto i 30 km di profondità: compare solo dove ce ne sono abbastanza."
 }

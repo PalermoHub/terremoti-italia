@@ -5,6 +5,7 @@ import { rendiGruppo, rendiApribile, creaSync, aggiungiMappa, adattaDimensioni, 
 import { nodoSvg, testoSvg, titoloAsse, collegaTooltip } from './terremoti-archivio.js';
 import { CLASSI_PROFONDITA, coloreProfondita, estremoAsse } from './scheda-sezione.js';
 import { raggioMagnitudo } from './scheda-terremoti.js';
+import { vista3d } from './grafico-sezione-3d.js';
 
 // Grafico della sezione verticale, nello stile di quelli della scheda: titolo con «i» e «ingrandisci», tooltip su ogni cerchio,
 // evidenza dell'evento in mappa al passaggio del mouse e, nel popup grande, zoom e pan lungo la linea.
@@ -34,10 +35,12 @@ function tacchePasso(da, a, quante) {
   return out;
 }
 
+let in3d = false; // la vista scelta nel popup resta tra un ridisegno e l'altro (zoom), si azzera a ogni apertura
+
 const tip = e => `M ${numero(e.mag, 1)} · ${numero(e.prof)} km · ${e.ora}${e.luogo ? ` · ${e.luogo}` : ''}`;
 
 // `eventi` = eventi dentro la fascia (con x e prof); `dominio`/`origine` = intervallo di distanza mostrato / intero (per lo zoom)
-export function graficoSezione(eventi, lunghezza, { grande = false, dominio = null, origine = null, interazione = null } = {}) {
+export function graficoSezione(eventi, lunghezza, { grande = false, dominio = null, origine = null, interazione = null, semilarghezza = null } = {}) {
   const intero = origine ?? { da: 0, a: lunghezza };
   const da = Math.max(0, dominio?.da ?? 0), a = Math.min(lunghezza, dominio?.a ?? lunghezza);
   const visibili = eventi.filter(e => e.x >= da && e.x <= a);
@@ -50,7 +53,7 @@ export function graficoSezione(eventi, lunghezza, { grande = false, dominio = nu
   const y = p => alto + p / cima * (basso - alto); // la profondità cresce verso il basso
   const titolo = t('terremoti.sez.graficoTitolo');
   const blocco = el('div', `terremoti-serie terremoti-confronto-grafico${grande ? ' grande' : ''}`);
-  const ingrandisci = () => apriGrande(titolo, () => { azzeraSelezione(); adattaDimensioni('sezione'); return graficoSezione(eventi, lunghezza, { grande: true, interazione }); });
+  const ingrandisci = () => apriGrande(titolo, () => { in3d = false; azzeraSelezione(); adattaDimensioni('sezione'); return graficoSezione(eventi, lunghezza, { grande: true, interazione, semilarghezza }); });
   blocco.append(titoloConInfo('h4', 'terremoti-titolo', titolo, 'sezione-verticale', grande ? null : ingrandisci));
   const svg = nodoSvg('svg', { viewBox: `0 0 ${L} ${A}`, role: 'img', 'aria-label': t('terremoti.sez.aria') });
   if (grande) svg.classList.add('grafico-zoom');
@@ -99,6 +102,7 @@ export function graficoSezione(eventi, lunghezza, { grande = false, dominio = nu
   collegaTooltip(blocco);
   if (grande) {
     aggiungiMappa(blocco, sync, eventi, null, e => coloreProfondita(e.prof));
+    if (semilarghezza) aggiungiVista3d(blocco, svg, chiave, sync, eventi, lunghezza, semilarghezza, cimaProfondita(Math.max(10, ...eventi.map(e => e.prof))), interazione);
     zoomGrafico({
       blocco, svg,
       dominio: { da, a },
@@ -107,8 +111,29 @@ export function graficoSezione(eventi, lunghezza, { grande = false, dominio = nu
       minDurata: Math.max(5, lunghezza / 40),
       aiuto: t('terremoti.sez.zoomAiuto'),
       formatta: (d0, d1) => `${numero(d0)} – ${numero(d1)} km`,
-      ridisegna: d => graficoSezione(eventi, lunghezza, { grande: true, dominio: d, origine: intero, interazione }),
+      ridisegna: d => graficoSezione(eventi, lunghezza, { grande: true, dominio: d, origine: intero, interazione, semilarghezza }),
     });
   }
   return blocco;
+}
+
+// Interruttore 2D / 3D del popup: la nuvola 3D prende il posto dell'svg nella stessa cella e usa lo stesso `sync` (minimappa, scheda)
+function aggiungiVista3d(blocco, svg, chiave, sync, eventi, lunghezza, semilarghezza, cima, interazione) {
+  const v = vista3d(eventi, lunghezza, semilarghezza, cima, { sync, interazione });
+  const interruttore = el('button', 'grafico-3d-interruttore');
+  interruttore.type = 'button';
+  const imposta = acceso => {
+    in3d = acceso;
+    svg.style.display = acceso ? 'none' : '';
+    blocco.classList.toggle('vista-3d', acceso);
+    v.canvas.hidden = !acceso;
+    v.comandi.hidden = !acceso;
+    interruttore.textContent = acceso ? t('terremoti.sez.vista2d') : t('terremoti.sez.vista3d');
+    interruttore.setAttribute('aria-pressed', String(acceso));
+    if (acceso) v.disegna();
+  };
+  interruttore.addEventListener('click', () => imposta(!in3d));
+  svg.after(v.canvas);
+  chiave.append(interruttore, v.comandi);
+  imposta(in3d);
 }

@@ -3632,5 +3632,12 @@
   "info.sezione-verticale.cosa": "The depth of earthquakes along an A–B line drawn on the map, as if the crust were cut open.",
   "info.sezione-verticale.come": "Horizontally is the distance from A along the line, vertically the depth (downwards). Each circle is an earthquake inside the swath around the line: colour shows depth, size shows magnitude. Hovering a circle shows magnitude, depth, date and place, and lights the event on the map.",
   "info.sezione-verticale.leggere": "A cloud of events sloping steadily from one side to the other indicates an inclined plane, such as a subduction zone or a long fault. Events that are all shallow point to a rigid, thin crust. When enlarged, drag or use the wheel to look at part of the line.",
-  "terremoti.sez.zoomAiuto": "Drag on the chart or use the mouse wheel to zoom into part of the line; double-click to go back to the whole line. When zoomed in, drag to pan (Shift + drag for a new selection)."
+  "terremoti.sez.zoomAiuto": "Drag on the chart or use the mouse wheel to zoom into part of the line; double-click to go back to the whole line. When zoomed in, drag to pan (Shift + drag for a new selection).",
+  "terremoti.sez.aria3d": "3D view of the section: distance along the A–B line, offset from the line and depth of events",
+  "terremoti.sez.vista3d": "3D view",
+  "terremoti.sez.vista2d": "2D view",
+  "terremoti.sez.superficie": "Estimated surface",
+  "terremoti.sez.esagerazione": "Vertical scale",
+  "terremoti.sez.azzeraVista": "Reset view",
+  "terremoti.sez.aiuto3d": "Drag to rotate the cloud, use the wheel to zoom. The surface is estimated from events deeper than 30 km and only appears where there are enough of them."
 }
