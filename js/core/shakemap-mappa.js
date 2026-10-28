@@ -1,6 +1,8 @@
 // Contorni della ShakeMap INGV di un evento, disegnati sopra la mappa quando l'utente li sceglie dalla scheda dell'evento.
 // La scheda manda `scheda:shakemap` con detail { id, prodotto } (prodotto null = toglili); i file stanno nel ramo `shakemap`
 // (copiati da scripts/shakemap.mjs, perché shakemap.ingv.it non ha CORS). Linee e valori hanno i colori dell'INGV.
+import { t } from './i18n.js';
+
 export const URL_CONTORNI = 'https://raw.githubusercontent.com/PalermoHub/terremoti-italia/shakemap/';
 export const EVENTO_SHAKEMAP = 'scheda:shakemap';
 
@@ -33,13 +35,29 @@ function inquadra(map, geojson) {
 let attivo = null; // { id, prodotto } dei contorni in mappa: la scheda ridisegnata dopo un clic lo rilegge per rimettere la scelta
 export const contorniAttivi = () => attivo;
 
+// Chip tra quelli degli strati accesi: i contorni restano in mappa anche a scheda chiusa (un clic su un punto vuoto la chiude),
+// e la × è l'unico comando per spegnerli quando la scheda non c'è
+function scriviChip() {
+  const barra = document.getElementById('strati-chip');
+  if (!barra) return;
+  barra.querySelector('.shakemap-chip')?.remove();
+  if (!attivo) return;
+  const chip = Object.assign(document.createElement('button'), { type: 'button', className: 'strato-chip shakemap-chip', title: t('terremoti.ev.contorniSpegni') });
+  const testo = document.createElement('span');
+  testo.textContent = `ShakeMap · ${t(`terremoti.ev.cont.${attivo.prodotto}`)}`;
+  const x = Object.assign(document.createElement('i'), { textContent: '×' });
+  chip.append(testo, x);
+  chip.addEventListener('click', () => document.dispatchEvent(new CustomEvent(EVENTO_SHAKEMAP, { detail: { prodotto: null } })));
+  barra.append(chip);
+}
+
 export function collegaShakeMap(map) {
   let richiesta = 0;
-  document.addEventListener('scheda:chiusa', () => document.dispatchEvent(new CustomEvent(EVENTO_SHAKEMAP, { detail: { prodotto: null } }))); // chiusa la scheda non c'è più il comando per spegnerli
   document.addEventListener(EVENTO_SHAKEMAP, async e => {
     const { id, prodotto } = e.detail ?? {};
     const mia = ++richiesta;
     attivo = prodotto ? { id, prodotto } : null;
+    scriviChip();
     if (!prodotto) { map.getSource(SRC)?.setData(VUOTO); return; }
     try {
       const r = await fetch(`${URL_CONTORNI}${id}/${prodotto}.json`);

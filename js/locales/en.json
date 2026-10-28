@@ -3232,6 +3232,7 @@
   "terremoti.ev.localizzatoDa": "Located by",
   "terremoti.ev.contorni": "ShakeMap contours",
   "terremoti.ev.contorniNessuno": "None",
+  "terremoti.ev.contorniSpegni": "Turn off ShakeMap contours",
   "terremoti.ev.contorniAltro": "On map: event {id}",
   "terremoti.ev.cont.mmi": "Intensity (MMI)",
   "terremoti.ev.cont.pga": "Peak ground acceleration (PGA)",

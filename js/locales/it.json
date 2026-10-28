@@ -3232,6 +3232,7 @@
   "terremoti.ev.localizzatoDa": "Localizzato da",
   "terremoti.ev.contorni": "Contorni ShakeMap",
   "terremoti.ev.contorniNessuno": "Nessuno",
+  "terremoti.ev.contorniSpegni": "Spegni i contorni ShakeMap",
   "terremoti.ev.contorniAltro": "In mappa: evento {id}",
   "terremoti.ev.cont.mmi": "Intensità (MMI)",
   "terremoti.ev.cont.pga": "Accelerazione di picco (PGA)",
