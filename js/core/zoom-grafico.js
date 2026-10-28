@@ -23,7 +23,7 @@ function nodoSvg(tag, attributi = {}) {
 // `dominio` e `origine` sono intervalli { da, a } sull'asse orizzontale; `geometria` è il viewBox del grafico
 // ({ L, A, MS, MD, MA, MB }); `ridisegna(dominio)` restituisce il blocco nuovo, che si ricostruisce il suo zoom;
 // `formatta(da, a)` scrive l'intervallo nella riga dei comandi. `minDurata` ferma lo zoom prima che il tratto sia troppo stretto.
-export function zoomGrafico({ blocco, svg, dominio, origine, geometria, formatta, ridisegna, minDurata = 0, aiuto = t('terremoti.zoom.aiuto'), frecceInRiga = false }) {
+export function zoomGrafico({ blocco, svg, dominio, origine, geometria, formatta, ridisegna, minDurata = 0, aiuto = t('terremoti.zoom.aiuto') }) {
   const { L, A, MS, MD, MA, MB } = geometria;
   let corrente = blocco; // il blocco in pagina: il pan lo sostituisce mentre si trascina
   const sostituisci = nuovo => { if (nuovo) { corrente.replaceWith(nuovo); corrente = nuovo; } };
@@ -52,7 +52,7 @@ export function zoomGrafico({ blocco, svg, dominio, origine, geometria, formatta
     const riga = el('div', 'zoom-riga');
     // frecce: spostano il tratto di un terzo della sua durata, senza uscire dai dati
     const freccia = (simbolo, verso, chiave) => {
-      const b = el('button', `zoom-freccia ${verso < 0 ? 'sx' : 'dx'}${frecceInRiga ? ' nella-riga' : ''}`, simbolo);
+      const b = el('button', `zoom-freccia ${verso < 0 ? 'sx' : 'dx'}`, simbolo);
       b.type = 'button';
       b.title = t(chiave);
       b.setAttribute('aria-label', t(chiave));
@@ -64,11 +64,9 @@ export function zoomGrafico({ blocco, svg, dominio, origine, geometria, formatta
       });
       return b;
     };
-    const saette = () => [freccia('‹', -1, 'terremoti.zoom.sinistra'), freccia('›', 1, 'terremoti.zoom.destra')];
-    if (frecceInRiga) riga.append(...saette()); // nella riga dei comandi, senza coprire assi e dati
     riga.append(...piuMeno(), icona('reimposta', 'terremoti.zoom.reimposta', tutto), el('span', 'scheda-nota', formatta(dominio.da, dominio.a)));
     svg.before(riga);
-    if (!frecceInRiga) blocco.append(...saette()); // sul grafico, ai lati, come in uno slider di foto
+    blocco.append(freccia('‹', -1, 'terremoti.zoom.sinistra'), freccia('›', 1, 'terremoti.zoom.destra')); // sul grafico, ai lati, come in uno slider di foto
   }
 
   svg.addEventListener('dblclick', tutto);

@@ -290,9 +290,57 @@ const compatto = n => (n >= 1000 ? `${n / 1000}k` : String(n));
 const meseCorto = m => new Date(Date.UTC(2020, m - 1, 1)).toLocaleDateString(localeIntl(), { month: 'short', timeZone: 'UTC' });
 const annoBarra = b => new Date(b.da).getFullYear();
 
+// ---- Tooltip dei grafici: un riquadro HTML che segue il puntatore; il testo sta in `data-tip` ----
+let tooltipGrafico = null;
+let tooltipCollegato = false;
+
+function nascondiTooltip() {
+  if (tooltipGrafico) tooltipGrafico.hidden = true;
+}
+
+function posizionaTooltip(x, y) {
+  const r = tooltipGrafico.getBoundingClientRect();
+  tooltipGrafico.style.left = `${Math.min(Math.max(8, x + 14), window.innerWidth - r.width - 8)}px`;
+  tooltipGrafico.style.top = `${Math.min(Math.max(8, y + 14), window.innerHeight - r.height - 8)}px`;
+}
+
+function mostraTooltip(testo, x, y, nodo) {
+  const ospite = nodo.closest?.('dialog') ?? document.body; // dentro un popup va nel popup, sopra il resto
+  if (!tooltipGrafico || !tooltipGrafico.isConnected) {
+    tooltipGrafico = document.createElement('div');
+    tooltipGrafico.className = 'grafico-tooltip';
+    tooltipGrafico.setAttribute('role', 'tooltip');
+    tooltipGrafico.hidden = true;
+  }
+  if (tooltipGrafico.parentNode !== ospite) ospite.append(tooltipGrafico);
+  tooltipGrafico.textContent = testo;
+  tooltipGrafico.hidden = false;
+  posizionaTooltip(x, y);
+}
+
+function collegaTooltip(blocco) {
+  if (!tooltipCollegato) {
+    tooltipCollegato = true;
+    window.addEventListener('scroll', nascondiTooltip, { passive: true, capture: true });
+    window.addEventListener('resize', nascondiTooltip);
+    document.addEventListener('close', nascondiTooltip, true); // dialogo chiuso: via anche il tooltip
+    document.addEventListener('pointerdown', nascondiTooltip, true); // un clic altrove non lascia il riquadro appeso
+  }
+  blocco.addEventListener('pointermove', ev => {
+    if (ev.pointerType === 'touch' || ev.buttons) { nascondiTooltip(); return; } // niente tooltip mentre si trascina
+    const nodo = ev.target instanceof Element ? ev.target.closest('[data-tip]') : null;
+    if (!nodo) { nascondiTooltip(); return; }
+    mostraTooltip(nodo.getAttribute('data-tip'), ev.clientX, ev.clientY, nodo);
+  });
+  blocco.addEventListener('pointerleave', nascondiTooltip);
+  blocco.addEventListener('pointerdown', nascondiTooltip);
+  blocco.addEventListener('wheel', nascondiTooltip, { passive: true });
+}
+
 // Istogramma per classe di magnitudo: due barre affiancate (anno A e B) sulla stessa scala;
 // nel popup i conteggi stanno sopra ogni barra.
 function graficoClassi(c, annoA, annoB, grande = false) {
+  const eventi = t('terremoti.arc.eventi').toLocaleLowerCase(localeIntl());
   const max = Math.max(1, ...c.a.perClasse, ...c.b.perClasse);
   const titolo = t('terremoti.arc.classi');
   const blocco = el('div', `terremoti-serie terremoti-archivio-classi${grande ? ' grande' : ''}`);
@@ -313,7 +361,7 @@ function graficoClassi(c, annoA, annoB, grande = false) {
       const colonna = el('div', 'terremoti-archivio-colonna');
       const b = el('i', `terremoti-archivio-${lato}`);
       b.style.height = `${n ? Math.max(4, n / max * 100) : 0}%`;
-      b.title = `${anno}: ${numero(n)}`;
+      b.dataset.tip = `${anno} · ${nomeClasse(classe)}: ${numero(n)} ${eventi}`;
       if (grande) b.append(el('b', 'terremoti-archivio-conteggio', numero(n))); // sopra la barra, anche quando è a zero
       colonna.append(b);
       barre.append(colonna);
@@ -322,12 +370,14 @@ function graficoClassi(c, annoA, annoB, grande = false) {
     istogramma.append(gruppo);
   });
   blocco.append(chiave, istogramma);
+  collegaTooltip(blocco);
   return blocco;
 }
 
 // Barre degli eventi per anno dal 1985 (scala logaritmica) e linea della magnitudo massima; gli anni A e B sono colorati.
 // `dominio` = intervallo di anni mostrato (per lo zoom), `origine` = tutti gli anni (per tornare a tutto).
 function graficoAnni(serie, annoA, annoB, magMin, grande = false, dominio = null, origine = null) {
+  const eventi = t('terremoti.arc.eventi').toLocaleLowerCase(localeIntl());
   const barre = serie.barre;
   const massimo = Math.max(0, ...barre.map(b => b.n));
   if (!massimo) return null;
@@ -366,7 +416,7 @@ function graficoAnni(serie, annoA, annoB, magMin, grande = false, dominio = null
     const classe = anno === annoA ? 'barra-a' : anno === annoB ? 'barra-b' : 'barra-anno';
     const y = yConteggio(b.n);
     const rett = nodoSvg('rect', { x: cx - larghezza / 2, y, width: larghezza, height: Math.max(b.n ? 1 : 0, basso - y), class: classe });
-    rett.append(nodoSvg('title', {}, `${anno}: ${numero(b.n)} · ${t('terremoti.arc.magMax')} ${b.magMax == null ? '–' : numero(b.magMax, 1)}`));
+    rett.setAttribute('data-tip', `${anno}: ${numero(b.n)} ${eventi} · ${t('terremoti.arc.magMax')} ${b.magMax == null ? '–' : numero(b.magMax, 1)}`);
     svg.append(rett);
   });
 
@@ -378,9 +428,8 @@ function graficoAnni(serie, annoA, annoB, magMin, grande = false, dominio = null
   });
   if (punti.length > 1) svg.append(nodoSvg('polyline', { points: punti.map(p => `${p[0]},${p[1]}`).join(' '), class: 'linea-mag' }));
   for (const [cx, cy, anno, mag] of punti) {
-    const punto = nodoSvg('circle', { cx, cy, r: 1.7, class: 'punto-mag' });
-    punto.append(nodoSvg('title', {}, `${anno}: ${t('terremoti.arc.magMax')} ${numero(mag, 1)}`));
-    svg.append(punto);
+    svg.append(nodoSvg('circle', { cx, cy, r: 1.7, class: 'punto-mag' }));
+    svg.append(nodoSvg('circle', { cx, cy, r: grande ? 7 : 6, class: 'punto-hit', 'data-tip': `${anno}: ${t('terremoti.arc.magMax')} ${numero(mag, 1)}` }));
   }
 
   // Anni A e B sempre scritti; le tacche ogni 5 anni (o più fitte da ingrandito) solo se non finiscono addosso a loro.
@@ -416,6 +465,7 @@ function graficoAnni(serie, annoA, annoB, magMin, grande = false, dominio = null
     titoloAsse(svg, t('terremoti.asse.magMax'), L - 8, (alto + basso) / 2, true);
   }
   blocco.append(svg, el('p', 'scheda-nota', t('terremoti.arc.graficoAnniNota', { mag: magnitudo(magMin) })));
+  collegaTooltip(blocco);
   if (grande) {
     zoomGrafico({
       blocco, svg,
@@ -424,7 +474,6 @@ function graficoAnni(serie, annoA, annoB, magMin, grande = false, dominio = null
       geometria: dim,
       minDurata: 2,
       formatta: (d0, d1) => `${Math.round(d0)} – ${Math.round(d1) - 1}`,
-      frecceInRiga: true,
       ridisegna: d => graficoAnni(serie, annoA, annoB, magMin, true, d, intero),
     });
   }
@@ -435,6 +484,7 @@ function graficoAnni(serie, annoA, annoB, magMin, grande = false, dominio = null
 // `dominio` = intervallo di mesi mostrato (per lo zoom), `origine` = tutto l'anno (per tornare a tutto).
 function graficoCumulata(c, annoA, annoB, adesso, grande = false, dominio = null, origine = null) {
   if (!c.a.n && !c.b.n) return null;
+  const eventi = t('terremoti.arc.eventi').toLocaleLowerCase(localeIntl());
   const annoCorrente = new Date(adesso).getUTCFullYear();
   const fino = anno => (anno === annoCorrente ? new Date(adesso).getUTCMonth() + 1 : 12);
   const serieA = c.a.cumulata.slice(0, fino(annoA));
@@ -494,15 +544,16 @@ function graficoCumulata(c, annoA, annoB, adesso, grande = false, dominio = null
     if (grande) {
       for (const p of serie) {
         if (p.mese < da || p.mese > a) continue;
-        const punto = nodoSvg('circle', { cx: x(p.mese), cy: y(p.cumulati), r: 2.4, fill: colore });
-        punto.append(nodoSvg('title', {}, `${meseCorto(p.mese)} ${anno}: ${numero(p.cumulati)} ${t('terremoti.arc.eventi').toLocaleLowerCase(localeIntl())}`));
-        svg.append(punto);
+        svg.append(nodoSvg('circle', { cx: x(p.mese), cy: y(p.cumulati), r: 2.4, fill: colore }));
       }
     }
+    for (const p of serie) {
+      if (p.mese < da || p.mese > a) continue;
+      svg.append(nodoSvg('circle', { cx: x(p.mese), cy: y(p.cumulati), r: 7, class: 'punto-hit', 'data-tip': `${meseCorto(p.mese)} ${anno}: ${numero(p.cumulati)} ${eventi}` }));
+    }
     const fine = punti.at(-1);
-    const punto = nodoSvg('circle', { cx: x(fine.mese), cy: y(fine.v), r: grande ? 3.2 : 2.2, fill: colore });
-    punto.append(nodoSvg('title', {}, `${anno}: ${numero(fine.v)} ${t('terremoti.arc.eventi').toLocaleLowerCase(localeIntl())}`));
-    svg.append(punto);
+    svg.append(nodoSvg('circle', { cx: x(fine.mese), cy: y(fine.v), r: grande ? 3.2 : 2.2, fill: colore }));
+    svg.append(nodoSvg('circle', { cx: x(fine.mese), cy: y(fine.v), r: 7, class: 'punto-hit', 'data-tip': `${anno}: ${numero(fine.v)} ${eventi}` }));
   };
   linea(serieA, 'linea-a', COLORE_A, annoA);
   linea(serieB, 'linea-b', COLORE_B, annoB);
@@ -521,6 +572,7 @@ function graficoCumulata(c, annoA, annoB, adesso, grande = false, dominio = null
     chiave.append(voce);
   }
   blocco.append(chiave, svg, el('p', 'scheda-nota', t('terremoti.arc.graficoCumulataNota')));
+  collegaTooltip(blocco);
   if (grande) {
     zoomGrafico({
       blocco, svg,
@@ -529,7 +581,6 @@ function graficoCumulata(c, annoA, annoB, adesso, grande = false, dominio = null
       geometria: dim,
       minDurata: 2,
       formatta: (d0, d1) => `${meseCorto(Math.ceil(d0))} – ${meseCorto(Math.floor(d1))}`,
-      frecceInRiga: true,
       ridisegna: d => graficoCumulata(c, annoA, annoB, adesso, true, d, intero),
     });
   }

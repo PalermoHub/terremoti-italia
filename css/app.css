@@ -2481,10 +2481,8 @@ a.scheda-tel { min-height: 40px; }
 .terremoti-mt.grande .apribile { cursor: pointer; }
 .terremoti-mt.grande.zoomato { cursor: grab; }
 .zoom-aiuto { margin: 0 0 4px; }
-.zoom-riga { display: flex; align-items: center; gap: 10px; margin: 2px 0 6px; }
+.zoom-riga { display: flex; align-items: center; gap: 8px; margin: 2px 0 6px; }
 .zoom-riga .scheda-nota { margin: 0; }
-.zoom-riga .zoom-freccia { width: 30px; height: 30px; padding: 0 0 2px; border: 1px solid var(--border-ui); border-radius: 50%; background: transparent; color: var(--text); font-size: 20px; line-height: 1; cursor: pointer; opacity: .8; }
-.zoom-riga .zoom-freccia:hover, .zoom-riga .zoom-freccia:focus-visible { opacity: 1; background: rgba(127, 127, 127, .15); color: var(--accent); }
 /* minimappa accanto al grafico (popup grande) */
 .grafico-grande-popup:has(.con-mappa) { width: min(1760px, calc(100vw - 24px)); height: 690px; max-height: 95vh; padding: 8px 14px 14px; overflow: auto; } /* altezza fissa, qualunque sia il monitor; più in basso si scorre, sotto ~1250 px di larghezza anche in orizzontale */
 /* tre riquadri alti uguali, ognuno con una riga di testo sopra e una sotto: grafico | minimappa | scheda dell'evento */
@@ -2508,11 +2506,11 @@ a.scheda-tel { min-height: 40px; }
 .minimappa-punti .fissato circle { stroke: #f08c00; stroke-width: 3; }
 .terremoti-mt .sel circle { stroke: var(--text, #222); stroke-width: 2; opacity: 1; }
 .terremoti-mt .sel circle:not(.pt) { r: 6; } /* i cerchi del diagramma spazio-tempo (.pt) tengono il loro raggio: cambiarlo sotto il mouse faceva uscire e rientrare il puntatore (sfarfallio) */
-.zoom-icona { display: inline-flex; align-items: center; justify-content: center; width: 34px; height: 34px; padding: 0; border: 0; border-radius: var(--r-sm); background: transparent; color: var(--text); cursor: pointer; vertical-align: middle; }
-.zoom-icona svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
+.zoom-icona { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: var(--r-sm); background: transparent; color: var(--text); cursor: pointer; vertical-align: middle; }
+.zoom-icona svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; stroke-linejoin: round; }
 .zoom-icona:hover, .zoom-icona:focus-visible { color: var(--accent); background: rgba(127, 127, 127, .15); }
 .terremoti-serie:has(> .zoom-freccia) { position: relative; }
-.terremoti-serie > .zoom-freccia { position: absolute; top: 50%; z-index: 3; width: 34px; height: 34px; padding: 0 0 3px; border: 0; border-radius: 50%; background: rgba(0, 0, 0, .45); color: #fff; font-size: 24px; line-height: 1; cursor: pointer; opacity: .75; }
+.terremoti-serie > .zoom-freccia { position: absolute; top: 50%; z-index: 3; width: 30px; height: 30px; padding: 0 0 2px; border: 0; border-radius: 50%; background: rgba(0, 0, 0, .45); color: #fff; font-size: 20px; line-height: 1; cursor: pointer; opacity: .75; }
 .terremoti-serie > .zoom-freccia:hover, .terremoti-serie > .zoom-freccia:focus-visible { opacity: 1; background: rgba(0, 0, 0, .7); }
 .terremoti-serie > .zoom-freccia.sx { left: 6px; }
 .terremoti-serie > .zoom-freccia.dx { right: 6px; }
@@ -2612,7 +2610,8 @@ details.scheda-sez-evento .scheda-sez-testo { display: contents; }
 .terremoti-confronto-grafici { display: flex; flex-direction: column; gap: 10px; }
 .terremoti-confronto-grafico { margin: 0; }
 .terremoti-confronto-grafico .terremoti-titolo { margin: 0 0 2px; }
-.terremoti-confronto-grafico svg { display: block; width: 100%; height: auto; overflow: visible; }
+.terremoti-confronto-grafico > svg { display: block; width: 100%; height: auto; overflow: visible; }
+.grafico-grande-popup .terremoti-confronto-grafico.grande > svg { width: calc(100% - 80px); margin: 0 40px; }
 .terremoti-confronto-grafico text { font-size: 9px; fill: var(--text-muted); }
 .terremoti-confronto-grafico .asse-titolo { font-weight: 600; letter-spacing: .02em; }
 .terremoti-confronto-grafico.grande text { font-size: 12px; }
@@ -2625,6 +2624,16 @@ details.scheda-sez-evento .scheda-sez-testo { display: contents; }
 .terremoti-confronto-grafico .linea-b { fill: none; stroke: #f97316; stroke-width: 2; }
 .terremoti-confronto-grafico .griglia { stroke: var(--border-ui); stroke-width: .6; opacity: .55; }
 .terremoti-confronto-grafico .asse { stroke: var(--border-ui); stroke-width: 1; }
+.terremoti-confronto-grafico .punto-hit { fill: transparent; pointer-events: all; }
+.terremoti-confronto-grafico .griglia,
+.terremoti-confronto-grafico .asse,
+.terremoti-confronto-grafico text,
+.terremoti-confronto-grafico .linea-mag,
+.terremoti-confronto-grafico .linea-a,
+.terremoti-confronto-grafico .linea-b { pointer-events: none; }
+/* tooltip dei grafici: riquadro che segue il puntatore, sopra la scheda o il popup grande */
+.grafico-tooltip { position: fixed; z-index: 10000; max-width: 280px; padding: 6px 10px; border: 1px solid var(--border-ui); border-radius: var(--r-sm); background: var(--surface); color: var(--text); font-size: var(--fs-xs); line-height: 1.35; font-variant-numeric: tabular-nums; box-shadow: var(--ombra); pointer-events: none; }
+.grafico-tooltip[hidden] { display: none; }
 .terremoti-confronto-grafico.grande svg.grafico-zoom { cursor: crosshair; user-select: none; touch-action: none; }
 .terremoti-confronto-grafico.grande svg.grafico-zoom.zoomato { cursor: grab; }
 .terremoti-confronto-grafico.grande .brush { fill: var(--accent); opacity: .22; stroke: var(--accent); stroke-width: 1; pointer-events: none; }
