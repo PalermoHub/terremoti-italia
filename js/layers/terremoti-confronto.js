@@ -10,8 +10,8 @@ import { registraTooltipStrati } from '../core/tooltip.js';
 import { clicSu } from '../core/scheda-navigazione.js';
 import { creaFiltroTerritorio } from '../core/filtro-territorio.js';
 import { espressioneClassiMagnitudo, espressioneColoreMagnitudo } from '../core/magnitudo.js';
-import { aggiornaLegendaInMappa, creaClassiFiltro, EVENTO_TEMA_MAGNITUDO, temaMagnitudoAttivo } from '../core/tema-magnitudo.js';
-import { creaSliderMagnitudo } from './slider-magnitudo.js';
+import { aggiornaLegendaInMappa, EVENTO_TEMA_MAGNITUDO, temaMagnitudoAttivo } from '../core/tema-magnitudo.js';
+import { legendaMagnitudo } from './legenda-magnitudo.js';
 
 // Confronto tra due anni: gli eventi dei due anni insieme in mappa, a parte dai terremoti storici. Spento all'avvio; si accende dal pannello Strati.
 // Anno A azzurro, anno B arancio: il colore dice a quale anno appartiene il cerchio, la grandezza la magnitudo. Non si aggiorna da solo.
@@ -41,8 +41,6 @@ let scelto = null; // evento scelto con le frecce della scheda
 let richiesta = 0; // una risposta in ritardo di una richiesta precedente si scarta
 const popup = creaPopupTerremoti();
 let titolo = null; // intestazione della legenda: cambia col tema magnitudo
-let classiFiltro = null; // classi di magnitudo della legenda, quando il tema è acceso
-let sliderMag = null; // intervallo di magnitudo della legenda (slider a due maniglie)
 let notaAnno = null; // con il tema il colore è la magnitudo: l'anno resta il bordo
 let grigliaDati = null; // celle della differenza di densità, mostrate solo a strato acceso
 
@@ -148,7 +146,7 @@ function applicaFiltroMappa() {
 }
 
 // Tema magnitudo: il colore del cerchio diventa la classe di magnitudo e l'anno resta il bordo (più spesso, per
-// leggersi); la legenda mostra le classi, che filtrano la mappa, e la chiave degli anni diventa di anelli.
+// leggersi); le classi del blocco condiviso filtrano la mappa e la chiave degli anni diventa di anelli.
 function applicaTema() {
   const tema = temaMagnitudoAttivo();
   if (mappa?.getLayer(PUNTI)) {
@@ -159,8 +157,6 @@ function applicaTema() {
   applicaFiltroMappa();
   if (legenda) {
     titolo.textContent = tema ? t('tema.magnitudo.titoloStrato', { nome: t('terremoti.arc.titoloConfronto') }) : t('terremoti.arc.titoloConfronto');
-    classiFiltro.nodo.hidden = !tema;
-    classiFiltro.sincronizza();
     notaAnno.hidden = !tema;
     chiave?.stileTema(tema);
   }
@@ -168,17 +164,12 @@ function applicaTema() {
 }
 
 function creaLegenda() {
+  legendaMagnitudo(); // slider e classi della magnitudo: un blocco solo per tutti gli strati dei terremoti
   legenda = document.createElement('div');
   legenda.className = 'legenda legenda-monumenti lg-terremoti-confronto';
   legenda.hidden = !acceso;
   titolo = document.createElement('strong');
   titolo.textContent = t('terremoti.arc.titoloConfronto');
-  sliderMag = creaSliderMagnitudo();
-  classiFiltro = creaClassiFiltro({ accese: () => filtro.classi, suCambio: insieme => { filtro.classi = insieme; document.dispatchEvent(new Event(EVENTO_FILTRO)); } });
-  const nota = document.createElement('p');
-  nota.className = 'legenda-magnitudo-nota';
-  nota.textContent = t('tema.magnitudo.filtro');
-  classiFiltro.nodo.append(nota);
   pannello = pannelloConfronto({ carica, territorio: creaFiltroTerritorio(mappa), griglia: mostraGriglia });
   chiave = creaChiave();
   notaAnno = document.createElement('p');
@@ -188,7 +179,7 @@ function creaLegenda() {
   credito.className = 'uffici-nota';
   const link = Object.assign(document.createElement('a'), { textContent: 'INGV', href: 'https://terremoti.ingv.it/', target: '_blank', rel: 'noopener' });
   credito.append(`${t('terremoti.dati')} `, link);
-  legenda.append(titolo, sliderMag.nodo, classiFiltro.nodo, chiave.nodo, notaAnno, credito);
+  legenda.append(titolo, chiave.nodo, notaAnno, credito);
   document.getElementById('legende').append(legenda);
   applicaTema();
 }

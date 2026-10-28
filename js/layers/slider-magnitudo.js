@@ -1,7 +1,7 @@
-// Slider della magnitudo nelle legende dei terremoti: due maniglie sullo stesso binario (minima e massima), i numeri
+// Slider della magnitudo delle legende dei terremoti: due maniglie sullo stesso binario (minima e massima), i numeri
 // scritti accanto e le tacche con i cerchi della scala. Scrive `magMin`/`magMax` nel filtro condiviso e avvisa con
-// EVENTO_FILTRO: vale per tutti gli strati dei terremoti (tempo reale, storico, confronto), e le copie nelle legende si
-// allineano da sole perché leggono lo stesso filtro.
+// EVENTO_FILTRO: vale per tutti gli strati dei terremoti (tempo reale, storico, confronto). Sta nel blocco unico
+// (legenda-magnitudo.js), che si allinea da solo perché legge lo stesso filtro.
 import { t } from '../core/i18n.js';
 import { SLIDER_MAGNITUDO, filtroMagnitudo, maniglieMagnitudo, raggioMagnitudo } from '../core/magnitudo.js';
 import { filtro } from './scheda-terremoti.js';
@@ -100,7 +100,7 @@ export function creaSliderMagnitudo() {
   campoDa.addEventListener('change', () => dalCampo('min', campoDa.value));
   campoA.addEventListener('change', () => dalCampo('max', campoA.value));
 
-  // le copie nelle legende (una per strato dei terremoti) seguono la stessa fonte: chi è uscito dal documento si stacca
+  // il blocco condiviso segue la stessa fonte: se il nodo esce dal documento si stacca
   const segui = () => (nodo.isConnected ? sincronizza() : document.removeEventListener(EVENTO_FILTRO, segui));
   document.addEventListener(EVENTO_FILTRO, segui);
   sincronizza();

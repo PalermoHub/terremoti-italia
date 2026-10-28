@@ -9,8 +9,8 @@ import { EVENTO_TABELLA } from '../core/tabella-dati.js';
 import { registraTooltipStrati } from '../core/tooltip.js';
 import { clicSu } from '../core/scheda-navigazione.js';
 import { espressioneClassiMagnitudo, espressioneColoreMagnitudo } from '../core/magnitudo.js';
-import { aggiornaLegendaInMappa, creaClassiFiltro, EVENTO_TEMA_MAGNITUDO, temaMagnitudoAttivo } from '../core/tema-magnitudo.js';
-import { creaSliderMagnitudo } from './slider-magnitudo.js';
+import { aggiornaLegendaInMappa, EVENTO_TEMA_MAGNITUDO, temaMagnitudoAttivo } from '../core/tema-magnitudo.js';
+import { legendaMagnitudo } from './legenda-magnitudo.js';
 
 // Terremoti storici: gli eventi di un anno qualsiasi dell'archivio (dal 1985), a parte dal tempo reale. Spento all'avvio; si accende dal pannello Strati.
 // Cerchio = un evento, grande quanto la magnitudo; un solo colore (viola), perché l'età non dice niente su un anno intero. Non si aggiorna da solo.
@@ -41,8 +41,6 @@ let scelto = null; // evento scelto con le frecce della scheda
 let richiesta = 0; // una risposta in ritardo di una richiesta precedente si scarta
 const popup = creaPopupTerremoti();
 let titolo = null; // intestazione della legenda: cambia col tema magnitudo
-let classiFiltro = null; // classi di magnitudo della legenda, quando il tema è acceso
-let sliderMag = null; // intervallo di magnitudo della legenda (slider a due maniglie)
 
 const annoRoma = ts => Number(new Date(ts).toLocaleDateString('en-CA', { timeZone: 'Europe/Rome', year: 'numeric' }));
 const proprieta = f => ({ ...f.properties, lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] });
@@ -110,8 +108,8 @@ function applicaFiltroMappa() {
   document.dispatchEvent(new Event(EVENTO_TABELLA));
 }
 
-// Tema magnitudo: i cerchi prendono il colore della classe (invece del viola dell'archivio) e la legenda mostra le
-// classi, che filtrano la mappa. Con il tema acceso la legenda sta in mappa se questo è il primo strato dei terremoti.
+// Tema magnitudo: i cerchi prendono il colore della classe (invece del viola dell'archivio) e le classi del blocco
+// condiviso filtrano la mappa. Con il tema acceso la legenda sta in mappa se questo è il primo strato dei terremoti.
 function applicaTema() {
   const tema = temaMagnitudoAttivo();
   if (mappa?.getLayer(PUNTI)) {
@@ -120,32 +118,23 @@ function applicaTema() {
     mappa.setPaintProperty(PUNTI, 'circle-stroke-color', colore);
   }
   applicaFiltroMappa();
-  if (legenda) {
-    titolo.textContent = tema ? t('tema.magnitudo.titoloStrato', { nome: t('terremoti.arc.titoloStrato') }) : t('terremoti.arc.titoloStrato');
-    classiFiltro.nodo.hidden = !tema;
-    classiFiltro.sincronizza();
-  }
+  if (legenda) titolo.textContent = tema ? t('tema.magnitudo.titoloStrato', { nome: t('terremoti.arc.titoloStrato') }) : t('terremoti.arc.titoloStrato');
   aggiornaLegendaInMappa();
 }
 
 function creaLegenda() {
+  legendaMagnitudo(); // slider e classi della magnitudo: un blocco solo per tutti gli strati dei terremoti
   legenda = document.createElement('div');
   legenda.className = 'legenda legenda-monumenti lg-terremoti-storico';
   legenda.hidden = !acceso;
   titolo = document.createElement('strong');
   titolo.textContent = t('terremoti.arc.titoloStrato');
-  sliderMag = creaSliderMagnitudo();
-  classiFiltro = creaClassiFiltro({ accese: () => filtro.classi, suCambio: insieme => { filtro.classi = insieme; document.dispatchEvent(new Event(EVENTO_FILTRO)); } });
-  const nota = document.createElement('p');
-  nota.className = 'legenda-magnitudo-nota';
-  nota.textContent = t('tema.magnitudo.filtro');
-  classiFiltro.nodo.append(nota);
   pannello = pannelloArchivio({ carica });
   const credito = document.createElement('p');
   credito.className = 'uffici-nota';
   const link = Object.assign(document.createElement('a'), { textContent: 'INGV', href: 'https://terremoti.ingv.it/', target: '_blank', rel: 'noopener' });
   credito.append(`${t('terremoti.dati')} `, link);
-  legenda.append(titolo, sliderMag.nodo, classiFiltro.nodo, pannello.nodo, credito);
+  legenda.append(titolo, pannello.nodo, credito);
   document.getElementById('legende').append(legenda);
   applicaTema();
 }

@@ -9,8 +9,8 @@ import { pannelloFiltro } from './terremoti-pannello.js';
 import { registraTooltipStrati } from '../core/tooltip.js';
 import { clicSu } from '../core/scheda-navigazione.js';
 import { coloreMagnitudo, espressioneColoreMagnitudo } from '../core/magnitudo.js';
-import { aggiornaLegendaInMappa, creaClassiFiltro, EVENTO_TEMA_MAGNITUDO, temaMagnitudoAttivo } from '../core/tema-magnitudo.js';
-import { creaSliderMagnitudo } from './slider-magnitudo.js';
+import { aggiornaLegendaInMappa, EVENTO_TEMA_MAGNITUDO, temaMagnitudoAttivo } from '../core/tema-magnitudo.js';
+import { legendaMagnitudo } from './legenda-magnitudo.js';
 import { creaPopupTerremoti, simboliRighe } from './terremoti-popup.js';
 import { EVENTO_TABELLA } from '../core/tabella-dati.js';
 
@@ -27,7 +27,6 @@ const VUOTO = { type: 'FeatureCollection', features: [] };
 let mappa = null;
 let legenda = null;
 let nota = null;
-let sliderMag = null; // intervallo di magnitudo della legenda (slider a due maniglie), uno solo per tutti gli strati dei terremoti
 let timer = null;
 let ultimo = 0;
 let troncato = false; // l'archivio ha più eventi di quanti ne arrivino in mappa
@@ -39,7 +38,6 @@ let eventi = []; // proprietà degli eventi in mappa
 let pannelloPf = null;
 let titolo = null; // intestazione della legenda: cambia col tema magnitudo
 let bloccoFasce = null; // filtri per età (colore del cerchio): con il tema magnitudo non descrivono più la mappa
-let classiFiltro = null; // classi di magnitudo della legenda, quando il tema è acceso
 let inAreaScelta = null; // (proprietà) => bool, dalla ricerca per area; null = nessuna area che restringa
 const inArea = p => !inAreaScelta || inAreaScelta(p);
 let richiesta = 0; // una risposta in ritardo di una richiesta precedente si scarta
@@ -116,16 +114,13 @@ function applicaFiltro() {
   const dentro = inAreaScelta ? [['in', ['get', 'id'], ['literal', eventi.filter(inAreaScelta).map(p => p.id)]]] : [];
   const espr = ['all', espressioneFiltro(), ...(fasce ? [fasce] : []), ...dentro];
   for (const id of [PUNTI, HIT]) mappa?.getLayer(id) && mappa.setFilter(id, espr);
-  classiFiltro?.sincronizza(); // le caselle seguono il filtro anche quando cambia da fuori (istogramma, «Azzera», ricerca)
   scriviNota(true);
   document.dispatchEvent(new Event(EVENTO_TABELLA));
 }
 
-const emetti = () => document.dispatchEvent(new Event(EVENTO_FILTRO));
-
-// Tema magnitudo (overlay informativo): cerchi colorati per classe di magnitudo invece che per età e legenda con le
-// classi al posto delle fasce. La legenda passa in mappa, al posto di quella dell'età, e resta il filtro delle classi;
-// con il tema spento tornano i colori dell'età e la legenda se ne va dove la mette «Legende sulla mappa».
+// Tema magnitudo (overlay informativo): cerchi colorati per classe di magnitudo invece che per età; le classi (blocco
+// condiviso, legenda-magnitudo.js) prendono il posto delle fasce e filtrano la mappa. La legenda passa in mappa, al
+// posto di quella dell'età; con il tema spento tornano i colori dell'età e la legenda se ne va dove dice «Legende sulla mappa».
 function applicaTema() {
   const tema = temaMagnitudoAttivo();
   if (mappa?.getLayer(PUNTI)) {
@@ -136,9 +131,7 @@ function applicaTema() {
   if (!legenda) return;
   titolo.textContent = tema ? t('tema.magnitudo.titoloStrato', { nome: tl('Terremoti in tempo reale') }) : tl('Terremoti in tempo reale');
   bloccoFasce.hidden = tema;
-  classiFiltro.nodo.hidden = !tema;
   if (tema) accendiTutteLeFasce(); // senza il comando in vista un filtro per età resterebbe invisibile
-  classiFiltro.sincronizza();
   aggiornaLegendaInMappa();
 }
 
@@ -152,6 +145,7 @@ function accendiTutteLeFasce() {
 }
 
 function creaLegenda() {
+  legendaMagnitudo(); // slider e classi della magnitudo: un blocco solo per tutti gli strati dei terremoti
   legenda = el('div', 'legenda legenda-monumenti lg-terremoti');
   legenda.hidden = !acceso;
   titolo = el('strong', null, 'Terremoti in tempo reale');
@@ -164,12 +158,8 @@ function creaLegenda() {
       applicaFiltro();
     }));
   }
-  // tema magnitudo: al posto delle fasce d'età le classi di magnitudo, che filtrano la mappa come l'istogramma
-  sliderMag = creaSliderMagnitudo();
-  classiFiltro = creaClassiFiltro({ accese: () => filtro.classi, suCambio: insieme => { filtro.classi = insieme; emetti(); } });
-  classiFiltro.nodo.append(el('p', 'legenda-magnitudo-nota', t('tema.magnitudo.filtro')));
   pannelloPf = pannelloFiltro(() => eventi);
-  legenda.append(titolo, bloccoFasce, sliderMag.nodo, classiFiltro.nodo, pannelloPf.nodo, menuFiltro({ magnitudo: false }), el('p', 'uffici-nota', t('terremoti.clicca')));
+  legenda.append(titolo, bloccoFasce, pannelloPf.nodo, menuFiltro({ magnitudo: false }), el('p', 'uffici-nota', t('terremoti.clicca')));
   nota = el('p', 'uffici-nota');
   const credito = el('p', 'uffici-nota');
   const link = el('a', null, 'INGV');

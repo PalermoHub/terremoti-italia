@@ -45,7 +45,8 @@ function involucro(nodo, aperti, casa) {
   d.className = 'legenda-in-pannello';
   d.open = legendaAperta(contaVoci(nodo));
   const titolo = document.createElement('summary');
-  titolo.textContent = t('legenda.pannello.titolo');
+  // una parte può darsi il proprio titolo (es. «Magnitudo»): sotto lo stesso strato due «Legenda» sarebbero indistinguibili
+  titolo.textContent = nodo.dataset.legendaTitolo || t('legenda.pannello.titolo');
   d.append(titolo);
   // una parte di legenda porta con sé le classi della legenda d'origine (gli stili sono scritti con quei discendenti)
   const parte = !nodo.classList.contains('legenda');
