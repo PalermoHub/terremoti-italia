@@ -3,8 +3,9 @@ import { codificaStato, decodificaStato } from './condividi-stato.js';
 import { EVENTO_FILTRO } from '../layers/scheda-terremoti-dom.js';
 import { t } from './i18n.js';
 import { segnala } from './pannello.js';
+import { contorniAttivi, EVENTO_SHAKEMAP } from './shakemap-mappa.js';
 
-const PARAMETRI = ['strati', 'lng', 'tema', 'gg', 'magmin', 'magmax', 'prof', 'cl', 'fin', 'per', 'op', 'sto', 'ca', 'cb', 'cmag', 'cprof', 'ct', 'area', 'solo'];
+const PARAMETRI = ['strati', 'lng', 'tema', 'gg', 'magmin', 'magmax', 'prof', 'cl', 'fin', 'per', 'op', 'sto', 'ca', 'cb', 'cmag', 'cprof', 'ct', 'area', 'solo', 'sm'];
 const caselleStrati = () => [...document.querySelectorAll('#pannello input[type=checkbox][id^="strato-"]')];
 
 export function statoCorrente({ storico = null, confronto = null, ricerca = null } = {}) {
@@ -15,6 +16,7 @@ export function statoCorrente({ storico = null, confronto = null, ricerca = null
     storico: storico?.periodoVisibile() ?? null,
     confronto: confronto?.statoCondiviso() ?? null,
     area: ricerca?.stato() ?? null,
+    shakemap: contorniAttivi(),
     strati: caselleStrati().filter(c => c.checked).map(c => c.id.slice(7)),
     filtro,
     tema: document.documentElement.dataset.tema === 'scuro' ? 'scuro' : 'chiaro',
@@ -58,6 +60,7 @@ export async function applicaStatoDaUrl(search = location.search, { storico = nu
   if (s.area && ricerca) await ricerca.imposta(s.area).catch(() => {});
   if (s.storico && storico) await storico.mostraPeriodo(s.storico, filtro.magMin, profonditaDaFiltro()).catch(() => {});
   if (s.confronto && confronto) await confronto.impostaCondiviso(s.confronto).catch(() => {});
+  if (s.shakemap) document.dispatchEvent(new CustomEvent(EVENTO_SHAKEMAP, { detail: s.shakemap })); // inquadra i contorni, poi vale la vista del link
   if (vista) map.jumpTo(vista);
 }
 
@@ -80,6 +83,7 @@ export function tieniAggiornatoIndirizzo(moduli = {}, { map = moduli.map, attesa
   pannello?.addEventListener('change', pianifica);
   pannello?.addEventListener('input', pianifica);
   document.addEventListener(EVENTO_FILTRO, pianifica);
+  document.addEventListener(EVENTO_SHAKEMAP, pianifica); // il gestore dei contorni è registrato prima: lo stato è già aggiornato
   map?.on('idle', pianifica); // periodi di storico/confronto e area di ricerca ridisegnano la mappa
   scrivi();
 }

@@ -20,7 +20,7 @@ function decodificaPeriodo(v) {
   return n?.length === 2 && n.every(Number.isFinite) ? { da: n[0], a: n[1] } : null;
 }
 
-export function codificaStato({ strati, filtro: f, tema, lingua, opacita = {}, storico = null, confronto = null, area = null }) {
+export function codificaStato({ strati, filtro: f, tema, lingua, opacita = {}, storico = null, confronto = null, area = null, shakemap = null }) {
   const p = new URLSearchParams();
   p.set('strati', strati.join(','));
   if (lingua) p.set('lng', lingua);
@@ -48,6 +48,7 @@ export function codificaStato({ strati, filtro: f, tema, lingua, opacita = {}, s
     p.set('area', codificaTerritorio(area));
     if (area.soloEventi) p.set('solo', '1');
   }
+  if (shakemap) p.set('sm', `${shakemap.id}.${shakemap.prodotto}`); // contorni ShakeMap in mappa: evento e prodotto
   return p;
 }
 
@@ -71,10 +72,12 @@ export function decodificaStato(search) {
   const cprof = PROFONDITA.find(x => x.chiave === p.get('cprof'));
   const cmag = p.get('cmag') === null ? NaN : Number(p.get('cmag'));
   const area = decodificaTerritorio(p.get('area'));
+  const sm = /^(\d+)\.(\w+)$/.exec(p.get('sm') ?? '');
   return {
     opacita: Object.keys(opacita).length ? opacita : null,
     storico: decodificaPeriodo(p.get('sto')),
     confronto: ca && cb && cprof && Number.isFinite(cmag) ? { a: ca, b: cb, mag: cmag, prof: cprof.chiave, territorio: decodificaTerritorio(p.get('ct')) } : null,
+    shakemap: sm && { id: sm[1], prodotto: sm[2] },
     area: area && { ...area, soloEventi: p.get('solo') === '1' },
     strati: p.has('strati') ? p.get('strati').split(',').filter(Boolean) : null,
     lingua: LINGUE.includes(p.get('lng')) ? p.get('lng') : null,
