@@ -10,6 +10,7 @@ export { abilitaRiordino }; // l'API pubblica resta qui: i gruppi RNDT e «I mie
 import { ETICHETTE, EVENTO_GRUPPO } from './pannello-comune.js';
 import { aggiornaSottogruppi, rendiPieghevoli } from './sottogruppi.js';
 import { t } from './i18n.js';
+import { EVENTO_SHAKEMAP } from './shakemap-mappa.js';
 import { tooltipAttivi, impostaTooltipAttivi } from './tooltip.js';
 import { creaInterruttorePannello as interruttoreLiveZoom } from './live-zoom.js';
 import { creaInterruttorePannello as interruttoreTemaMagnitudo } from './tema-magnitudo.js';
@@ -397,7 +398,7 @@ export function disattivaStrato(map, strato) {
 }
 
 // «Reset» accanto alla ricerca: spegne tutti gli strati del pannello tranne quelli indicati (id dei moduli),
-// lasciando acceso «Terremoti in tempo reale». Ogni casella passa dal suo `change`, come un clic dell'utente.
+// lasciando acceso «Terremoti in tempo reale»; spegne anche i contorni ShakeMap. Ogni casella passa dal suo `change`, come un clic dell'utente.
 export function spegniStratiTranne(ids = ['terremoti']) {
   const restano = new Set(ids.map(id => `strato-${id}`));
   for (const casella of document.querySelectorAll('#pannello input[type=checkbox][id^="strato-"]')) {
@@ -406,4 +407,5 @@ export function spegniStratiTranne(ids = ['terremoti']) {
     casella.checked = accesa;
     casella.dispatchEvent(new Event('change', { bubbles: true }));
   }
+  document.dispatchEvent(new CustomEvent(EVENTO_SHAKEMAP, { detail: { prodotto: null } }));
 }
