@@ -3,6 +3,7 @@ import { AREA_EVENTI } from '../core/config.js';
 import { scaricaEventiTutti, eventoDaIngv, accordionTerremoti, MAX_ELENCO } from './scheda-terremoti.js';
 import { disegnaAccordion } from '../core/scheda-disegno.js';
 import { ANNO_INIZIO, periodoValido } from './scheda-archivio.js';
+import { CLASSI_PROFONDITA } from './scheda-sezione.js';
 import { scelta, sceltaPeriodo, stato } from './terremoti-archivio.js';
 import { creaInterazione } from './scheda-terremoti-dom.js';
 import { evidenziaEventi, nascondiEvidenzaEventi } from '../core/evidenza-eventi.js';
@@ -59,6 +60,30 @@ export function pannelloPeriodo({ titolo, extra = [], alMostra, ancora = [] }) {
   bottone.addEventListener('click', mostra);
   nodo.append(el('strong', null, titolo), filtri, bottone, nota, messaggio, ...ancora, el('p', 'uffici-nota', t('terremoti.arc.utc')), creditoIngv());
   return { nodo, mostra };
+}
+
+// Righe di legenda dei colori per profondità: una riga per classe, con il campione e l'intervallo in km
+export function legendaProfondita() {
+  const blocco = el('div', 'terremoti-sezione-prof');
+  CLASSI_PROFONDITA.forEach((c, i) => {
+    const riga = el('div');
+    const chip = el('i', 'incendi-campione');
+    chip.style.background = c.colore;
+    const da = i ? CLASSI_PROFONDITA[i - 1].fino : 0;
+    riga.append(chip, c.fino === Infinity ? `≥ ${da} km` : i ? `${da}–${c.fino} km` : `< ${c.fino} km`);
+    blocco.append(riga);
+  });
+  return blocco;
+}
+
+// Legenda in mappa di uno strato (in #legende, nascosta finché lo strato è spento): si sposta sotto lo strato con «Legende sulla mappa» spento.
+// Il suo selettore è `.lg-<id>`, da dichiarare come `legendaPannello` dello strato.
+export function legendaMappa(id, titolo, corpo) {
+  const nodo = el('div', `legenda legenda-monumenti lg-${id}`);
+  nodo.hidden = true;
+  nodo.append(el('strong', null, titolo), ...corpo);
+  document.getElementById('legende')?.append(nodo);
+  return nodo;
 }
 
 // Credito INGV in fondo alla legenda

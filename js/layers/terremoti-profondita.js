@@ -4,7 +4,7 @@ import { registraTooltipStrati } from '../core/tooltip.js';
 import { colonneTabellaTerremoti, modelloPopupTerremoto } from './scheda-terremoti.js';
 import { CLASSI_PROFONDITA, coloreProfondita } from './scheda-sezione.js';
 import { creaPopupTerremoti, simboliRighe } from './terremoti-popup.js';
-import { eventiPeriodo, pannelloPeriodo, elencoEventi, el } from './terremoti-periodo.js';
+import { eventiPeriodo, pannelloPeriodo, elencoEventi, legendaProfondita, legendaMappa } from './terremoti-periodo.js';
 
 // Terremoti per profondità: gli eventi di un anno o di un periodo dell'archivio, in tutta Italia, con il colore che dice la
 // profondità dell'ipocentro e la grandezza che dice la magnitudo. Spento all'avvio; non si aggiorna da solo.
@@ -17,22 +17,11 @@ let mappa = null;
 let acceso = false;
 let primaVolta = true;
 let pannello = null;
+let legenda = null;
 let eventi = [];
 let elenco = null;
 let richiesta = 0;
 const popup = creaPopupTerremoti();
-
-// Legenda dei colori: una riga per classe di profondità
-function legendaColori() {
-  const blocco = el('p', 'terremoti-sezione-prof');
-  CLASSI_PROFONDITA.forEach((c, i) => {
-    const chip = el('i', 'incendi-campione');
-    chip.style.background = c.colore;
-    const da = i ? CLASSI_PROFONDITA[i - 1].fino : 0;
-    blocco.append(chip, ` ${c.fino === Infinity ? `≥ ${da}` : i ? `${da}–${c.fino}` : `< ${c.fino}`} km  `);
-  });
-  return blocco;
-}
 
 async function carica({ periodo, mag }) {
   const mia = ++richiesta;
@@ -51,7 +40,8 @@ async function carica({ periodo, mag }) {
 
 function creaPannello() {
   elenco = elencoEventi(() => eventi, () => mappa);
-  pannello = pannelloPeriodo({ titolo: t('terremoti.prof.titolo'), alMostra: carica, ancora: [legendaColori(), elenco.nodo] });
+  legenda = legendaMappa('terremoti-profondita', t('terremoti.prof.titolo'), [legendaProfondita()]);
+  pannello = pannelloPeriodo({ titolo: t('terremoti.prof.titolo'), alMostra: carica, ancora: [legendaProfondita(), elenco.nodo] });
 }
 
 export const nodoMappa = () => pannello?.nodo ?? null;
@@ -91,9 +81,10 @@ export default {
     map.on('mouseleave', PUNTI, () => { map.getCanvas().style.cursor = ''; });
   },
   strati: [{
-    id: 'terremoti-profondita', etichetta: 'Terremoti per profondità', layers: [PUNTI], attivo: false,
+    id: 'terremoti-profondita', etichetta: 'Terremoti per profondità', layers: [PUNTI], attivo: false, legendaPannello: '.lg-terremoti-profondita',
     suCambio(attivo) {
       acceso = attivo;
+      if (legenda) legenda.hidden = !attivo;
       if (!attivo) popup.chiudi();
       else if (primaVolta && pannello) { primaVolta = false; pannello.mostra(); } // la prima volta si vede subito l'anno scorso
       document.dispatchEvent(new Event(EVENTO_TABELLA));

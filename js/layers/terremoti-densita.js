@@ -4,7 +4,7 @@ import { registraTooltipStrati } from '../core/tooltip.js';
 import { RAGGIO_GRIGLIA } from './scheda-archivio.js';
 import { grigliaConteggi, RAMPA_COLORI } from './scheda-mappe.js';
 import { scelta } from './terremoti-archivio.js';
-import { eventiPeriodo, pannelloPeriodo, elencoEventi, el, numero } from './terremoti-periodo.js';
+import { eventiPeriodo, pannelloPeriodo, elencoEventi, legendaMappa, el, numero } from './terremoti-periodo.js';
 
 // Densità dei terremoti: celle esagonali (circa 17 km) colorate per numero di eventi o per magnitudo massima, su un anno
 // o un periodo dell'archivio. Serve quando i cerchi sono troppi e si sovrappongono. Spento all'avvio; non si aggiorna da solo.
@@ -22,22 +22,23 @@ let elenco = null;
 let massimo = 0;
 let metricaMostrata = 'conteggio';
 let richiesta = 0;
-let barra = null;
-let estremi = null;
+let estremi = []; // una scritta per ogni rampa: quella del pannello e quella in mappa
+let legenda = null;
 
 // Barra della rampa di colori, con il valore massimo a destra
 function legendaRampa() {
   const nodo = el('div', 'terremoti-rampa');
-  barra = el('i', 'terremoti-rampa-barra');
+  const barra = el('i', 'terremoti-rampa-barra');
   barra.style.background = `linear-gradient(to right, ${RAMPA_COLORI.join(', ')})`;
-  estremi = el('span', 'terremoti-rampa-estremi');
-  nodo.append(barra, estremi);
+  const scritta = el('span', 'terremoti-rampa-estremi');
+  estremi.push(scritta);
+  nodo.append(barra, scritta);
   return nodo;
 }
 const scriviEstremi = () => {
-  if (!estremi) return;
   const mag = metricaMostrata === 'magMax';
-  estremi.textContent = massimo > 0 ? `0 – ${numero(massimo, mag ? 1 : 0)}${mag ? '' : ` ${t('terremoti.den.eventi')}`}` : '';
+  const testo = massimo > 0 ? `0 – ${numero(massimo, mag ? 1 : 0)}${mag ? '' : ` ${t('terremoti.den.eventi')}`}` : '';
+  estremi.forEach(e => { e.textContent = testo; });
 };
 
 let metrica = null;
@@ -61,6 +62,7 @@ async function carica({ periodo, mag }) {
 function creaPannello() {
   metrica = scelta(t('terremoti.den.misura'), [0, 1], 0, v => t(v ? 'terremoti.den.magMax' : 'terremoti.den.conteggio'));
   elenco = elencoEventi(() => eventiMostrati, () => mappa);
+  legenda = legendaMappa('terremoti-densita', t('terremoti.den.titolo'), [legendaRampa()]);
   pannello = pannelloPeriodo({ titolo: t('terremoti.den.titolo'), extra: [metrica], alMostra: carica, ancora: [legendaRampa(), elenco.nodo] });
 }
 
@@ -89,9 +91,10 @@ export default {
     }]);
   },
   strati: [{
-    id: 'terremoti-densita', etichetta: 'Densità terremoti (esagoni)', layers: [CELLE], attivo: false,
+    id: 'terremoti-densita', etichetta: 'Densità terremoti (esagoni)', layers: [CELLE], attivo: false, legendaPannello: '.lg-terremoti-densita',
     suCambio(attivo) {
       acceso = attivo;
+      if (legenda) legenda.hidden = !attivo;
       if (attivo && primaVolta && pannello) { primaVolta = false; pannello.mostra(); }
       document.dispatchEvent(new Event(EVENTO_TABELLA));
     },

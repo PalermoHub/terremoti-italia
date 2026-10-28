@@ -8,7 +8,7 @@ import { CLASSI_PROFONDITA, SEMILARGHEZZE_KM, SEZIONI_PREDEFINITE, coloreProfond
 import { graficoSezione } from './grafico-sezione.js';
 import { creaInterazione } from './scheda-terremoti-dom.js';
 import { creaEvidenzaMappa } from '../core/evidenza-eventi.js';
-import { creditoIngv, elencoEventi } from './terremoti-periodo.js';
+import { creditoIngv, elencoEventi, legendaProfondita, legendaMappa } from './terremoti-periodo.js';
 import { catturaClic } from '../core/cattura-clic.js';
 import { registraTooltipStrati } from '../core/tooltip.js';
 
@@ -35,6 +35,7 @@ let eventiTabella = []; // eventi dentro la fascia, con distanza e scostamento d
 let punti = []; // punti scelti con i clic, prima che la linea sia completa
 let tracciando = false;
 let controlli = null;
+let legenda = null;
 let interazione = null; // evidenza in mappa dell'evento sotto il mouse nel grafico
 let elenco = null;
 
@@ -156,6 +157,7 @@ async function carica(periodo, magMin, semilarghezza, nota, grafico) {
 }
 
 function creaPannello() {
+  legenda = legendaMappa('terremoti-sezione', t('terremoti.sez.titolo'), [legendaProfondita()]);
   controlli = costruisciPannello();
 }
 
@@ -194,9 +196,10 @@ export default {
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && tracciando) controlli?.annulla(); });
   },
   strati: [{
-    id: 'terremoti-sezione', etichetta: 'Sezione verticale (profondità)', layers: [FASCIA, LINEA, PUNTI, ESTREMI], attivo: false,
+    id: 'terremoti-sezione', etichetta: 'Sezione verticale (profondità)', layers: [FASCIA, LINEA, PUNTI, ESTREMI], attivo: false, legendaPannello: '.lg-terremoti-sezione',
     suCambio(attivo) {
       acceso = attivo;
+      if (legenda) legenda.hidden = !attivo;
       document.dispatchEvent(new Event(EVENTO_TABELLA));
       if (!attivo) controlli?.annulla();
       else if (primaVolta && controlli) { primaVolta = false; controlli.predefinita(); } // la prima volta si vede subito la sezione dell'arco calabro

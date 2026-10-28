@@ -2793,4 +2793,9 @@ details.scheda-sez-evento .scheda-sez-testo { display: contents; }
 #mappe-pannello .terremoti-archivio-btn.secondario { background: none; color: var(--text); border-color: var(--border-ui); }
 #mappe-pannello .terremoti-sezione-azioni { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
 #mappe-pannello .terremoti-pannello[hidden] { display: none; }
-.terremoti-sezione-prof { margin: 6px 0 0; font-size: .85em; }
+.terremoti-sezione-prof, .legenda .terremoti-sezione-prof { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; margin: 6px 0 0; font-size: .85em; }
+.terremoti-sezione-prof > div, .legenda .terremoti-sezione-prof > div { display: flex; align-items: center; justify-content: flex-start; gap: 6px; }
+/* nelle legende in mappa `.legenda div` e `.legenda i` renderebbero la rampa una riga con un quadratino */
+.legenda .terremoti-rampa { display: block; min-width: 150px; margin: 4px 0 0; }
+.legenda .terremoti-rampa-barra { display: block; width: 100%; height: 12px; border-radius: 6px; }
+.legenda .terremoti-rampa-estremi { display: block; }

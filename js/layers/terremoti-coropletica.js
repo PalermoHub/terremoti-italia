@@ -6,7 +6,7 @@ import { caricaTerritorio } from '../core/territorio-eventi.js';
 import { amministrazioneDi } from '../core/territorio.js';
 import { aggregaTerritorio, RAMPA_COLORI } from './scheda-mappe.js';
 import { scelta } from './terremoti-archivio.js';
-import { eventiPeriodo, pannelloPeriodo, elencoEventi, el, numero } from './terremoti-periodo.js';
+import { eventiPeriodo, pannelloPeriodo, elencoEventi, legendaMappa, el, numero } from './terremoti-periodo.js';
 
 // Mappa coropletica dei terremoti: le province (o le regioni) colorate per numero di eventi o per magnitudo massima, su un anno o
 // un periodo dell'archivio. Il territorio di ogni evento viene dall'indice dei comuni (core/territorio.js): gli eventi in mare non contano.
@@ -26,7 +26,8 @@ let elenco = null;
 let massimo = 0;
 let livelloMostrato = 'provincia';
 let richiesta = 0;
-let estremi = null;
+let estremi = []; // una scritta per ogni rampa: quella del pannello e quella in mappa
+let legenda = null;
 
 const chiave = nome => String(nome ?? '').trim().toLowerCase();
 
@@ -41,8 +42,9 @@ function legendaRampa() {
   const nodo = el('div', 'terremoti-rampa');
   const barra = el('i', 'terremoti-rampa-barra');
   barra.style.background = `linear-gradient(to right, ${RAMPA_COLORI.join(', ')})`;
-  estremi = el('span', 'terremoti-rampa-estremi');
-  nodo.append(barra, estremi);
+  const scritta = el('span', 'terremoti-rampa-estremi');
+  estremi.push(scritta);
+  nodo.append(barra, scritta);
   return nodo;
 }
 
@@ -60,7 +62,8 @@ async function carica({ periodo, mag }) {
   livelloMostrato = l;
   applicaColori();
   elenco?.aggiorna();
-  estremi.textContent = massimo > 0 ? `0 – ${numero(massimo, m === 'magMax' ? 1 : 0)}${m === 'magMax' ? '' : ` ${t('terremoti.den.eventi')}`}` : '';
+  const testo = massimo > 0 ? `0 – ${numero(massimo, m === 'magMax' ? 1 : 0)}${m === 'magMax' ? '' : ` ${t('terremoti.den.eventi')}`}` : '';
+  estremi.forEach(e => { e.textContent = testo; });
   document.dispatchEvent(new Event(EVENTO_TABELLA));
   return { n: eventi.length, troncato, testo: t('terremoti.coro.nota', { n: numero(righe.length), fuori: numero(a.fuori) }) };
 }
@@ -69,6 +72,7 @@ function creaPannello() {
   livello = scelta(t('terremoti.coro.livello'), [0, 1], 0, v => t(v ? 'terremoti.coro.regioni' : 'terremoti.coro.province'));
   metrica = scelta(t('terremoti.den.misura'), [0, 1], 0, v => t(v ? 'terremoti.den.magMax' : 'terremoti.den.conteggio'));
   elenco = elencoEventi(() => eventiMostrati, () => mappa);
+  legenda = legendaMappa('terremoti-coropletica', t('terremoti.coro.titolo'), [legendaRampa()]);
   pannello = pannelloPeriodo({ titolo: t('terremoti.coro.titolo'), extra: [livello, metrica], alMostra: carica, ancora: [legendaRampa(), elenco.nodo] });
 }
 
@@ -103,9 +107,10 @@ export default {
     }]);
   },
   strati: [{
-    id: 'terremoti-coropletica', etichetta: 'Terremoti per territorio (province)', layers: [FILL], attivo: false,
+    id: 'terremoti-coropletica', etichetta: 'Terremoti per territorio (province)', layers: [FILL], attivo: false, legendaPannello: '.lg-terremoti-coropletica',
     suCambio(attivo) {
       acceso = attivo;
+      if (legenda) legenda.hidden = !attivo;
       if (attivo && primaVolta && pannello) { primaVolta = false; pannello.mostra(); }
       document.dispatchEvent(new Event(EVENTO_TABELLA));
     },
