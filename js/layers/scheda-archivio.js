@@ -86,7 +86,7 @@ function statistiche(r, giorni) {
     momento += momentoSismico(mag) * n;
     if (magMax == null || mag > magMax) magMax = mag;
   }
-  return { n: r.totale, magMax, perGiorno: r.totale / giorni, perClasse, energiaClasse, energia: momento, meseMax: meseDominante(r.perMese, r.totale), cumulata: cumulataMensile(r.perMese), magEquivalente: r.totale ? magnitudoDaMomento(momento) : null };
+  return { n: r.totale, magMax, perGiorno: r.totale / giorni, perClasse, energiaClasse, perMagnitudo: r.perMagnitudo, energia: momento, meseMax: meseDominante(r.perMese, r.totale), cumulata: cumulataMensile(r.perMese), magEquivalente: r.totale ? magnitudoDaMomento(momento) : null };
 }
 
 // Confronto tra due riepiloghi; `giorni*` = giorni davvero trascorsi nel periodo (un anno in corso è parziale)
@@ -149,6 +149,63 @@ export function riferimentoAnnuale(serie, magMin, adesso = Date.now()) {
   const mediana = (ord[Math.floor((ord.length - 1) / 2)] + ord[Math.ceil((ord.length - 1) / 2)]) / 2;
   return mediana > 0 ? { mediana, da: anni[0].anno, a: anni.at(-1).anno } : null;
 }
+
+// Frequenza cumulata (Gutenberg-Richter): per ogni magnitudo presente, quanti eventi hanno magnitudo uguale o maggiore.
+// In scala logaritmica è quasi una retta: la sua pendenza dice quanti eventi forti ci sono rispetto ai deboli.
+export function frequenzaCumulata(perMagnitudo, magMin = -Infinity) {
+  const punti = perMagnitudo.filter(m => m.mag >= magMin && m.n > 0).sort((x, y) => x.mag - y.mag);
+  let resto = punti.reduce((s, m) => s + m.n, 0);
+  return punti.map(m => { const punto = { mag: m.mag, n: resto }; resto -= m.n; return punto; });
+}
+
+// Valore b di Gutenberg-Richter col metodo di Aki-Utsu (magnitudo in classi da 0,1): b ≈ 1 è la norma, di più = più eventi deboli
+// rispetto ai forti. Vale solo sopra la magnitudo di completezza del catalogo: con meno di MIN_EVENTI_B eventi è troppo incerto (null).
+export const MIN_EVENTI_B = 50;
+export function valoreB(perMagnitudo, magMin) {
+  const punti = perMagnitudo.filter(m => m.mag >= magMin && m.n > 0);
+  const n = punti.reduce((s, m) => s + m.n, 0);
+  if (n < MIN_EVENTI_B) return null;
+  const media = punti.reduce((s, m) => s + m.mag * m.n, 0) / n;
+  const b = Math.LOG10E / (media - (magMin - 0.05));
+  return Number.isFinite(b) && b > 0 ? Math.round(b * 100) / 100 : null;
+}
+
+// Eventi dell'anno giorno per giorno (UTC): 366 caselle, indice = giorno dell'anno da 0 contato su un anno bisestile (1 marzo = 60 sempre),
+// così due anni si sovrappongono per data. Ogni casella tiene gli eventi del giorno e la magnitudo massima.
+const BISESTILE = Date.UTC(2020, 0, 1);
+export const giornoDellAnno = ts => {
+  const d = new Date(ts);
+  return Math.round((Date.UTC(2020, d.getUTCMonth(), d.getUTCDate()) - BISESTILE) / GIORNO_MS);
+};
+export function serieGiornaliera(eventi, anno) {
+  const giorni = Array.from({ length: 366 }, () => ({ n: 0, magMax: null, eventi: [] }));
+  for (const e of eventi) {
+    if (new Date(e.ts).getUTCFullYear() !== anno) continue;
+    const g = giorni[giornoDellAnno(e.ts)];
+    g.n++;
+    g.eventi.push(e);
+    if (g.magMax == null || e.mag > g.magMax) g.magMax = e.mag;
+  }
+  return { giorni, max: Math.max(0, ...giorni.map(g => g.n)) };
+}
+
+// Gli eventi più forti che, da soli, liberano almeno `quota` (0–1) dell'energia: pochi terremoti pesano più di tutti gli altri
+export function eventiPerEnergia(eventi, quota = 0.5) {
+  const ordinati = eventi.filter(e => Number.isFinite(e.mag)).sort((x, y) => y.mag - x.mag);
+  const totale = ordinati.reduce((s, e) => s + momentoSismico(e.mag), 0);
+  const scelti = [];
+  let somma = 0;
+  for (const e of ordinati) {
+    if (somma >= totale * quota) break;
+    scelti.push(e);
+    somma += momentoSismico(e.mag);
+  }
+  return scelti;
+}
+
+// Eventi con la magnitudo massima del periodo (le magnitudo dei riepiloghi sono in classi da 0,1) e quelli di un mese UTC «AAAA-MM»
+export const eventiMagMax = (eventi, magMax) => (magMax == null ? [] : eventi.filter(e => Math.round(e.mag * 10) / 10 === magMax));
+export const eventiDelMese = (eventi, mese) => (mese ? eventi.filter(e => new Date(e.ts).toISOString().slice(0, 7) === mese) : []);
 
 // Riepilogo (stessa forma di GET /terremoti/riepilogo) calcolato dagli eventi già scaricati: serve quando il confronto è ristretto a un territorio
 export function riepilogoDaEventi(eventi) {

@@ -68,6 +68,7 @@ async function scaricaLato(lato, periodo, magMin, area, profondita = null) {
   return {
     features,
     troncato: scarico.troncato || nelTerritorio.length > features.length,
+    incompleto: Boolean(scarico.troncato), // gli eventi stessi sono tagliati (non solo i cerchi in mappa)
     eventi: nelTerritorio.map(f => ({ ...f.properties, lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] })),
   };
 }
@@ -97,7 +98,7 @@ async function carica(periodoA, periodoB, magMin, area = null, profondita = null
   document.dispatchEvent(new Event(EVENTO_TABELLA));
   popup.chiudi();
   chiave?.update(periodoA, periodoB);
-  return { a: { n: a.features.length, troncato: a.troncato, eventi: a.eventi }, b: { n: b.features.length, troncato: b.troncato, eventi: b.eventi } };
+  return { a: { n: a.features.length, troncato: a.troncato, incompleto: a.incompleto, eventi: a.eventi }, b: { n: b.features.length, troncato: b.troncato, incompleto: b.incompleto, eventi: b.eventi } };
 }
 
 // Chiave dei colori: quale anno è azzurro e quale arancio, e quanti eventi ha ciascuno

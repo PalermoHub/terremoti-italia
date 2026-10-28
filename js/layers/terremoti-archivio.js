@@ -6,7 +6,7 @@ import { titoloConInfo, apriGrande } from '../core/info-grafico.js';
 import { zoomGrafico } from '../core/zoom-grafico.js';
 import { CLASSI_MAG, PROFONDITA } from './scheda-terremoti.js';
 import { apriDialogoPeriodo, creaInterazione, rendiGruppo } from './scheda-terremoti-dom.js';
-import { ANNO_INIZIO, periodoAnno, periodoAnnoIntero, periodoValido, annoDi, etichettaPeriodo, avvisoCompletezza, confrontaPeriodi, giorniPeriodo, scaricaRiepilogo, riepilogoDaEventi, serieAnnuale, grigliaDensita, conclusioniConfronto, quoteEnergiaClassi, riferimentoAnnuale } from './scheda-archivio.js';
+import { ANNO_INIZIO, periodoAnno, periodoAnnoIntero, periodoValido, annoDi, etichettaPeriodo, avvisoCompletezza, confrontaPeriodi, giorniPeriodo, scaricaRiepilogo, riepilogoDaEventi, serieAnnuale, grigliaDensita, conclusioniConfronto, quoteEnergiaClassi, riferimentoAnnuale, frequenzaCumulata, valoreB, serieGiornaliera, eventiPerEnergia, eventiMagMax, eventiDelMese } from './scheda-archivio.js';
 
 const MAGNITUDO_ARCHIVIO = [2, 2.5, 3, 4, 5];
 const MAG_PREDEFINITA = 3; // a M ≥ 2 anni come il 2016 superano il tetto di eventi della mappa
@@ -213,10 +213,15 @@ export function pannelloConfronto({ carica, territorio = null, griglia = null, e
       // con un territorio o una profondità scelta i conteggi vengono da tutti gli eventi (oltre il tetto della mappa);
       // senza, dal riepilogo del server (esatto anche oltre il tetto) e dagli eventi in mappa, insieme.
       const conEventi = Boolean(area) || p.min != null;
-      const [ra, rb, mappa] = conEventi
+      let [ra, rb, mappa] = conEventi
         ? await carica(pa, pb, m, area, p).then(r => [r && riepilogoDaEventi(r.a.eventi), r && riepilogoDaEventi(r.b.eventi), r])
         : await Promise.all([scaricaRiepilogo(pa, m), scaricaRiepilogo(pb, m), carica(pa, pb, m, null, p)]);
       if (!mappa) return;
+      // Senza server i riepiloghi statici hanno le magnitudo di tutta la storia, non del periodo: magnitudo massima, energia e classi
+      // verrebbero uguali per A e B. Con gli eventi del periodo al completo la distribuzione per magnitudo si ricalcola da lì.
+      const delPeriodo = (r, lato) => (!conEventi && r && !lato.incompleto ? { ...r, perMagnitudo: riepilogoDaEventi(lato.eventi).perMagnitudo } : r);
+      ra = delPeriodo(ra, mappa.a);
+      rb = delPeriodo(rb, mappa.b);
       ultimo = { a: mappa.a.eventi, b: mappa.b.eventi };
       const eventiA = ultimo.a, eventiB = ultimo.b; // gruppi da evidenziare in mappa dai grafici del confronto
       interruttore.disabled = false;
@@ -229,7 +234,9 @@ export function pannelloConfronto({ carica, territorio = null, griglia = null, e
       const grafici = soloAnni ? el('div', 'terremoti-confronto-grafici') : null;
       const cumulata = grafici ? graficoCumulata(c, annoDi(pa), annoDi(pb), ora, false, null, null, eventiA, eventiB, interazione) : null;
       if (grafici && cumulata) grafici.append(cumulata);
-      esito.replaceChildren(...disegnaConfronto(c, pa, pb, adesso, condizioni, avviso, grafici, soloAnni, eventiA, eventiB, interazione));
+      const giorni = grafici ? graficoGiorni(eventiA, eventiB, annoDi(pa), annoDi(pb), false, null, null, interazione) : null;
+      if (grafici && giorni) grafici.append(giorni);
+      esito.replaceChildren(...disegnaConfronto(c, pa, pb, adesso, condizioni, avviso, grafici, soloAnni, eventiA, eventiB, interazione, m));
       nota.textContent = mappa.a.troncato || mappa.b.troncato ? t('terremoti.arc.troncatoConfronto', { n: Math.max(mappa.a.n, mappa.b.n) }) : '';
       disegnaGriglia();
       // il grafico degli anni arriva dopo la tabella, così il confronto non aspetta una seconda richiesta
@@ -298,7 +305,7 @@ function testoConclusioni(frasi, a, b) {
 
 // Tabella dei due periodi e un istogramma con due barre per classe di magnitudo (stessa scala).
 // `condizioni` (magnitudo minima, profondità, territorio) e `avviso` (completezza del catalogo) sono le due righe sopra la tabella.
-export function disegnaConfronto(c, periodoA, periodoB, adesso, condizioni = null, avviso = null, grafici = null, soloAnni = true, eventiA = [], eventiB = [], interazione = null) {
+export function disegnaConfronto(c, periodoA, periodoB, adesso, condizioni = null, avviso = null, grafici = null, soloAnni = true, eventiA = [], eventiB = [], interazione = null, magMin = null) {
   if (!c.a.n && !c.b.n) return [el('p', 'uffici-nota', t('terremoti.arc.nessunEvento'))];
   const elementi = [];
   if (condizioni) elementi.push(el('p', 'uffici-nota', condizioni));
@@ -311,11 +318,14 @@ export function disegnaConfronto(c, periodoA, periodoB, adesso, condizioni = nul
     const anno = annoDi(p);
     return anno === annoCorrente ? `${anno} (${t('terremoti.arc.parziale')})` : String(anno);
   };
-  const riga = (etichetta, a, b, d, titoloA = null, titoloB = null) => {
+  // `gruppoA`/`gruppoB` = eventi che la cella rappresenta: sotto il mouse (o con il focus) si accendono in mappa, come le barre dei grafici
+  const riga = (etichetta, a, b, d, titoloA = null, titoloB = null, gruppoA = null, gruppoB = null) => {
     const tr = el('tr');
     const cellaA = el('td', null, a), cellaB = el('td', null, b);
     if (titoloA) cellaA.title = titoloA;
     if (titoloB) cellaB.title = titoloB;
+    rendiGruppo(cellaA, gruppoA, interazione, titoloA);
+    rendiGruppo(cellaB, gruppoB, interazione, titoloB);
     tr.append(el('th', null, etichetta), cellaA, cellaB, el('td', null, d));
     return tr;
   };
@@ -325,20 +335,29 @@ export function disegnaConfronto(c, periodoA, periodoB, adesso, condizioni = nul
   intestazione.append(el('th'), el('th', null, nome(periodoA)), el('th', null, nome(periodoB)), el('th', null, t('terremoti.arc.differenza')));
   const dif = c.differenza;
   const magTesto = m => (m == null ? '–' : numero(m, 1));
+  const forti = [eventiPerEnergia(eventiA), eventiPerEnergia(eventiB)];
+  const magMaxA = eventiMagMax(eventiA, c.a.magMax), magMaxB = eventiMagMax(eventiB, c.b.magMax);
+  const meseA = eventiDelMese(eventiA, c.a.meseMax?.mese), meseB = eventiDelMese(eventiB, c.b.meseMax?.mese);
+  const suggerimento = (gruppo, chiave, valori = {}) => (gruppo.length ? t(chiave, valori) : null);
   tabella.append(
     intestazione,
-    riga(t('terremoti.arc.eventi'), numero(c.a.n), numero(c.b.n), dif.nPercento == null ? segno(dif.n) : `${segno(dif.n)} (${segno(dif.nPercento)}%)`),
+    riga(t('terremoti.arc.eventi'), numero(c.a.n), numero(c.b.n), dif.nPercento == null ? segno(dif.n) : `${segno(dif.n)} (${segno(dif.nPercento)}%)`,
+      suggerimento(eventiA, 'terremoti.arc.evidTutti'), suggerimento(eventiB, 'terremoti.arc.evidTutti'), eventiA, eventiB),
     riga(t('terremoti.arc.alGiorno'), numero(c.a.perGiorno, 2), numero(c.b.perGiorno, 2), dif.perGiorno == null ? '–' : segno(dif.perGiorno, 2)),
-    riga(t('terremoti.arc.magMax'), magTesto(c.a.magMax), magTesto(c.b.magMax), dif.magMax == null ? '–' : segno(dif.magMax, 1)),
+    riga(t('terremoti.arc.magMax'), magTesto(c.a.magMax), magTesto(c.b.magMax), dif.magMax == null ? '–' : segno(dif.magMax, 1),
+      suggerimento(magMaxA, 'terremoti.arc.evidMagMax'), suggerimento(magMaxB, 'terremoti.arc.evidMagMax'), magMaxA, magMaxB),
     riga(t('terremoti.arc.magEquivalente'), magTesto(c.a.magEquivalente), magTesto(c.b.magEquivalente), dif.magEquivalente == null ? '–' : segno(dif.magEquivalente, 1)),
-    riga(t('terremoti.arc.energia'), energiaTesto(c.a.energia), energiaTesto(c.b.energia), dif.energia == null ? '–' : `×${numero(dif.energia, 1)}`),
-    riga(t('terremoti.arc.meseMax'), meseTesto(c.a.meseMax), meseTesto(c.b.meseMax), '–', titoloMese(c.a.meseMax), titoloMese(c.b.meseMax)),
+    riga(t('terremoti.arc.energia'), energiaTesto(c.a.energia), energiaTesto(c.b.energia), dif.energia == null ? '–' : `×${numero(dif.energia, 1)}`,
+      suggerimento(forti[0], 'terremoti.arc.evidEnergia', { n: numero(forti[0].length) }), suggerimento(forti[1], 'terremoti.arc.evidEnergia', { n: numero(forti[1].length) }), forti[0], forti[1]),
+    riga(t('terremoti.arc.meseMax'), meseTesto(c.a.meseMax), meseTesto(c.b.meseMax), '–', titoloMese(c.a.meseMax), titoloMese(c.b.meseMax), meseA, meseB),
   );
   elementi.push(tabella);
   if (dif.energia != null) elementi.push(el('p', 'uffici-nota', t('terremoti.arc.rapporto')));
   elementi.push(el('p', 'uffici-nota', t('terremoti.arc.lettura')));
   if (grafici) elementi.push(grafici);
   elementi.push(graficoClassi(c, periodoA, periodoB, false, eventiA, eventiB, interazione));
+  const gr = graficoFrequenza(c, periodoA, periodoB, magMin ?? 0, false, null, null, eventiA, eventiB, interazione);
+  if (gr) elementi.push(gr);
   return elementi;
 }
 
@@ -748,6 +767,168 @@ function graficoCumulata(c, annoA, annoB, adesso, grande = false, dominio = null
       minDurata: 2,
       formatta: (d0, d1) => `${meseCorto(Math.ceil(d0))} – ${meseCorto(Math.floor(d1))}`,
       ridisegna: d => graficoCumulata(c, annoA, annoB, adesso, true, d, intero, eventiA, eventiB, interazione),
+    });
+  }
+  return blocco;
+}
+
+// Frequenza cumulata di Gutenberg-Richter: eventi con magnitudo uguale o maggiore di M, in scala logaritmica, per i due periodi.
+// Due linee parallele = stessa proporzione di eventi forti; una linea più ripida = più eventi deboli rispetto ai forti.
+// `dominio` = intervallo di magnitudo mostrato (per lo zoom), `origine` = tutto l'intervallo (per tornare a tutto).
+function graficoFrequenza(c, periodoA, periodoB, magMin, grande = false, dominio = null, origine = null, eventiA = [], eventiB = [], interazione = null) {
+  const eventi = t('terremoti.arc.eventi').toLocaleLowerCase(localeIntl());
+  const serie = [
+    { periodo: periodoA, punti: frequenzaCumulata(c.a.perMagnitudo ?? [], magMin), classe: 'linea-a', colore: COLORE_A, delPeriodo: eventiA, b: valoreB(c.a.perMagnitudo ?? [], magMin) },
+    { periodo: periodoB, punti: frequenzaCumulata(c.b.perMagnitudo ?? [], magMin), classe: 'linea-b', colore: COLORE_B, delPeriodo: eventiB, b: valoreB(c.b.perMagnitudo ?? [], magMin) },
+  ];
+  const tutti = serie.flatMap(s => s.punti);
+  if (!tutti.length) return null;
+  const minimo = Math.floor(Math.min(...tutti.map(p => p.mag))), massimoMag = Math.max(minimo + 1, Math.ceil(Math.max(...tutti.map(p => p.mag))));
+  const intero = origine ?? { da: minimo, a: massimoMag };
+  const da = Math.max(intero.da, Math.min(dominio?.da ?? intero.da, intero.a - 1));
+  const a = Math.min(intero.a, Math.max(dominio?.a ?? intero.a, da + 1));
+  const dim = grande ? DIM_CUM_GRANDE : DIM_CUM;
+  const { L, A, MS, MD, MA, MB } = dim;
+  const sinistra = MS, destra = L - MD, alto = MA, basso = A - MB;
+  const visibili = serie.flatMap(s => s.punti).filter(p => p.mag >= da && p.mag <= a);
+  const massimo = Math.max(1, ...visibili.map(p => p.n));
+  const logMax = Math.max(1, Math.log10(massimo));
+  const x = m => sinistra + (m - da) / (a - da) * (destra - sinistra);
+  const y = n => (n <= 1 ? basso : basso - Math.log10(n) / logMax * (basso - alto));
+  const titolo = t('terremoti.arc.graficoFrequenza');
+  const blocco = el('div', `terremoti-serie terremoti-confronto-grafico${grande ? ' grande' : ''}`);
+  blocco.append(titoloConInfo('h4', 'terremoti-titolo', titolo, 'confronto-gr', grande ? null : () => apriGrande(titolo, () => graficoFrequenza(c, periodoA, periodoB, magMin, true, null, null, eventiA, eventiB, interazione))));
+  const svg = nodoSvg('svg', { viewBox: `0 0 ${L} ${A}`, role: 'img', 'aria-label': titolo });
+  if (grande) svg.classList.add('grafico-zoom');
+
+  for (let k = 0; 10 ** k <= massimo; k++) {
+    svg.append(nodoSvg('line', { x1: sinistra, x2: destra, y1: y(10 ** k), y2: y(10 ** k), class: k ? 'griglia' : 'asse' }));
+    svg.append(testoSvg(sinistra - 4, y(10 ** k) + 3, compatto(10 ** k), { 'text-anchor': 'end' }));
+  }
+  for (let m = Math.ceil(da); m <= a; m++) {
+    svg.append(testoSvg(x(m), grande ? basso + 22 : A - 6, String(m), { 'text-anchor': 'middle' }));
+    if (grande) svg.append(nodoSvg('line', { x1: x(m), x2: x(m), y1: alto, y2: basso, class: 'griglia' }));
+  }
+  for (const { periodo, punti, classe, colore, delPeriodo } of serie) {
+    const dentro = punti.filter(p => p.mag >= da && p.mag <= a);
+    if (dentro.length > 1) svg.append(nodoSvg('polyline', { points: dentro.map(p => `${x(p.mag).toFixed(1)},${y(p.n).toFixed(1)}`).join(' '), class: classe }));
+    for (const p of dentro) {
+      svg.append(nodoSvg('circle', { cx: x(p.mag), cy: y(p.n), r: grande ? 3 : 2, fill: colore }));
+      const tip = `${etichettaPeriodo(periodo)} · M ≥ ${numero(p.mag, 1)}: ${numero(p.n)} ${eventi}`;
+      const hit = nodoSvg('circle', { cx: x(p.mag), cy: y(p.n), r: 7, class: 'punto-hit', 'data-tip': tip });
+      rendiGruppo(hit, delPeriodo.filter(e => Math.round(e.mag * 10) / 10 >= p.mag), interazione, tip); // gli eventi di quella magnitudo o più
+      svg.append(hit);
+    }
+  }
+  if (grande) {
+    svg.append(nodoSvg('line', { x1: sinistra, x2: sinistra, y1: alto, y2: basso, class: 'asse' }));
+    titoloAsse(svg, t('terremoti.asse.magnitudoMin'), sinistra + (destra - sinistra) / 2, A - 4);
+    titoloAsse(svg, t('terremoti.asse.eventiMagMin'), 15, (alto + basso) / 2, true);
+  }
+
+  const chiave = el('div', 'terremoti-confronto-chiave');
+  for (const { periodo, colore } of serie) {
+    const voce = el('span');
+    const pallino = el('i');
+    pallino.style.background = colore;
+    voce.append(pallino, el('span', null, etichettaPeriodo(periodo)));
+    chiave.append(voce);
+  }
+  const nota = [t('terremoti.arc.graficoFrequenzaNota')];
+  if (serie.some(s => s.b != null)) nota.push(t('terremoti.arc.valoreB', { a: etichettaPeriodo(periodoA), ba: serie[0].b == null ? '–' : numero(serie[0].b, 2), b: etichettaPeriodo(periodoB), bb: serie[1].b == null ? '–' : numero(serie[1].b, 2) }));
+  blocco.append(chiave, svg, el('p', 'scheda-nota', nota.join(' ')));
+  collegaTooltip(blocco);
+  if (grande) {
+    zoomGrafico({
+      blocco, svg,
+      dominio: { da, a },
+      origine: intero,
+      geometria: dim,
+      minDurata: 1,
+      formatta: (d0, d1) => `M ${numero(d0, 1)} – ${numero(d1, 1)}`,
+      ridisegna: d => graficoFrequenza(c, periodoA, periodoB, magMin, true, d, intero, eventiA, eventiB, interazione),
+    });
+  }
+  return blocco;
+}
+
+// Eventi giorno per giorno dei due anni sovrapposti per data (scala logaritmica): i picchi alti e isolati sono sequenze sismiche,
+// il fondo basso e continuo è l'attività di tutti i giorni. `dominio` = giorni mostrati (per lo zoom), `origine` = tutto l'anno.
+const dataGiorno = i => new Date(Date.UTC(2020, 0, 1 + i)).toLocaleDateString(localeIntl(), { day: 'numeric', month: 'short', timeZone: 'UTC' });
+function graficoGiorni(eventiA, eventiB, annoA, annoB, grande = false, dominio = null, origine = null, interazione = null) {
+  const eventi = t('terremoti.arc.eventi').toLocaleLowerCase(localeIntl());
+  const serie = [
+    { anno: annoA, ...serieGiornaliera(eventiA, annoA), classe: 'barra-a', colore: COLORE_A },
+    { anno: annoB, ...serieGiornaliera(eventiB, annoB), classe: 'barra-b', colore: COLORE_B },
+  ];
+  if (!serie.some(s => s.max)) return null;
+  const intero = origine ?? { da: 0, a: 366 };
+  const da = Math.max(0, Math.min(Math.round(dominio?.da ?? 0), 365));
+  const a = Math.min(366, Math.max(Math.round(dominio?.a ?? 366), da + 1));
+  const dim = grande ? DIM_CUM_GRANDE : DIM_CUM;
+  const { L, A, MS, MD, MA, MB } = dim;
+  const sinistra = MS, destra = L - MD, alto = MA, basso = A - MB;
+  const massimo = Math.max(1, ...serie.flatMap(s => s.giorni.slice(da, a).map(g => g.n)));
+  const y = n => basso - Math.log10(1 + n) / Math.log10(1 + massimo) * (basso - alto);
+  const passo = (destra - sinistra) / (a - da);
+  const larghezza = Math.max(0.5, Math.min(grande ? 6 : Infinity, passo * 0.42));
+  const x = i => sinistra + (i - da) * passo;
+  const titolo = t('terremoti.arc.graficoGiorni');
+  const blocco = el('div', `terremoti-serie terremoti-confronto-grafico${grande ? ' grande' : ''}`);
+  blocco.append(titoloConInfo('h4', 'terremoti-titolo', titolo, 'confronto-giorni', grande ? null : () => apriGrande(titolo, () => graficoGiorni(eventiA, eventiB, annoA, annoB, true, null, null, interazione))));
+  const svg = nodoSvg('svg', { viewBox: `0 0 ${L} ${A}`, role: 'img', 'aria-label': titolo });
+  if (grande) svg.classList.add('grafico-zoom');
+
+  for (let k = 0; 10 ** k <= massimo; k++) {
+    svg.append(nodoSvg('line', { x1: sinistra, x2: destra, y1: y(10 ** k), y2: y(10 ** k), class: 'griglia' }));
+    svg.append(testoSvg(sinistra - 4, y(10 ** k) + 3, compatto(10 ** k), { 'text-anchor': 'end' }));
+  }
+  // asse: mesi se si vede molto dell'anno, altrimenti giorni a passo regolare
+  const tacche = [];
+  if (a - da > 62) for (let m = 0; m < 12; m++) { const i = (Date.UTC(2020, m, 1) - Date.UTC(2020, 0, 1)) / 86400000; if (i >= da && i < a && (grande || m % 2 === 0)) tacche.push([i, meseCorto(m + 1)]); }
+  else { const passoGiorni = a - da > 31 ? 7 : a - da > 14 ? 3 : 1; for (let i = da; i < a; i += passoGiorni) tacche.push([i, dataGiorno(i)]); }
+  for (const [i, testo] of tacche) {
+    svg.append(testoSvg(x(i) + (a - da > 62 ? 0 : passo / 2), grande ? basso + 22 : A - 6, testo, { 'text-anchor': a - da > 62 ? 'start' : 'middle' }));
+    if (grande) svg.append(nodoSvg('line', { x1: x(i), x2: x(i), y1: alto, y2: basso, class: 'griglia' }));
+  }
+  serie.forEach((s, lato) => {
+    for (let i = da; i < a; i++) {
+      const g = s.giorni[i];
+      if (!g.n) continue;
+      const cx = x(i) + passo / 2 - (lato === 0 ? larghezza : 0);
+      const rett = nodoSvg('rect', { x: cx, y: y(g.n), width: larghezza, height: Math.max(1.5, basso - y(g.n)), class: s.classe });
+      const tip = `${s.anno} · ${dataGiorno(i)}: ${numero(g.n)} ${eventi} · ${t('terremoti.arc.magMax')} ${numero(g.magMax, 1)}`;
+      rett.setAttribute('data-tip', tip);
+      rendiGruppo(rett, g.eventi, interazione, tip); // il giorno: sotto il mouse si accendono i suoi eventi
+      svg.append(rett);
+    }
+  });
+  svg.append(nodoSvg('line', { x1: sinistra, x2: destra, y1: basso, y2: basso, class: 'asse' }));
+  if (grande) {
+    svg.append(nodoSvg('line', { x1: sinistra, x2: sinistra, y1: alto, y2: basso, class: 'asse' }));
+    titoloAsse(svg, t('terremoti.asse.giornoAnno'), sinistra + (destra - sinistra) / 2, A - 4);
+    titoloAsse(svg, t('terremoti.asse.eventiGiorno'), 15, (alto + basso) / 2, true);
+  }
+
+  const chiave = el('div', 'terremoti-confronto-chiave');
+  for (const { anno, colore } of serie) {
+    const voce = el('span');
+    const pallino = el('i');
+    pallino.style.background = colore;
+    voce.append(pallino, el('span', null, String(anno)));
+    chiave.append(voce);
+  }
+  blocco.append(chiave, svg, el('p', 'scheda-nota', t('terremoti.arc.graficoGiorniNota')));
+  collegaTooltip(blocco);
+  if (grande) {
+    zoomGrafico({
+      blocco, svg,
+      dominio: { da, a },
+      origine: intero,
+      geometria: dim,
+      minDurata: 7,
+      formatta: (d0, d1) => `${dataGiorno(Math.round(d0))} – ${dataGiorno(Math.round(d1) - 1)}`,
+      ridisegna: d => graficoGiorni(eventiA, eventiB, annoA, annoB, true, d, intero, interazione),
     });
   }
   return blocco;
