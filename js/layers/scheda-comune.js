@@ -5,7 +5,7 @@ import { t, tl, localeIntl } from '../core/i18n.js';
 import { puntoInGeometrie } from '../core/aree.js';
 import { iconaAttesa, righe } from '../core/scheda-util.js';
 import { ANNO_INIZIO } from './scheda-archivio.js';
-import { FONTE, LINK, eventiDaTesto, oraEvento, rispostaDaArchivio, scaricaEventi } from './scheda-terremoti.js';
+import { FONTE, LINK, LINK_SHAKEMAP, haShakeMap, eventiDaTesto, oraEvento, rispostaDaArchivio, scaricaEventi } from './scheda-terremoti.js';
 
 export const PESO_COMUNE = 9; // dopo la scheda dell'evento (peso 8), nello stesso tab «Luogo»
 export const MAG_RECENTE = 1; // ultimi 30 giorni: la stessa soglia dello strato in tempo reale
@@ -148,6 +148,8 @@ function serie(anni, annoCorrente) {
   return [el('p', 'comune-sismico-titolo', t('comune.sismico.perAnno')), barre, etichette];
 }
 
+const linkShakeMap = id => Object.assign(el('a', 'comune-sismico-link', t('comune.sismico.shakemap')), { href: LINK_SHAKEMAP + id, target: '_blank', rel: 'noopener' });
+
 // Elenco degli eventi dal più recente: una riga per evento (data, magnitudo, luogo, link INGV), a blocchi con «Mostra altri»
 function elencoEventi(eventi) {
   const titolo = el('p', 'comune-sismico-titolo', t('comune.sismico.elenco', { n: numero(eventi.length) }));
@@ -162,7 +164,10 @@ function elencoEventi(eventi) {
       link.href = LINK + ev.id;
       link.target = '_blank';
       link.rel = 'noopener';
-      voce.append(el('span', 'comune-sismico-data', dataBreve(ev.ts)), link, el('span', 'comune-sismico-luogo', ev.luogo));
+      const links = el('span', 'comune-sismico-links');
+      links.append(link);
+      if (haShakeMap(ev)) links.append(' · ', linkShakeMap(ev.id));
+      voce.append(el('span', 'comune-sismico-data', dataBreve(ev.ts)), links, el('span', 'comune-sismico-luogo', ev.luogo));
       lista.append(voce);
     }
     mostrati = Math.min(eventi.length, mostrati + PASSO_ELENCO);
@@ -192,6 +197,7 @@ export function quadroComune(d) {
     link.target = '_blank';
     link.rel = 'noopener';
     dove.append(link);
+    if (haShakeMap(d.forte)) dove.append(' · ', linkShakeMap(d.forte.id));
     nodi.push(dove);
   }
   if (!d.totale && !d.recente.giorni30) nodi.push(el('p', 'uffici-nota', t('comune.sismico.nessuno')));

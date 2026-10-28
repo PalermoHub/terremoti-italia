@@ -16,6 +16,16 @@ if (!eventi.length) throw new Error('nessun evento dall\'INGV: snapshot non scri
 writeFileSync(`${uscita}/terremoti.json`, JSON.stringify({ eventi, aggiornato: adesso }));
 console.log(`terremoti.json: ${eventi.length} eventi`);
 
+// Elenco degli eventi con una ShakeMap su shakemap.ingv.it (il sito non ha CORS: lo legge il browser da qui).
+try {
+  const r = await fetch('https://shakemap.ingv.it/events.json', { signal: AbortSignal.timeout(60000) });
+  if (!r.ok) throw new Error(String(r.status));
+  const ids = Object.values(await r.json()).flatMap(anno => Object.values(anno).flat()).map(e => String(e.id));
+  if (!ids.length) throw new Error('elenco vuoto');
+  writeFileSync(`${uscita}/shakemap.json`, JSON.stringify(ids));
+  console.log(`shakemap.json: ${ids.length} eventi`);
+} catch (e) { console.warn(`shakemap.json non scritto: ${e.message}`); }
+
 const r = await gestisciAllerte(fetch, {});
 if (r.stato !== 200) throw new Error(`allerte: ${r.corpo}`);
 writeFileSync(`${uscita}/allerte.json`, r.corpo);

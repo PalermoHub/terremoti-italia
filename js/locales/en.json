@@ -159,6 +159,7 @@
   "comune.sismico.recente": "Last 30 days (M ≥ 1)",
   "comune.sismico.regione": "Region",
   "comune.sismico.schedaIngv": "INGV page",
+  "comune.sismico.shakemap": "ShakeMap",
   "comune.sismico.titolo": "Earthquakes in the municipality",
   "comune.sismico.totale": "Total since {anno}",
   "comuni.tooltip.codice": "ISTAT code {codice}",

@@ -159,6 +159,7 @@
   "comune.sismico.recente": "Ultimi 30 giorni (M ≥ 1)",
   "comune.sismico.regione": "Regione",
   "comune.sismico.schedaIngv": "Scheda INGV",
+  "comune.sismico.shakemap": "ShakeMap",
   "comune.sismico.titolo": "Terremoti nel comune",
   "comune.sismico.totale": "Totale dal {anno}",
   "comuni.tooltip.codice": "Codice ISTAT {codice}",

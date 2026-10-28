@@ -2615,6 +2615,7 @@ a.scheda-tel { min-height: 40px; }
 .scheda-evento-campo { display: flex; flex-direction: column; min-width: 0; }
 .scheda-evento-chiave { font-size: var(--fs-xs); font-weight: 800; text-transform: uppercase; color: #e8590c; }
 .scheda-evento-chiave small { font-weight: 400; text-transform: none; color: var(--text-soft, var(--text)); }
+.scheda-evento-link { font-size: var(--fs-sm); font-weight: 600; text-decoration: underline; }
 .scheda-evento-valore { font-size: var(--fs-base); font-weight: 600; }
 .scheda-evento-legende { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; margin: 10px 0; }
 .scheda-evento-legenda strong { display: block; margin-bottom: 4px; font-size: var(--fs-xs); text-transform: uppercase; }

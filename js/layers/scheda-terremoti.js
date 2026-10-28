@@ -215,9 +215,14 @@ export function modelloPopupTerremoto(p, adesso = Date.now()) {
   return { titolo: titoloTerremoto(p), sottotitolo: p.fascia, ...(p.anno ? { badge: { testo: String(p.anno), colore: p.colore } } : {}), righe: righeTerremoto(p, adesso).filter(r => r.etichetta !== 'Zona') };
 }
 
-// L'INGV pubblica la ShakeMap (scuotimento del suolo) solo per i terremoti di magnitudo ≥ 3 nell'area del dataset (lon 6–21, lat 35–48);
-// il sito non risponde con CORS, quindi non si può verificare se la mappa esiste: si applica la regola del dataset
-export const haShakeMap = p => p.mag >= 3 && p.lat >= 35 && p.lat <= 48 && p.lon >= 6 && p.lon <= 21;
+// Elenco degli eventi con una ShakeMap su shakemap.ingv.it (poche centinaia, quasi tutti recenti: non basta essere M ≥ 3).
+// Il sito non risponde con CORS: lo copia scripts/snapshot.mjs in shakemap.json (ramo `snapshot`), che si legge una volta sola all'avvio
+const eventiShakeMap = new Set();
+export const caricaShakeMap = (urlBase = URL_SNAPSHOT) => fetch(`${urlBase}shakemap.json`)
+  .then(r => (r.ok ? r.json() : []))
+  .then(ids => { for (const id of ids) eventiShakeMap.add(String(id)); })
+  .catch(() => { /* senza elenco il collegamento alla ShakeMap non compare: meglio nessun link di uno che porta a una pagina vuota */ });
+export const haShakeMap = p => eventiShakeMap.has(String(p.id));
 
 // Data e ora come le scrive l'INGV («2026-03-02 23:53:10»), nel fuso chiesto: UTC per l'ora ufficiale dell'evento, Roma per la stessa ora italiana
 const PARTI_ORARIO = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' };
@@ -241,7 +246,7 @@ export function modelloEvento(p) {
       { chiave: t('terremoti.ev.oraUtc'), valore: dataOra(p.ts, 'UTC') },
       { chiave: t('terremoti.ev.oraItaliana'), valore: dataOra(p.ts, 'Europe/Rome') },
       { chiave: t('terremoti.ev.posizione'), valore: coordinateEvento(p) },
-      { chiave: t('terremoti.ev.id'), valore: p.id == null ? '' : String(p.id) },
+      { chiave: t('terremoti.ev.id'), valore: p.id == null ? '' : String(p.id), ...(haShakeMap(p) ? { link: { testo: 'ShakeMap INGV', url: LINK_SHAKEMAP + p.id } } : {}) },
       { chiave: t('terremoti.ev.localizzatoDa'), valore: p.autore ?? '' },
     ].filter(c => c.valore),
     legende: [

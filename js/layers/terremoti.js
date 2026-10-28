@@ -2,7 +2,7 @@ import { tl, t, localeIntl } from '../core/i18n.js';
 import { AREA_EVENTI, HIT_COMUNI, SRC_COMUNI, STRATO_COMUNI } from '../core/config.js';
 import { filtroInsieme, voceFiltro } from '../core/legenda.js';
 import { primo } from '../core/scheda-util.js';
-import { FASCE, GIORNI_MAX, scaricaEventi, filtro, FILTRO_INIZIALE, profonditaDaFiltro, passaFiltro, espressioneFiltro, eventoDaIngv, quantoTempoFa, distanzaKm, modelloPopupTerremoto, voceTerremoto, voceSerie, voceAltri, riassuntoTerremoti, proprietaStorico, colonneTabellaTerremoti } from './scheda-terremoti.js';
+import { FASCE, GIORNI_MAX, scaricaEventi, filtro, FILTRO_INIZIALE, profonditaDaFiltro, passaFiltro, espressioneFiltro, eventoDaIngv, quantoTempoFa, distanzaKm, modelloPopupTerremoto, voceTerremoto, voceSerie, voceAltri, riassuntoTerremoti, proprietaStorico, colonneTabellaTerremoti, caricaShakeMap } from './scheda-terremoti.js';
 import { voceComune } from './scheda-comune.js';
 import { zonaComune } from './classificazione.js';
 import { fasciaAlPunto } from './pericolosita.js';
@@ -270,6 +270,7 @@ export default {
   },
   aggiungiLayer(map) {
     mappa = map;
+    caricaShakeMap();
     // i più recenti e i più forti sopra gli altri
     map.addLayer({
       id: PUNTI, type: 'circle', source: SRC, layout: { visibility: 'visible', 'circle-sort-key': ['+', ['*', ['get', 'mag'], 1000], ['/', ['get', 'ts'], 1e13]] },
