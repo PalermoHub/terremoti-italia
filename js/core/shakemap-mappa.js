@@ -5,6 +5,7 @@ export const URL_CONTORNI = 'https://raw.githubusercontent.com/PalermoHub/terrem
 export const EVENTO_SHAKEMAP = 'scheda:shakemap';
 
 const SRC = 'shakemap-contorni';
+const BORDO = 'shakemap-contorni-bordo';
 const LINEE = 'shakemap-contorni-linee';
 const VALORI = 'shakemap-contorni-valori';
 const VUOTO = { type: 'FeatureCollection', features: [] };
@@ -12,6 +13,8 @@ const VUOTO = { type: 'FeatureCollection', features: [] };
 function assicuraStrati(map) {
   if (map.getSource(SRC)) return;
   map.addSource(SRC, { type: 'geojson', data: VUOTO, attribution: '<a href="https://shakemap.ingv.it/" target="_blank" rel="noopener">ShakeMap INGV</a>' });
+  // bordo scuro sotto la linea colorata: le intensità basse sono quasi bianche e sparirebbero sulla base chiara
+  map.addLayer({ id: BORDO, type: 'line', source: SRC, layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': '#1f2a44', 'line-opacity': 0.55, 'line-width': ['interpolate', ['linear'], ['get', 'weight'], 1, 3.5, 6, 6.5] } });
   map.addLayer({ id: LINEE, type: 'line', source: SRC, layout: { 'line-cap': 'round', 'line-join': 'round' }, paint: { 'line-color': ['get', 'color'], 'line-width': ['interpolate', ['linear'], ['get', 'weight'], 1, 1.5, 6, 4], 'line-opacity': 0.9 } });
   map.addLayer({
     id: VALORI, type: 'symbol', source: SRC, minzoom: 6,
