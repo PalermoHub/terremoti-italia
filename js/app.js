@@ -19,7 +19,7 @@ import { creaRegolatoreRaggio } from './core/raggio-vicini.js';
 import { collegaMinimappa } from './core/minimappa.js';
 import { caricaTemaMagnitudo } from './core/tema-magnitudo.js';
 import { t } from './core/i18n.js';
-import { collegaCondividi, applicaStatoDaUrl } from './core/condividi.js';
+import { collegaCondividi, applicaStatoDaUrl, tieniAggiornatoIndirizzo } from './core/condividi.js';
 import protezioneCivile from './layers/protezione-civile.js';
 import terremotiGruppo from './layers/terremoti-gruppo.js';
 import faglieGruppo from './layers/faglie-gruppo.js';
@@ -123,5 +123,6 @@ map.once('style.load', async () => {
   const condivisi = { storico: terremotiStorico, confronto: terremotiConfronto, ricerca, map };
   collegaCondividi(document.getElementById('btn-condividi'), { moduli: condivisi });
   await applicaStatoDaUrl(location.search, condivisi); // strati e filtri del link condiviso, a strati già avviati
+  tieniAggiornatoIndirizzo(condivisi); // dopo il ripristino: prima cancellerebbe i parametri del link
   window.dt.pronto = true;
 });

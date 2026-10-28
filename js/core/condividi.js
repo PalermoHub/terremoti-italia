@@ -68,6 +68,22 @@ export function applicaTemaDaUrl(search = location.search) {
   else if (tema === 'chiaro') delete document.documentElement.dataset.tema;
 }
 
+// La barra degli indirizzi segue lo stato: copiarla basta per condividere. L'hash (vista) lo scrive la mappa, qui si cambia solo la query.
+export function tieniAggiornatoIndirizzo(moduli = {}, { map = moduli.map, attesa = 300 } = {}) {
+  let timer = 0;
+  const scrivi = () => {
+    const { search } = new URL(indirizzoCondivisibile(location.href, moduli));
+    if (search !== location.search) history.replaceState(history.state, '', location.pathname + search + location.hash);
+  };
+  const pianifica = () => { clearTimeout(timer); timer = setTimeout(scrivi, attesa); };
+  const pannello = document.getElementById('pannello');
+  pannello?.addEventListener('change', pianifica);
+  pannello?.addEventListener('input', pianifica);
+  document.addEventListener(EVENTO_FILTRO, pianifica);
+  map?.on('idle', pianifica); // periodi di storico/confronto e area di ricerca ridisegnano la mappa
+  scrivi();
+}
+
 export function collegaCondividi(bottone, { navigatore = navigator, appunti = navigator.clipboard, moduli = {} } = {}) {
   bottone.addEventListener('click', async () => {
     const url = indirizzoCondivisibile(location.href, moduli);
