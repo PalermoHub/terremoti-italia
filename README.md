@@ -76,6 +76,13 @@ Il tab **Storico** del rail apre il pannello degli eventi dell'archivio: senza u
 
 **Terremoti del comune**: un clic su un comune in mappa (senza un cerchio di terremoto sotto il dito) apre la scheda «Terremoti nel comune»: eventi degli ultimi 30 giorni (M ≥ 1), conteggio dell'anno in corso e totale dal 1985 (M ≥ 2), anno più sismico, evento più forte con il link alla scheda INGV e la serie anno per anno. Si contano solo gli epicentri dentro il confine comunale: `GET /terremoti` (e `/riepilogo`) accettano anche `bbox=<ovest>,<sud>,<est>,<nord>` per scaricare solo l'area del comune. Il codice sta in `js/layers/scheda-comune.js` e nella `scheda` di `js/layers/terremoti.js`; lo strato trasparente che rende cliccabili i comuni (`aree-hit`) lo aggiunge `js/core/ricerca.js`.
 
+**ShakeMap INGV**: per gli eventi che hanno una mappa dello scuotimento su <https://shakemap.ingv.it/> (poche centinaia, quasi tutti recenti: non basta essere M ≥ 3) la scheda dell'evento ha il campo **ShakeMap**, un link a `https://shakemap.ingv.it/#event/<id>`, e l'elenco **Contorni ShakeMap** (intensità MMI, PGA, PGV, PSA 0,3 / 1,0 / 3,0 s), che disegna in mappa le linee dei contorni con i colori dell'INGV e i valori. Il link compare anche nel popup del terremoto e nella scheda comune. Il sito INGV non ha CORS e il browser non può leggerlo, quindi due Action copiano i dati nel repo:
+
+- `.github/workflows/snapshot.yml` (ogni 15 minuti) scrive nel ramo `snapshot` anche `shakemap.json`, l'elenco degli id con una ShakeMap (`scripts/snapshot.mjs`); decide dove compare il link (`haShakeMap` in `js/layers/scheda-terremoti.js`).
+- `.github/workflows/shakemap.yml` (ogni 3 ore, o `gh workflow run shakemap.yml`) copia nel ramo `shakemap` i contorni GeoJSON `<id>/<prodotto>.json` (`scripts/shakemap.mjs`, circa 44 MB al 28 ottobre 2026). Il ramo è incrementale: aggiunge gli eventi nuovi e rifà solo quelli degli ultimi 3 giorni. Li disegna `js/core/shakemap-mappa.js`.
+
+Lo shapefile (`…/data/<id>/current/products/shape.zip`) non è copiato. Dati INGV, CC BY 4.0 (DOI 10.13127/shakemaps).
+
 Storico dall'INGV (dal 1985, magnitudo ≥ 2, riprendibile):
 
     node --no-warnings scripts/carica-storico.mjs --da 1985 --magmin 2
