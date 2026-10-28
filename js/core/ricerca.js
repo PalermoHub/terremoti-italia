@@ -5,7 +5,7 @@
 import { HIT_COMUNI, SRC_COMUNI, STRATO_COMUNI as STRATO, VISTA_ITALIA, sorgenteComuni } from './config.js';
 import { caricaIndiceComuni } from './indice-comuni.js';
 import { t } from './i18n.js';
-import { segnala } from './pannello.js';
+import { segnala, spegniStratiTranne } from './pannello.js';
 import { liveZoomAttivo, riquadroDa } from './live-zoom.js';
 import { LIVELLI, MIN_LETTERE, SCELTA_VUOTA, cambia, cerca, contesto, filtroArea, haScelta, opzioni, puntoInGeometrie, sceltaDaVoce, voceScelta } from './aree.js';
 
@@ -171,16 +171,22 @@ export function collegaRicerca(map, { terremoti = null, storico = null, comuni =
     bottoneFiltri.setAttribute('aria-expanded', String(apri));
     if (apri) chiudiElenco();
   });
+  // «Azzera» accanto alla ricerca: riporta la mappa come all'avvio. Via l'area scelta e tutti i filtri
+  // (periodo, magnitudo, profondità, finestra, classi, fasce d'età, anno dell'archivio), strati spenti tranne
+  // «Terremoti in tempo reale» e vista di partenza sull'Italia.
   azzera.addEventListener('click', () => {
     campo.value = '';
     chiudiElenco();
+    pannello.hidden = true;
+    bottoneFiltri.setAttribute('aria-expanded', 'false');
     casellaEventi.checked = false;
     soloEventi = false;
     const anno = document.getElementById('filtro-anno');
     if (anno) anno.value = '';
     storico?.mostraAnno?.(null); // spegne l'archivio storico e torna al tempo reale
-    terremoti?.ripristinaFiltro?.(); // periodo, magnitudo e classi iniziali
-    applica({ ...SCELTA_VUOTA }, { casa: true });
+    terremoti?.ripristinaFiltro?.(); // periodo, magnitudo, profondità, finestra, classi e fasce d'età iniziali
+    spegniStratiTranne(); // resta acceso il solo strato «Terremoti in tempo reale»
+    applica({ ...SCELTA_VUOTA }, { casa: true }); // via l'area scelta, l'evidenziazione e si torna alla vista iniziale
   });
 
   // ---- applica la scelta ----

@@ -61,14 +61,14 @@ const TAB_DIRETTI = new Set(['base', 'rndt', 'miei', 'filtri']);
 
 // Totale degli strati accesi (mostrato sul pulsante «Strati» di mobile)
 function aggiornaConteggio() {
-  const caselle = [...document.querySelectorAll('#pannello input[type=checkbox]:checked:not([data-filtro])')];
+  const caselle = [...document.querySelectorAll('#pannello input[type=checkbox][id^="strato-"]:checked')];
   for (const el of document.querySelectorAll('#strati-attivi, .conta-strati')) {
     el.textContent = String(caselle.length);
     if (el.classList.contains('conta-strati')) el.hidden = caselle.length === 0; // il pallino sul tab Strati compare solo con strati accesi
   }
   const tabLayer = document.getElementById('btn-gruppo-layer');
   if (tabLayer) {
-    const n = document.querySelectorAll('#gruppo-layer input[type=checkbox]:checked:not([data-filtro])').length;
+    const n = document.querySelectorAll('#gruppo-layer input[type=checkbox][id^="strato-"]:checked').length;
     tabLayer.dataset.attivo = String(n > 0);
     tabLayer.dataset.n = String(n);
   }
@@ -287,7 +287,7 @@ export function costruisciPannello(map, moduli, contenitore, barra) {
     if (m.pannello) m.pannello(gruppo, map);
     // pallino verde sull'icona se nel gruppo c'è almeno uno strato acceso
     const segna = (conta = true) => {
-      const caselle = [...gruppo.querySelectorAll('input[type=checkbox]:not([data-filtro])')];
+      const caselle = [...gruppo.querySelectorAll('input[type=checkbox][id^="strato-"]')];
       if (caselle.length) {
         const n = caselle.filter(c => c.checked).length;
         gruppo.bottone.dataset.attivo = String(n > 0);
@@ -388,4 +388,16 @@ export function disattivaStrato(map, strato) {
   casella.disabled = true;
   casella.title = t('pannello.dato.nd');
   aggiornaConteggio();
+}
+
+// «Reset» accanto alla ricerca: spegne tutti gli strati del pannello tranne quelli indicati (id dei moduli),
+// lasciando acceso «Terremoti in tempo reale». Ogni casella passa dal suo `change`, come un clic dell'utente.
+export function spegniStratiTranne(ids = ['terremoti']) {
+  const restano = new Set(ids.map(id => `strato-${id}`));
+  for (const casella of document.querySelectorAll('#pannello input[type=checkbox][id^="strato-"]')) {
+    const accesa = restano.has(casella.id);
+    if (casella.checked === accesa) continue;
+    casella.checked = accesa;
+    casella.dispatchEvent(new Event('change', { bubbles: true }));
+  }
 }

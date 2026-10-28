@@ -3339,7 +3339,7 @@
   "lbl.I terremoti di un anno qualsiasi dal 1985, dall'archivio locale dei dati INGV: scegli l'anno e la magnitudo minima, oppure confronta due anni.": "Earthquakes of any year since 1985, from the local archive of INGV data: choose the year and the minimum magnitude, or compare two years.",
   "ricerca.segnaposto": "Search municipality, province or region…",
   "ricerca.aria": "Search municipality, province or region",
-  "ricerca.azzera": "Reset and return to Italy",
+  "ricerca.azzera": "Clear all filters, switch off the other layers and go back to the initial view",
   "ricerca.filtri": "Filters",
   "ricerca.filtri.aria": "Area filters",
   "ricerca.nessuno": "No results for “{q}”",

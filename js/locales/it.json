@@ -3339,7 +3339,7 @@
   "lbl.I terremoti di un anno qualsiasi dal 1985, dall'archivio locale dei dati INGV: scegli l'anno e la magnitudo minima, oppure confronta due anni.": "I terremoti di un anno qualsiasi dal 1985, dall'archivio locale dei dati INGV: scegli l'anno e la magnitudo minima, oppure confronta due anni.",
   "ricerca.segnaposto": "Cerca comune, provincia o regione…",
   "ricerca.aria": "Cerca comune, provincia o regione",
-  "ricerca.azzera": "Azzera e torna all'Italia",
+  "ricerca.azzera": "Azzera tutti i filtri, spegni gli altri strati e torna alla vista iniziale",
   "ricerca.filtri": "Filtri",
   "ricerca.filtri.aria": "Filtri per area",
   "ricerca.nessuno": "Nessun risultato per «{q}»",

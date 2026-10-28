@@ -271,9 +271,14 @@ export default {
   menuProfondita,
   // Profondità scelta nel filtro condiviso, per i menu che la passano allo strato storico
   profonditaScelta: () => profonditaDaFiltro(filtro),
-  // Riporta ai valori iniziali i filtri condivisi (pulsante «Azzera» accanto alla ricerca): periodo, magnitudo, profondità, finestra e classi
+  // Riporta ai valori iniziali i filtri condivisi (pulsante «Azzera» accanto alla ricerca): periodo, magnitudo,
+  // profondità, finestra e classi, più le fasce d'età della legenda; ferma anche la riproduzione della finestra.
   ripristinaFiltro() {
     Object.assign(filtro, FILTRO_INIZIALE);
+    pannelloPf?.ferma();
+    fasceAccese.clear();
+    for (const f of FASCE) fasceAccese.add(f.colore);
+    for (const casella of bloccoFasce?.querySelectorAll('input[type=checkbox]') ?? []) casella.checked = true;
     document.dispatchEvent(new CustomEvent(EVENTO_FILTRO));
   },
   avvia() { aggiorna(); pianifica(); },
