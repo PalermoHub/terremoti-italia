@@ -4,7 +4,7 @@ import { filtroInsieme, voceFiltro } from '../core/legenda.js';
 import { primo } from '../core/scheda-util.js';
 import { FASCE, GIORNI_MAX, scaricaEventi, filtro, FILTRO_INIZIALE, profonditaDaFiltro, passaFiltro, espressioneFiltro, eventoDaIngv, modelloPopupTerremoto, voceTerremoto, voceSerie, voceAltri, riassuntoTerremoti, proprietaStorico, colonneTabellaTerremoti } from './scheda-terremoti.js';
 import { voceComune } from './scheda-comune.js';
-import { EVENTO_FILTRO, menuFiltro, menuMagnitudo, menuProfondita, elencoAltri, graficoSerie, testoGiorni, barraEventi } from './scheda-terremoti-dom.js';
+import { EVENTO_FILTRO, menuFiltro, menuMagnitudo, menuProfondita, elencoAltri, graficoSerie, testoPeriodo, barraEventi } from './scheda-terremoti-dom.js';
 import { pannelloFiltro } from './terremoti-pannello.js';
 import { registraTooltipStrati } from '../core/tooltip.js';
 import { clicSu } from '../core/scheda-navigazione.js';
@@ -42,6 +42,10 @@ let bloccoFasce = null; // filtri per età (colore del cerchio): con il tema mag
 let classiFiltro = null; // classi di magnitudo della legenda, quando il tema è acceso
 let inAreaScelta = null; // (proprietà) => bool, dalla ricerca per area; null = nessuna area che restringa
 const inArea = p => !inAreaScelta || inAreaScelta(p);
+let richiesta = 0; // una risposta in ritardo di una richiesta precedente si scarta
+let caricato = 'recente'; // intervallo degli eventi in memoria: 'recente' (30 giorni) o la chiave del periodo scelto
+const chiavePeriodo = p => (p ? `${p.da}-${p.a}` : 'recente');
+const periodoNelPassato = () => Boolean(filtro.periodo && filtro.periodo.a < Date.now());
 
 function el(tag, classe, testo) {
   const e = document.createElement(tag);
@@ -55,31 +59,53 @@ function scriviNota(ok) {
   const r = riassuntoTerremoti(eventi.filter(p => passaFiltro(p) && inArea(p)));
   if (!ok && !ultimo) { nota.textContent = t('terremoti.nonDisponibile'); return; }
   const ora = new Date(ultimo).toLocaleTimeString(localeIntl(), { hour: '2-digit', minute: '2-digit' });
-  const base = r ? t('terremoti.riassunto', { giorni: testoGiorni(filtro.giorni), n: r.n, ora, mag: r.forte.mag.toLocaleString(localeIntl(), { minimumFractionDigits: 1 }), luogo: r.forte.luogo }) : t('terremoti.nessuno', { ora, giorni: testoGiorni(filtro.giorni) });
+  const base = r ? t('terremoti.riassunto', { giorni: testoPeriodo(), n: r.n, ora, mag: r.forte.mag.toLocaleString(localeIntl(), { minimumFractionDigits: 1 }), luogo: r.forte.luogo }) : t('terremoti.nessuno', { ora, giorni: testoPeriodo() });
   nota.textContent = [base, fallito ? t('terremoti.aggiornamentoFallito', { ora }) : '', troncato ? t('terremoti.troncato', { n: eventi.length }) : ''].filter(Boolean).join(' ');
 }
 
+// Intervallo da chiedere all'archivio: il periodo scelto o, senza, gli ultimi GIORNI_MAX giorni. Il periodo
+// personalizzato può arrivare fino a oggi: la fine non si chiede oltre l'istante attuale.
+function intervalloDaCaricare(adesso) {
+  const p = filtro.periodo;
+  return p ? { da: p.da, a: Math.min(p.a, adesso) } : { da: adesso - GIORNI_MAX * 86400000, a: adesso };
+}
+
 async function aggiorna() {
+  const mia = ++richiesta;
+  const adesso = Date.now();
+  const { da, a } = intervalloDaCaricare(adesso);
+  const chiave = chiavePeriodo(filtro.periodo);
   try {
-    const adesso = Date.now();
-    const scarico = await scaricaEventi({ da: adesso - GIORNI_MAX * 86400000, a: adesso, magMin: MAGNITUDO_MIN, area: AREA });
+    const scarico = await scaricaEventi({ da, a, magMin: MAGNITUDO_MIN, area: AREA });
+    if (mia !== richiesta) return;
     const features = scarico.eventi.map(f => eventoDaIngv(f, adesso)).filter(Boolean);
     eventi = features.map(f => ({ ...f.properties, lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] }));
     mappa?.getSource(SRC)?.setData({ type: 'FeatureCollection', features });
     ultimo = adesso;
     troncato = scarico.troncato;
     fallito = false;
+    caricato = chiave;
     applicaFiltro(); // il periodo scorre con l'ora
     pannelloPf?.aggiorna();
     scriviNota(true);
-  } catch { fallito = true; scriviNota(false); } // senza risposta restano gli eventi di prima
+  } catch {
+    if (mia !== richiesta) return;
+    fallito = true;
+    scriviNota(false); // senza risposta restano gli eventi di prima
+  }
+}
+
+// Il menu «Periodo» ha scelto un altro intervallo: si richiede l'archivio solo se non è già quello in memoria.
+function sincronizzaPeriodo() {
+  if (acceso && chiavePeriodo(filtro.periodo) !== caricato) aggiorna();
+  pianifica();
 }
 
 // Il ciclo gira solo con lo strato acceso e la scheda del browser in primo piano
 function pianifica() {
   clearInterval(timer);
   timer = null;
-  if (acceso && !document.hidden) timer = setInterval(aggiorna, INTERVALLO_MS);
+  if (acceso && !document.hidden && !periodoNelPassato()) timer = setInterval(aggiorna, INTERVALLO_MS);
 }
 
 // le voci della legenda sono filtri: il colore del cerchio è la fascia d'età
@@ -233,9 +259,10 @@ export default {
     map.on('mouseenter', PUNTI, () => { map.getCanvas().style.cursor = 'pointer'; });
     map.on('mouseleave', PUNTI, () => { map.getCanvas().style.cursor = ''; });
     document.addEventListener(EVENTO_FILTRO, applicaFiltro);
+    document.addEventListener(EVENTO_FILTRO, sincronizzaPeriodo);
     document.addEventListener(EVENTO_TEMA_MAGNITUDO, applicaTema);
     document.addEventListener('visibilitychange', () => {
-      if (acceso && !document.hidden && Date.now() - ultimo > INTERVALLO_MS) aggiorna();
+      if (acceso && !document.hidden && !periodoNelPassato() && (chiavePeriodo(filtro.periodo) !== caricato || Date.now() - ultimo > INTERVALLO_MS)) aggiorna();
       pianifica();
     });
   },
@@ -290,7 +317,7 @@ export default {
     suCambio(attivo) {
       acceso = attivo;
       if (legenda) legenda.hidden = !attivo;
-      if (attivo && Date.now() - ultimo > INTERVALLO_MS) aggiorna();
+      if (attivo && (chiavePeriodo(filtro.periodo) !== caricato || Date.now() - ultimo > INTERVALLO_MS)) aggiorna();
       if (!attivo) { popup.chiudi(); pannelloPf?.ferma(); }
       pianifica();
       aggiornaLegendaInMappa(); // con il tema acceso la legenda in mappa è una sola: può essere un'altra

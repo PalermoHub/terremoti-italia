@@ -10,6 +10,9 @@ import { SCELTE_GIORNI, SCELTE_MAGNITUDO, PROFONDITA, UNITA, MAG_STORICO, ANNI_S
 
 export const EVENTO_FILTRO = 'terremoti:filtro';
 
+const GIORNO_MS = 86400000;
+const emetti = () => document.dispatchEvent(new CustomEvent(EVENTO_FILTRO));
+
 function el(tag, classe, testo) {
   const e = document.createElement(tag);
   if (classe) e.className = classe;
@@ -48,11 +51,140 @@ function menu(etichetta, scelte, valore, testoScelta, suCambio) {
 
 const cambia = campo => v => {
   filtro[campo] = v;
-  if (campo === 'giorni') filtro.finestra = null; // il menu «Periodo» sostituisce l'intervallo dello slider
-  document.dispatchEvent(new CustomEvent(EVENTO_FILTRO));
+  if (campo === 'giorni') { filtro.finestra = null; filtro.periodo = null; } // il menu «Periodo» sostituisce l'intervallo dello slider
+  emetti();
 };
 
 export const testoGiorni = g => (g === 1 ? t('terremoti.ultime24') : t('terremoti.ultimiGiorni', { n: g }));
+
+// ---------- periodo: giorni predefiniti oppure un giorno o un intervallo scelto dal calendario ----------
+const dataPeriodo = ts => new Date(ts).toLocaleDateString(localeIntl(), { day: 'numeric', month: 'short', year: 'numeric' });
+const stessoGiorno = (a, b) => {
+  const x = new Date(a), y = new Date(b);
+  return x.getFullYear() === y.getFullYear() && x.getMonth() === y.getMonth() && x.getDate() === y.getDate();
+};
+// Testo compatto del periodo: «il 24 ago 2016» oppure «dal 24 ago 2016 al 30 ago 2016»
+export const testoPeriodoBreve = p => (stessoGiorno(p.da, p.a)
+  ? t('terremoti.periodoGiorno', { data: dataPeriodo(p.da) })
+  : t('terremoti.periodoNota', { da: dataPeriodo(p.da), a: dataPeriodo(p.a) }));
+// Frase del periodo per la nota della legenda: «Ultimi 7 giorni» o il periodo scelto
+export const testoPeriodo = (f = filtro) => (f.periodo ? testoPeriodoBreve(f.periodo) : testoGiorni(f.giorni));
+
+// data «YYYY-MM-DD» nei campi del calendario, e ritorno ai millisecondi locali
+const valoreData = ts => {
+  const d = new Date(ts);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+const inizioGiorno = valore => {
+  const [anno, mese, giorno] = valore.split('-').map(Number);
+  return new Date(anno, mese - 1, giorno).getTime();
+};
+const fineGiorno = ts => {
+  const d = new Date(ts);
+  d.setHours(23, 59, 59, 999);
+  return d.getTime();
+};
+const oggiInput = () => valoreData(Date.now());
+
+// Un solo dialogo per volta: si apre dal menu e restituisce il periodo scelto (o nulla se si annulla)
+let dialogoPeriodo = null;
+function apriDialogoPeriodo({ da = null, a = null, alApplica, alChiudi = null }) {
+  if (dialogoPeriodo) dialogoPeriodo.close();
+  const dlg = el('dialog', 'terremoti-periodo-dialog');
+  dlg.setAttribute('aria-label', t('terremoti.periodoDialogTitolo'));
+  const form = el('form');
+  form.noValidate = true;
+  const titolo = el('h2', null, t('terremoti.periodoDialogTitolo'));
+  const nota = el('p', 'uffici-nota', t('terremoti.periodoDialogNota'));
+  const campi = el('div', 'terremoti-periodo-campi');
+  const campoData = (etichetta, valore) => {
+    const lab = el('label');
+    const input = el('input');
+    Object.assign(input, { type: 'date', min: `${ANNO_INIZIO}-01-01`, max: oggiInput(), value: valore ? valoreData(valore) : '' });
+    input.setAttribute('aria-label', etichetta);
+    lab.append(el('span', null, etichetta), input);
+    return { lab, input };
+  };
+  const predefinito = Date.now() - Math.max(0, filtro.giorni - 1) * GIORNO_MS;
+  const dal = campoData(t('terremoti.periodoDa'), da ?? predefinito);
+  const al = campoData(t('terremoti.periodoA'), a ?? Date.now());
+  campi.append(dal.lab, al.lab);
+  const errore = el('p', 'terremoti-periodo-errore');
+  errore.setAttribute('role', 'alert');
+  errore.hidden = true;
+  const azioni = el('div', 'terremoti-periodo-azioni');
+  const annulla = el('button', 'secondario', t('terremoti.periodoAnnulla'));
+  annulla.type = 'button';
+  const applica = el('button', 'primario', t('terremoti.periodoApplica'));
+  applica.type = 'submit';
+  azioni.append(annulla, applica);
+  form.append(titolo, nota, campi, errore, azioni);
+  dlg.append(form);
+  const sbaglia = chiave => { errore.textContent = t(chiave); errore.hidden = false; };
+  annulla.addEventListener('click', () => dlg.close());
+  form.addEventListener('submit', ev => {
+    ev.preventDefault();
+    const daTs = dal.input.value ? inizioGiorno(dal.input.value) : null;
+    const aTs = al.input.value ? inizioGiorno(al.input.value) : null;
+    if (daTs == null && aTs == null) { sbaglia('terremoti.periodoErrore'); return; }
+    const inizio = daTs ?? aTs;
+    const fine = fineGiorno(aTs ?? daTs);
+    if (inizio > fine) { sbaglia('terremoti.arc.errInvertito'); return; }
+    if (new Date(inizio).getFullYear() < ANNO_INIZIO) { sbaglia('terremoti.arc.errPrima'); return; }
+    if (inizio > Date.now()) { sbaglia('terremoti.arc.errFuturo'); return; }
+    alApplica({ da: inizio, a: fine });
+    dlg.close();
+  });
+  dlg.addEventListener('close', () => {
+    if (dialogoPeriodo === dlg) dialogoPeriodo = null;
+    dlg.remove();
+    alChiudi?.();
+  });
+  document.body.append(dlg);
+  dialogoPeriodo = dlg;
+  dlg.showModal();
+}
+
+// Menu «Periodo»: le scorciatoie di sempre più «Personalizzato…», che apre un giorno o un intervallo sul calendario.
+function menuPeriodo() {
+  const lab = el('label', 'terremoti-filtro terremoti-filtro-periodo');
+  const sel = el('select');
+  for (const g of SCELTE_GIORNI) {
+    const o = el('option', null, testoGiorni(g));
+    o.value = String(g);
+    sel.append(o);
+  }
+  const personalizzato = el('option', null, t('terremoti.periodoPersonalizzato'));
+  personalizzato.value = 'personalizzato';
+  sel.append(personalizzato);
+  const nota = el('small', 'terremoti-periodo-nota');
+  const allinea = () => {
+    const p = filtro.periodo;
+    sel.value = p ? 'personalizzato' : String(filtro.giorni);
+    nota.hidden = !p;
+    nota.textContent = p ? testoPeriodoBreve(p) : '';
+  };
+  sel.addEventListener('change', () => {
+    if (sel.value === 'personalizzato') {
+      apriDialogoPeriodo({
+        da: filtro.periodo?.da ?? null,
+        a: filtro.periodo?.a ?? null,
+        alApplica: p => { filtro.periodo = p; filtro.finestra = null; emetti(); },
+        alChiudi: allinea,
+      });
+      return;
+    }
+    filtro.giorni = Number(sel.value);
+    filtro.finestra = null;
+    filtro.periodo = null;
+    emetti();
+  });
+  const segui = () => (lab.isConnected ? allinea() : document.removeEventListener(EVENTO_FILTRO, segui));
+  document.addEventListener(EVENTO_FILTRO, segui);
+  allinea();
+  lab.append(el('span', null, t('terremoti.periodo')), sel, nota);
+  return lab;
+}
 
 // Magnitudo minima scritta nei menu come la legge lo slider: «≥ 2,5», con la virgola decimale italiana
 const magnitudoMinima = m => `≥ ${m.toLocaleString(localeIntl(), { maximumFractionDigits: 1 })}`;
@@ -86,7 +218,7 @@ export function menuProfondita() {
 // ha lo slider a due maniglie (minima e massima), quindi il menu si può lasciar fuori (`magnitudo: false`); la scheda lo tiene.
 export function menuFiltro({ magnitudo = true } = {}) {
   const riga = el('div', 'terremoti-filtri');
-  riga.append(menu(t('terremoti.periodo'), SCELTE_GIORNI, () => filtro.giorni, testoGiorni, cambia('giorni')));
+  riga.append(menuPeriodo());
   if (magnitudo) riga.append(menu(t('terremoti.magMin'), SCELTE_MAGNITUDO, () => filtro.magMin, magnitudoMinima, cambia('magMin')));
   riga.append(menuProfondita());
   return riga;

@@ -22,7 +22,9 @@ export const FASCE = [
 ];
 export const fasciaEta = (ts, adesso = Date.now()) => FASCE.find(f => adesso - ts < f.finoA) ?? FASCE.at(-1);
 
-// Filtri della scheda e della legenda: periodo (giorni) e magnitudo minima. Il servizio si interroga per GIORNI_MAX giorni, la vista parte da GIORNI_INIZIALI.
+// Filtri della scheda e della legenda: periodo (giorni o intervallo assoluto) e magnitudo minima. Il servizio si
+// interroga per GIORNI_MAX giorni, la vista parte da GIORNI_INIZIALI; con un periodo personalizzato si interroga
+// l'archivio per l'intervallo scelto, anche prima degli ultimi 30 giorni.
 export const GIORNI_MAX = 30;
 export const SCELTE_GIORNI = [1, 7, 30];
 export const SCELTE_MAGNITUDO = [1, 2, 3, 4];
@@ -39,7 +41,7 @@ export const PROFONDITA = [
 // GIORNI_MAX, null = tutto) e `classi` (indici di CLASSI_MAG accesi, null = tutte); lo slider delle legende imposta
 // `magMax` (null = nessun massimo, con la maniglia a fondo scala). Magnitudo minima e massima valgono per tutti gli
 // strati dei terremoti: mappa, elenco, tabella e schede.
-export const FILTRO_INIZIALE = Object.freeze({ giorni: 7, magMin: 1, magMax: null, profMin: null, profMax: null, finestra: null, classi: null });
+export const FILTRO_INIZIALE = Object.freeze({ giorni: 7, magMin: 1, magMax: null, profMin: null, profMax: null, finestra: null, classi: null, periodo: null });
 export const filtro = { ...FILTRO_INIZIALE };
 const GIORNO_MS = 24 * ORA_MS;
 
@@ -52,8 +54,10 @@ export const chiaveProfondita = (f = filtro) => PROFONDITA.find(p => p.min === f
 // (core/magnitudo.js), così il tema magnitudo, il grafico e il filtro non possono andare ognuno per conto suo.
 export const CLASSI_MAG = CLASSI_MAGNITUDO;
 
-// Intervallo [da, a] in millisecondi: la finestra dello slider se c'è, altrimenti gli ultimi `giorni`. Il limite finale della finestra piena è aperto, così gli eventi nuovi restano dentro.
-export function intervallo({ giorni, finestra } = filtro, adesso = Date.now()) {
+// Intervallo [da, a] in millisecondi: il periodo personalizzato se c'è, altrimenti la finestra dello slider o gli
+// ultimi `giorni`. Il limite finale della finestra piena è aperto, così gli eventi nuovi restano dentro.
+export function intervallo({ giorni, finestra, periodo } = filtro, adesso = Date.now()) {
+  if (periodo) return [periodo.da, periodo.a];
   if (!finestra) return [adesso - giorni * GIORNO_MS, Infinity];
   const [da, a] = finestra;
   return [adesso - (GIORNI_MAX - da) * GIORNO_MS, a >= GIORNI_MAX ? Infinity : adesso - (GIORNI_MAX - a) * GIORNO_MS];
