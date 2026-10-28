@@ -1,5 +1,5 @@
 import { SRC_COMUNI, STRATO_COMUNI, sorgenteComuni } from '../core/config.js';
-import { disegnaVoceTooltip, registraTooltip } from '../core/tooltip.js';
+import { registraSezioneTerritorio, segnaStratoTerritorio, suStatoTerritorio } from '../core/tooltip-territorio.js';
 import { localeIntl, t } from '../core/i18n.js';
 import { iconaAttesa } from '../core/scheda-util.js';
 import { ANNO_INIZIO } from './scheda-archivio.js';
@@ -49,14 +49,14 @@ export function testoEventi(totale) {
 let gira = null;
 const iconaCaricamento = () => (gira ??= iconaAttesa('comuni-gira'));
 
-// Modello del tooltip del comune: nome, «provincia · regione», eventi dal 1985, codice ISTAT e l'invito al clic
+// Sezione «Confini comunali» del tooltip «Territorio»: nome, «provincia · regione», eventi dal 1985, codice ISTAT e l'invito al clic
 export function modelloComune(p, totale) {
   if (!p?.comune) return null;
   return {
-    sezione: 'Comuni', icona: 'confini', colore: COLORE,
+    sezione: 'Confini comunali', icona: 'confini', colore: COLORE,
     titolo: p.comune,
     sottotitolo: [p.den_uts, p.den_reg].filter(Boolean).join(' · '),
-    elenco: [{ testo: testoEventi(totale) }, ...(p.pro_com ? [{ testo: t('comuni.tooltip.codice', { codice: p.pro_com }) }] : [])],
+    elenco: [{ id: 'eventi', testo: testoEventi(totale) }, ...(p.pro_com ? [{ testo: t('comuni.tooltip.codice', { codice: p.pro_com }) }] : [])],
     suggerimento: t('comuni.tooltip.clicca'),
   };
 }
@@ -100,14 +100,14 @@ function caricaTotale(proCom) {
         tentativi.delete(proCom);
         if (totali.size > MAX_CACHE) totali.delete(totali.keys().next().value);
       }
-      const riga = ultimoProCom === proCom && ultimoNodo?.isConnected ? ultimoNodo.querySelector('[data-eventi]') : null;
+      const riga = ultimoProCom === proCom && ultimoNodo?.isConnected ? ultimoNodo.querySelector('[data-riga="eventi"]') : null;
       if (riga) riga.textContent = testoEventi(n);
     });
 }
 
 const visibile = id => Boolean(mappa?.getLayer(id)) && mappa.getLayoutProperty(id, 'visibility') === 'visible';
 
-// Contenuto del tooltip: il comune sotto il cursore, dai riempimenti accesi (strato o area della ricerca)
+// Sezione del tooltip: il comune sotto il cursore, dai riempimenti accesi (strato o area della ricerca)
 function fornitore(e) {
   if (!mappa) return null;
   const attivi = STRATI_HIT.filter(visibile);
@@ -124,13 +124,12 @@ function fornitore(e) {
   const m = modelloComune(p, noto ? totali.get(proCom) : fallito ? null : undefined);
   if (!m) return null;
   ultimoProCom = proCom;
-  ultimoNodo = disegnaVoceTooltip(m);
-  const riga = ultimoNodo.querySelector('.tooltip-elenco > div'); // la riga da aggiornare quando il conteggio arriva
-  if (riga) {
-    riga.setAttribute('data-eventi', '');
-    if (!noto && !fallito) riga.append(iconaCaricamento()); // conteggio in corso: l'iconcina gira al posto dei puntini
-  }
-  return { contenuto: ultimoNodo, colore: COLORE };
+  m.dopoDisegno = nodo => {
+    ultimoNodo = nodo;
+    const riga = nodo.querySelector('[data-riga="eventi"]'); // la riga da aggiornare quando il conteggio arriva
+    if (riga && !noto && !fallito) riga.append(iconaCaricamento()); // conteggio in corso: l'iconcina gira al posto dei puntini
+  };
+  return m;
 }
 
 export default {
@@ -162,7 +161,12 @@ export default {
     map.addLayer({ id: VELATURA, type: 'fill', source: SRC_COMUNI, 'source-layer': STRATO_COMUNI, filter: NESSUNO, paint: { 'fill-color': '#f5a623', 'fill-opacity': 0.14 } });
     map.addLayer({ id: EVIDENZA, type: 'line', source: SRC_COMUNI, 'source-layer': STRATO_COMUNI, filter: NESSUNO, layout: { 'line-join': 'round', 'line-cap': 'round' }, paint: { 'line-color': COLORE, 'line-width': ['interpolate', ['linear'], ['zoom'], 4, 1.4, 8, 2.4, 14, 3.4], 'line-opacity': 1 } });
 
-    registraTooltip(map, fornitore, 3);
+    // il riempimento dei comuni segue il gruppo «Territorio»: basta uno dei tre strati acceso per leggere il riquadro completo
+    suStatoTerritorio(attivo => {
+      map.setLayoutProperty(HIT, 'visibility', attivo ? 'visible' : 'none');
+      if (!attivo) { evidenzia(null); ultimoProCom = null; ultimoNodo = null; }
+    });
+    registraSezioneTerritorio(map, 0, fornitore);
     for (const id of STRATI_HIT) {
       map.on('mousemove', id, e => { if (e.features?.length) evidenzia(e.features[0].properties.pro_com); });
       map.on('mouseleave', id, () => evidenzia(null));
@@ -181,10 +185,7 @@ export default {
   },
   strati: [{
     id: 'comuni', etichetta: 'Confini comunali', layers: [BORDO], attivo: false,
-    // il riempimento e l'evidenza seguono il bordo: a strato spento non c'è nessun comune da indicare
-    suCambio(attivo, map) {
-      if (map.getLayer(HIT)) map.setLayoutProperty(HIT, 'visibility', attivo ? 'visible' : 'none');
-      if (!attivo) { evidenzia(null); ultimoProCom = null; ultimoNodo = null; }
-    },
+    // il riempimento e l'evidenza seguono il gruppo «Territorio» (vedi suStatoTerritorio)
+    suCambio(attivo) { segnaStratoTerritorio('comuni', attivo); },
   }],
 };

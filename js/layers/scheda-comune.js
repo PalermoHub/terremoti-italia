@@ -13,6 +13,7 @@ export const MAG_STORICO = 2; // anni: la stessa soglia dell'archivio storico
 const GIORNI_RECENTI = 30;
 const GIORNO_MS = 86400000;
 const ATTESE = 6; // richieste in parallelo: una per anno
+const PASSO_ELENCO = 10; // eventi mostrati nell'elenco, e quanti se ne aggiungono a ogni «Mostra altri»
 
 const el = (tag, classe, testo) => {
   const e = document.createElement(tag);
@@ -105,11 +106,15 @@ export async function contaComune({ geometrie, riquadro }, { fetchFn = fetch, ad
   const tutti = esiti.filter(Boolean).flatMap(r => r.eventi);
   const forte = [...tutti, ...recenti.eventi].reduce((a, b) => (!a || b.mag > a.mag ? b : a), null);
   const conNumero = anni.filter(a => a.n != null);
+  // elenco dal più recente: gli ultimi 30 giorni (M ≥ 1) e l'archivio (M ≥ 2) si sovrappongono, un evento conta una volta sola
+  const visti = new Set();
+  const elenco = [...recenti.eventi, ...tutti].filter(ev => !visti.has(ev.id) && visti.add(ev.id)).sort((a, b) => b.ts - a.ts);
   const parziale = anniElenco.some((_, i) => esiti[i] === null) || Boolean(recenti.troncato);
   return {
     anni,
     recente,
     forte,
+    elenco,
     parziale,
     totale: conNumero.reduce((somma, a) => somma + a.n, 0),
     questAnno: anni.at(-1).n,
@@ -143,6 +148,32 @@ function serie(anni, annoCorrente) {
   return [el('p', 'comune-sismico-titolo', t('comune.sismico.perAnno')), barre, etichette];
 }
 
+// Elenco degli eventi dal più recente: una riga per evento (data, magnitudo, luogo, link INGV), a blocchi con «Mostra altri»
+function elencoEventi(eventi) {
+  const titolo = el('p', 'comune-sismico-titolo', t('comune.sismico.elenco', { n: numero(eventi.length) }));
+  const lista = el('ul', 'comune-sismico-elenco');
+  const altri = el('button', 'comune-sismico-altri');
+  altri.type = 'button';
+  let mostrati = 0;
+  const aggiungi = () => {
+    for (const ev of eventi.slice(mostrati, mostrati + PASSO_ELENCO)) {
+      const voce = el('li');
+      const link = el('a', 'comune-sismico-link', `M ${magnitudo(ev.mag)}`);
+      link.href = LINK + ev.id;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      voce.append(el('span', 'comune-sismico-data', dataBreve(ev.ts)), link, el('span', 'comune-sismico-luogo', ev.luogo));
+      lista.append(voce);
+    }
+    mostrati = Math.min(eventi.length, mostrati + PASSO_ELENCO);
+    altri.hidden = mostrati >= eventi.length;
+    altri.textContent = t('comune.sismico.altri', { n: numero(eventi.length - mostrati) });
+  };
+  altri.addEventListener('click', aggiungi);
+  aggiungi();
+  return [titolo, lista, altri];
+}
+
 // Contenuto della card: numeri, serie per anno, evento più forte e nota sulla fonte
 export function quadroComune(d) {
   const annoCorrente = d.anni.at(-1)?.anno ?? new Date().getUTCFullYear();
@@ -165,6 +196,7 @@ export function quadroComune(d) {
   }
   if (!d.totale && !d.recente.giorni30) nodi.push(el('p', 'uffici-nota', t('comune.sismico.nessuno')));
   else nodi.push(...serie(d.anni, annoCorrente));
+  if (d.elenco?.length) nodi.push(...elencoEventi(d.elenco));
   if (d.parziale) nodi.push(el('p', 'uffici-nota', t('comune.sismico.parziale')));
   nodi.push(el('p', 'uffici-nota', t('comune.sismico.nota')));
   return nodi;
@@ -181,12 +213,17 @@ function disegna(carica) {
 }
 
 // Voce della scheda per il comune cliccato: nome, contesto e codice ISTAT subito, conteggi quando l'archivio risponde (una richiesta sola per scheda)
-export function voceComune({ cod, nome, geometrie }, { provincia = '', regione = '' } = {}) {
+// Zona sismica e fascia di ag sono le stesse del tooltip «Territorio»: `zona` = sigla della classificazione (es. «2B»),
+// `ag` = fascia di pericolosità sul punto cliccato (testo e zona dedotta, vedi fasciaAlPunto in layers/pericolosita.js)
+export function voceComune({ cod, nome, geometrie }, { provincia = '', regione = '', zona = '', ag = null } = {}) {
   let calcolo = null;
   const carica = () => calcolo ??= contaComune({ geometrie });
   return {
     chiave: `comune-${cod}`, tipo: 'comune', peso: PESO_COMUNE, titolo: t('comune.sismico.titolo'), icona: 'terremoto', sempre: true,
-    gruppi: [{ righe: righe([[t('comune.sismico.comune'), nome], [t('comune.sismico.provincia'), provincia], [t('comune.sismico.regione'), regione], [t('comune.sismico.codice'), cod]]) }],
+    gruppi: [{ righe: righe([[t('comune.sismico.comune'), nome], [t('comune.sismico.provincia'), provincia], [t('comune.sismico.regione'), regione], [t('comune.sismico.codice'), cod],
+      [t('comune.sismico.zona'), zona], [t('comune.sismico.ag'), ag ? `${ag.intervallo} g` : ''],
+      // la zona dedotta dalla fascia sta fuori se c'è la zona vera della classificazione
+      [t('comune.sismico.zonaDedotta'), ag && !zona ? ag.zona : '']]) }],
     dinamico: () => disegna(carica),
     fonte: t('layer.fonte', { fonte: tl(FONTE) }),
   };

@@ -1,12 +1,13 @@
 import { t } from '../core/i18n.js';
 import { urlDati } from '../core/config.js';
 import { SRC_COMUNI, STRATO_COMUNI, sorgenteComuni } from '../core/config.js';
-import { registraTooltipStrati } from '../core/tooltip.js';
+import { registraSezioneTerritorio, segnaStratoTerritorio, suStatoTerritorio, territorioAttivo } from '../core/tooltip-territorio.js';
 
 // Classificazione sismica dei comuni (zone 1–4) del Dipartimento della Protezione Civile, aggiornata a maggio 2025.
 // Ogni comune prende il colore della sua zona: i poligoni sono quelli dei confini comunali, la zona viene da
 // dati/classificazione-sismica.json (scripts/classificazione-sismica.mjs). Spento all'avvio.
 const FILL = 'classificazione-zone';
+const HIT = 'classificazione-hit'; // riempimento trasparente: la zona si legge nel tooltip anche a strato spento, se un altro strato del gruppo è acceso
 const FALLBACK = '#cccccc';
 // zona 1 = più pericolosa; i colori seguono la scala semaforica usata dalla Protezione Civile
 const COLORI = { 1: '#d7191c', 2: '#fd8d3c', 3: '#ffe066', 4: '#a6d96a' };
@@ -16,6 +17,20 @@ let legenda = null;
 
 // Zona principale di una sigla: la cifra più alta in pericolosità, cioè la più bassa («2A-3A-3B» → 2, «3S» → 3)
 const principale = sigla => Math.min(...[...String(sigla)].filter(c => c >= '1' && c <= '4').map(Number));
+
+// Sezione «Classificazione sismica» del tooltip «Territorio»: la zona del comune, col colore della zona in legenda. Il nome del
+// comune sta nella sezione dei confini, non si ripete.
+export function sezioneClassificazione(p, tabella) {
+  const sigla = tabella?.[p.pro_com];
+  if (!sigla || !p.comune) return null;
+  return {
+    sezione: 'Classificazione sismica', icona: 'terremoto', colore: COLORI[principale(sigla)] ?? '#6b7280',
+    titolo: t('classificazione.tooltip', { zona: sigla }),
+  };
+}
+
+// Sigla della zona sismica del comune per la scheda («2B»); stringa vuota se la tabella non è arrivata o il comune non c'è
+export const zonaComune = proCom => zone?.[proCom] ?? '';
 
 function el(tag, classe, testo) {
   const e = document.createElement(tag);
@@ -79,24 +94,19 @@ export default {
       .then(r => { if (!r.ok) throw new Error(r.status); return r.json(); })
       .then(dati => { zone = dati; colora(map); })
       .catch(() => { zone = null; });
-    registraTooltipStrati(map, [{
-      layers: [FILL], icona: 'terremoto', sezione: 'Classificazione sismica',
-      colore: p => COLORI[principale(zone?.[p.pro_com])] ?? '#6b7280',
-      modello: p => {
-        const sigla = zone?.[p.pro_com];
-        if (!sigla || !p.comune) return null;
-        return {
-          titolo: p.comune,
-          sottotitolo: [p.den_uts, p.den_reg].filter(Boolean).join(' · '),
-          elenco: [{ testo: t('classificazione.tooltip', { zona: sigla }) }],
-        };
-      },
-    }]);
+    // sezione del tooltip «Territorio»: la zona del comune sotto il cursore (con almeno uno strato del gruppo acceso e la tabella caricata)
+    map.addLayer({ id: HIT, type: 'fill', source: SRC_COMUNI, 'source-layer': STRATO_COMUNI, layout: { visibility: 'none' }, paint: { 'fill-opacity': 0 } });
+    suStatoTerritorio(attivo => map.setLayoutProperty(HIT, 'visibility', attivo ? 'visible' : 'none'));
+    registraSezioneTerritorio(map, 2, e => {
+      if (!territorioAttivo()) return null;
+      const f = map.queryRenderedFeatures([[e.point.x - 4, e.point.y - 4], [e.point.x + 4, e.point.y + 4]], { layers: [HIT] })[0];
+      return f ? sezioneClassificazione(f.properties, zone) : null;
+    });
   },
   legendaPannello: '.lg-classificazione',
   strati: [{
     id: 'classificazione', etichetta: 'Classificazione sismica', layers: [FILL], attivo: false, legendaPannello: '.lg-classificazione',
-    suCambio(attivo) { if (legenda) legenda.hidden = !attivo; },
+    suCambio(attivo) { segnaStratoTerritorio('classificazione', attivo); if (legenda) legenda.hidden = !attivo; },
   }],
   pannello: creaLegenda,
 };

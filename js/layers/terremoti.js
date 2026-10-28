@@ -4,6 +4,8 @@ import { filtroInsieme, voceFiltro } from '../core/legenda.js';
 import { primo } from '../core/scheda-util.js';
 import { FASCE, GIORNI_MAX, scaricaEventi, filtro, FILTRO_INIZIALE, profonditaDaFiltro, passaFiltro, espressioneFiltro, eventoDaIngv, quantoTempoFa, distanzaKm, modelloPopupTerremoto, voceTerremoto, voceSerie, voceAltri, riassuntoTerremoti, proprietaStorico, colonneTabellaTerremoti } from './scheda-terremoti.js';
 import { voceComune } from './scheda-comune.js';
+import { zonaComune } from './classificazione.js';
+import { fasciaAlPunto } from './pericolosita.js';
 import { EVENTO_FILTRO, menuFiltro, menuMagnitudo, menuProfondita, elencoAltri, graficoSerie, testoPeriodo, barraEventi } from './scheda-terremoti-dom.js';
 import { pannelloFiltro } from './terremoti-pannello.js';
 import { registraTooltipStrati } from '../core/tooltip.js';
@@ -245,11 +247,14 @@ function geometrieComune(proCom) {
 }
 
 // Card dei terremoti del comune cliccato (dalla ricerca non serve: la scheda si apre anche solo toccando il confine)
-function voceDelComune(comune) {
+function voceDelComune(comune, lngLat) {
   const p = comune.properties ?? {};
   const geometrie = geometrieComune(p.pro_com);
   if (!geometrie.length) return null;
-  return voceComune({ cod: p.pro_com, nome: p.comune, geometrie }, { provincia: p.den_uts ?? '', regione: p.den_reg ?? '' });
+  return voceComune({ cod: p.pro_com, nome: p.comune, geometrie }, {
+    provincia: p.den_uts ?? '', regione: p.den_reg ?? '',
+    zona: zonaComune(p.pro_com), ag: lngLat ? fasciaAlPunto(mappa, lngLat) : null, // le stesse informazioni del tooltip «Territorio»
+  });
 }
 
 export default {
@@ -313,7 +318,7 @@ export default {
     },
     // prima l'evento cliccato (il più forte sotto il cerchio, in evidenza), poi tutti gli altri che passano il filtro, anche quelli sovrapposti;
     // senza un evento sotto il dito, la card dei terremoti del comune (se il clic è caduto su un comune)
-    voci(trovati) {
+    voci(trovati, lngLat) {
       const voci = [];
       const primoEvento = evento(trovati.filter(f => f.layer.id === HIT));
       if (primoEvento) {
@@ -322,7 +327,7 @@ export default {
       }
       const comune = primo(trovati, HIT_COMUNI);
       if (comune) {
-        const voce = voceDelComune(comune);
+        const voce = voceDelComune(comune, lngLat);
         if (voce) voci.push(voce);
       }
       return voci;

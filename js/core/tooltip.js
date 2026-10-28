@@ -155,6 +155,7 @@ export function disegnaVoceTooltip(m) {
     elenco.className = 'tooltip-elenco';
     for (const riga of m.elenco) { // una stringa, o { testo, pallino, nodo } con il colore della legenda o un simbolo
       const r = document.createElement('div');
+      if (riga.id) r.dataset.riga = riga.id; // per ritrovare la riga e aggiornarla (es. il conteggio che arriva dopo)
       if (riga.pallino) {
         const pallino = document.createElement('span');
         pallino.className = 'tooltip-pallino';
