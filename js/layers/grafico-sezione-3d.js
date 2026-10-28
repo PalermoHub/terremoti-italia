@@ -122,7 +122,7 @@ export function vista3d(eventi, lunghezza, semilarghezza, cima, { sync = null, i
     // punti, dal più lontano al più vicino; i più forti hanno comunque la precedenza a parità di distanza
     proiettati = eventi.map(e => {
       const o = P(e.x, e.trasversale, e.prof);
-      return { e, sx: o.sx, sy: o.sy, d: o.d, r: Math.max(1.5, raggioMagnitudo(e.mag) * 0.7 * o.f * Math.min(1.6, stato.zoom)) };
+      return { e, sx: o.sx, sy: o.sy, d: o.d, r: Math.max(1.5, raggioMagnitudo(e.mag) * 0.7 * o.f * Math.min(1.6, stato.zoom) * Math.max(0.45, Math.min(1, w / 800))) };
     }).sort((a, b) => b.d - a.d);
     const evid = e => e && (e === stato.sopra || e === stato.fissato || (stato.fissato && e.id != null && e.id === stato.fissato.id) || (stato.sopra && e.id != null && e.id === stato.sopra.id));
     for (const p of proiettati) {

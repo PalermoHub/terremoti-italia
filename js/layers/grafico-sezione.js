@@ -100,9 +100,9 @@ export function graficoSezione(eventi, lunghezza, { grande = false, dominio = nu
   });
   blocco.append(chiave, svg, el('p', 'scheda-nota', t('terremoti.sez.graficoNota')));
   collegaTooltip(blocco);
+  if (semilarghezza) aggiungiVista3d(blocco, svg, chiave, sync, eventi, lunghezza, semilarghezza, cimaProfondita(Math.max(10, ...eventi.map(e => e.prof))), interazione, grande);
   if (grande) {
     aggiungiMappa(blocco, sync, eventi, null, e => coloreProfondita(e.prof));
-    if (semilarghezza) aggiungiVista3d(blocco, svg, chiave, sync, eventi, lunghezza, semilarghezza, cimaProfondita(Math.max(10, ...eventi.map(e => e.prof))), interazione);
     zoomGrafico({
       blocco, svg,
       dominio: { da, a },
@@ -117,13 +117,14 @@ export function graficoSezione(eventi, lunghezza, { grande = false, dominio = nu
   return blocco;
 }
 
-// Interruttore 2D / 3D del popup: la nuvola 3D prende il posto dell'svg nella stessa cella e usa lo stesso `sync` (minimappa, scheda)
-function aggiungiVista3d(blocco, svg, chiave, sync, eventi, lunghezza, semilarghezza, cima, interazione) {
+// Interruttore 2D / 3D (scheda e popup): la nuvola 3D prende il posto dell'svg e usa lo stesso `sync` (minimappa, scheda del popup)
+function aggiungiVista3d(blocco, svg, chiave, sync, eventi, lunghezza, semilarghezza, cima, interazione, grande) {
   const v = vista3d(eventi, lunghezza, semilarghezza, cima, { sync, interazione });
   const interruttore = el('button', 'grafico-3d-interruttore');
   interruttore.type = 'button';
   const imposta = acceso => {
-    in3d = acceso;
+    if (grande) in3d = acceso;
+    acceso3d = acceso;
     svg.style.display = acceso ? 'none' : '';
     blocco.classList.toggle('vista-3d', acceso);
     v.canvas.hidden = !acceso;
@@ -132,8 +133,10 @@ function aggiungiVista3d(blocco, svg, chiave, sync, eventi, lunghezza, semilargh
     interruttore.setAttribute('aria-pressed', String(acceso));
     if (acceso) v.disegna();
   };
-  interruttore.addEventListener('click', () => imposta(!in3d));
+  let acceso3d = grande && in3d;
+  interruttore.addEventListener('click', () => imposta(!acceso3d));
   svg.after(v.canvas);
-  chiave.append(interruttore, v.comandi);
-  imposta(in3d);
+  if (grande) chiave.append(interruttore, v.comandi);
+  else { chiave.append(interruttore); v.canvas.after(v.comandi); } // nella scheda stretta i comandi vanno sotto il grafico
+  imposta(acceso3d);
 }
