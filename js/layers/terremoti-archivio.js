@@ -5,7 +5,7 @@ import { t, localeIntl } from '../core/i18n.js';
 import { titoloConInfo, apriGrande } from '../core/info-grafico.js';
 import { zoomGrafico } from '../core/zoom-grafico.js';
 import { CLASSI_MAG, PROFONDITA } from './scheda-terremoti.js';
-import { apriDialogoPeriodo } from './scheda-terremoti-dom.js';
+import { apriDialogoPeriodo, creaInterazione, rendiGruppo } from './scheda-terremoti-dom.js';
 import { ANNO_INIZIO, periodoAnno, periodoAnnoIntero, periodoValido, annoDi, etichettaPeriodo, avvisoCompletezza, confrontaPeriodi, giorniPeriodo, scaricaRiepilogo, riepilogoDaEventi, serieAnnuale, grigliaDensita } from './scheda-archivio.js';
 
 const MAGNITUDO_ARCHIVIO = [2, 2.5, 3, 4, 5];
@@ -165,8 +165,9 @@ function riepilogoStorico(magMin) {
 // `territorio` (opzionale, da creaFiltroTerritorio) restringe entrambi gli anni allo stesso territorio; magnitudo e profondità
 // possono restringerlo ancora: con un territorio o una profondità i conteggi vengono da tutti gli eventi, non dal riepilogo del server.
 // `griglia` (opzionale) riceve la differenza di densità in celle esagonali da mostrare in mappa, o null per toglierla.
-export function pannelloConfronto({ carica, territorio = null, griglia = null }) {
+export function pannelloConfronto({ carica, territorio = null, griglia = null, evidenzia = null, nascondi = null }) {
   const nodo = el('div', 'terremoti-pannello terremoti-archivio');
+  const interazione = creaInterazione({ evidenzia, nascondi });
   const { adesso, anni } = anniArchivio();
   const ora = Date.now(); // `adesso` è l'anno per i menu; i grafici vogliono il momento
   const { messaggio, esegui } = stato();
@@ -215,6 +216,7 @@ export function pannelloConfronto({ carica, territorio = null, griglia = null })
         : await Promise.all([scaricaRiepilogo(pa, m), scaricaRiepilogo(pb, m), carica(pa, pb, m, null, p)]);
       if (!mappa) return;
       ultimo = { a: mappa.a.eventi, b: mappa.b.eventi };
+      const eventiA = ultimo.a, eventiB = ultimo.b; // gruppi da evidenziare in mappa dai grafici del confronto
       interruttore.disabled = false;
       // Le condizioni scritte sopra la tabella: senza, un confronto copiato o fotografato non dice a quali dati si riferisce
       const condizioni = t(area ? 'terremoti.arc.condizioniTerritorio' : 'terremoti.arc.condizioni', { mag: magnitudo(m), prof: t(`terremoti.arc.prof.${p.chiave}`) });
@@ -223,14 +225,14 @@ export function pannelloConfronto({ carica, territorio = null, griglia = null })
       // I grafici per anno e la cumulata mese per mese hanno senso solo con due anni interi: con un periodo
       // personalizzato restano la tabella, le classi di magnitudo e la mappa.
       const grafici = soloAnni ? el('div', 'terremoti-confronto-grafici') : null;
-      const cumulata = grafici ? graficoCumulata(c, annoDi(pa), annoDi(pb), ora) : null;
+      const cumulata = grafici ? graficoCumulata(c, annoDi(pa), annoDi(pb), ora, false, null, null, eventiA, eventiB, interazione) : null;
       if (grafici && cumulata) grafici.append(cumulata);
-      esito.replaceChildren(...disegnaConfronto(c, pa, pb, adesso, condizioni, avviso, grafici, soloAnni));
+      esito.replaceChildren(...disegnaConfronto(c, pa, pb, adesso, condizioni, avviso, grafici, soloAnni, eventiA, eventiB, interazione));
       nota.textContent = mappa.a.troncato || mappa.b.troncato ? t('terremoti.arc.troncatoConfronto', { n: Math.max(mappa.a.n, mappa.b.n) }) : '';
       disegnaGriglia();
       // il grafico degli anni arriva dopo la tabella, così il confronto non aspetta una seconda richiesta
       if (soloAnni) riepilogoStorico(m).then(storico => {
-        const grafico = graficoAnni(serieAnnuale(storico.perMese, ora), annoDi(pa), annoDi(pb), m);
+        const grafico = graficoAnni(serieAnnuale(storico.perMese, ora), annoDi(pa), annoDi(pb), m, false, null, null, eventiA, eventiB, interazione);
         if (grafico) grafici.prepend(grafico);
       }).catch(() => { /* il grafico storico è un di più: senza, la tabella resta */ });
     }, vaiConfronta);
@@ -241,6 +243,7 @@ export function pannelloConfronto({ carica, territorio = null, griglia = null })
   if (territorio) filtri.append(territorio.nodo);
   nodo.append(el('strong', null, t('terremoti.arc.confrontaTitolo')), filtri, confronta);
   if (griglia) nodo.append(casella, notaGriglia);
+  if (interazione) nodo.append(el('p', 'scheda-nota terremoti-grafici-aiuto', t('terremoti.grafici.aiuto')));
   nodo.append(nota, messaggio, esito, el('p', 'uffici-nota', t('terremoti.arc.utc')));
   return { nodo, confronta: vaiConfronta };
 }
@@ -266,7 +269,7 @@ const titoloMese = m => (m ? `${meseBreve(m.mese)} ${m.mese.slice(0, 4)}: ${nume
 
 // Tabella dei due periodi e un istogramma con due barre per classe di magnitudo (stessa scala).
 // `condizioni` (magnitudo minima, profondità, territorio) e `avviso` (completezza del catalogo) sono le due righe sopra la tabella.
-export function disegnaConfronto(c, periodoA, periodoB, adesso, condizioni = null, avviso = null, grafici = null, soloAnni = true) {
+export function disegnaConfronto(c, periodoA, periodoB, adesso, condizioni = null, avviso = null, grafici = null, soloAnni = true, eventiA = [], eventiB = [], interazione = null) {
   if (!c.a.n && !c.b.n) return [el('p', 'uffici-nota', t('terremoti.arc.nessunEvento'))];
   const elementi = [];
   if (condizioni) elementi.push(el('p', 'uffici-nota', condizioni));
@@ -304,7 +307,7 @@ export function disegnaConfronto(c, periodoA, periodoB, adesso, condizioni = nul
   if (dif.energia != null) elementi.push(el('p', 'uffici-nota', t('terremoti.arc.rapporto')));
   elementi.push(el('p', 'uffici-nota', t('terremoti.arc.lettura')));
   if (grafici) elementi.push(grafici);
-  elementi.push(graficoClassi(c, periodoA, periodoB));
+  elementi.push(graficoClassi(c, periodoA, periodoB, false, eventiA, eventiB, interazione));
   return elementi;
 }
 
@@ -390,12 +393,12 @@ function collegaTooltip(blocco) {
 
 // Istogramma per classe di magnitudo: due barre affiancate (periodo A e B) sulla stessa scala;
 // nel popup i conteggi stanno sopra ogni barra.
-function graficoClassi(c, periodoA, periodoB, grande = false) {
+function graficoClassi(c, periodoA, periodoB, grande = false, eventiA = [], eventiB = [], interazione = null) {
   const eventi = t('terremoti.arc.eventi').toLocaleLowerCase(localeIntl());
   const max = Math.max(1, ...c.a.perClasse, ...c.b.perClasse);
   const titolo = t('terremoti.arc.classi');
   const blocco = el('div', `terremoti-serie terremoti-archivio-classi${grande ? ' grande' : ''}`);
-  blocco.append(titoloConInfo('h4', 'terremoti-titolo', titolo, 'confronto-classi', grande ? null : () => apriGrande(titolo, () => graficoClassi(c, periodoA, periodoB, true))));
+  blocco.append(titoloConInfo('h4', 'terremoti-titolo', titolo, 'confronto-classi', grande ? null : () => apriGrande(titolo, () => graficoClassi(c, periodoA, periodoB, true, eventiA, eventiB, interazione))));
   const chiave = el('div', 'terremoti-confronto-chiave');
   for (const [periodo, colore] of [[periodoA, COLORE_A], [periodoB, COLORE_B]]) {
     const voce = el('span');
@@ -408,12 +411,14 @@ function graficoClassi(c, periodoA, periodoB, grande = false) {
   CLASSI_MAG.forEach((classe, i) => {
     const gruppo = el('div');
     const barre = el('div', 'terremoti-archivio-barre');
-    for (const [lato, periodo, n] of [['a', periodoA, c.a.perClasse[i]], ['b', periodoB, c.b.perClasse[i]]]) {
+    for (const [lato, periodo, n, delPeriodo] of [['a', periodoA, c.a.perClasse[i], eventiA], ['b', periodoB, c.b.perClasse[i], eventiB]]) {
       const colonna = el('div', 'terremoti-archivio-colonna');
       const b = el('i', `terremoti-archivio-${lato}`);
       b.style.height = `${n ? Math.max(4, n / max * 100) : 0}%`;
       b.dataset.tip = `${etichettaPeriodo(periodo)} · ${nomeClasse(classe)}: ${numero(n)} ${eventi}`;
       if (grande) b.append(el('b', 'terremoti-archivio-conteggio', numero(n))); // sopra la barra, anche quando è a zero
+      // la barra è la classe di magnitudo di un periodo: sotto il mouse si accendono i suoi eventi in mappa
+      rendiGruppo(b, delPeriodo.filter(e => e.mag >= classe.da && e.mag < classe.a), interazione, b.dataset.tip);
       colonna.append(b);
       barre.append(colonna);
     }
@@ -427,7 +432,7 @@ function graficoClassi(c, periodoA, periodoB, grande = false) {
 
 // Barre degli eventi per anno dal 1985 (scala logaritmica) e linea della magnitudo massima; gli anni A e B sono colorati.
 // `dominio` = intervallo di anni mostrato (per lo zoom), `origine` = tutti gli anni (per tornare a tutto).
-function graficoAnni(serie, annoA, annoB, magMin, grande = false, dominio = null, origine = null) {
+function graficoAnni(serie, annoA, annoB, magMin, grande = false, dominio = null, origine = null, eventiA = [], eventiB = [], interazione = null) {
   const eventi = t('terremoti.arc.eventi').toLocaleLowerCase(localeIntl());
   const barre = serie.barre;
   const massimo = Math.max(0, ...barre.map(b => b.n));
@@ -447,7 +452,7 @@ function graficoAnni(serie, annoA, annoB, magMin, grande = false, dominio = null
   const x = anno => sinistra + (anno - da) / (a - da) * larghezzaArea;
   const titolo = t('terremoti.arc.graficoAnni');
   const blocco = el('div', `terremoti-serie terremoti-confronto-grafico${grande ? ' grande' : ''}`);
-  blocco.append(titoloConInfo('h4', 'terremoti-titolo', titolo, 'confronto-anni', grande ? null : () => apriGrande(titolo, () => graficoAnni(serie, annoA, annoB, magMin, true))));
+  blocco.append(titoloConInfo('h4', 'terremoti-titolo', titolo, 'confronto-anni', grande ? null : () => apriGrande(titolo, () => graficoAnni(serie, annoA, annoB, magMin, true, null, null, eventiA, eventiB, interazione))));
   const svg = nodoSvg('svg', { viewBox: `0 0 ${L} ${A}`, role: 'img', 'aria-label': titolo });
   if (grande) svg.classList.add('grafico-zoom');
 
@@ -459,6 +464,8 @@ function graficoAnni(serie, annoA, annoB, magMin, grande = false, dominio = null
   const passo = larghezzaArea / (a - da);
   const larghezza = Math.max(2, Math.min(grande ? 72 : Infinity, passo * 0.68));
   const centro = anno => x(anno + 0.5);
+  // gli eventi dei due anni confrontati, già in memoria: le altre barre (1985+) non hanno eventi da mostrare
+  const delAnno = anno => (anno === annoA ? eventiA : anno === annoB ? eventiB : null);
   barre.forEach(b => {
     const anno = annoBarra(b);
     if (anno + 1 <= da || anno >= a) return;
@@ -467,7 +474,9 @@ function graficoAnni(serie, annoA, annoB, magMin, grande = false, dominio = null
     const classe = anno === annoA ? 'barra-a' : anno === annoB ? 'barra-b' : 'barra-anno';
     const y = yConteggio(b.n);
     const rett = nodoSvg('rect', { x: cx - larghezza / 2, y, width: larghezza, height: Math.max(b.n ? 1 : 0, basso - y), class: classe });
-    rett.setAttribute('data-tip', `${anno}: ${numero(b.n)} ${eventi} · ${t('terremoti.arc.magMax')} ${b.magMax == null ? '–' : numero(b.magMax, 1)}`);
+    const tip = `${anno}: ${numero(b.n)} ${eventi} · ${t('terremoti.arc.magMax')} ${b.magMax == null ? '–' : numero(b.magMax, 1)}`;
+    rett.setAttribute('data-tip', tip);
+    rendiGruppo(rett, delAnno(anno), interazione, tip); // la barra dell'anno: sotto il mouse si accendono i suoi eventi
     svg.append(rett);
   });
 
@@ -480,7 +489,10 @@ function graficoAnni(serie, annoA, annoB, magMin, grande = false, dominio = null
   if (punti.length > 1) svg.append(nodoSvg('polyline', { points: punti.map(p => `${p[0]},${p[1]}`).join(' '), class: 'linea-mag' }));
   for (const [cx, cy, anno, mag] of punti) {
     svg.append(nodoSvg('circle', { cx, cy, r: grande ? 2.8 : 2.4, class: 'punto-mag' }));
-    svg.append(nodoSvg('circle', { cx, cy, r: grande ? 7 : 6, class: 'punto-hit', 'data-tip': `${anno}: ${t('terremoti.arc.magMax')} ${numero(mag, 1)}` }));
+    const tip = `${anno}: ${t('terremoti.arc.magMax')} ${numero(mag, 1)}`;
+    const hit = nodoSvg('circle', { cx, cy, r: grande ? 7 : 6, class: 'punto-hit', 'data-tip': tip });
+    rendiGruppo(hit, delAnno(anno), interazione, tip); // anche il punto della magnitudo massima apre lo stesso gruppo
+    svg.append(hit);
   }
 
   // Anni A e B sempre scritti; le tacche ogni 5 anni (o più fitte da ingrandito) solo se non finiscono addosso a loro.
@@ -525,7 +537,7 @@ function graficoAnni(serie, annoA, annoB, magMin, grande = false, dominio = null
       geometria: dim,
       minDurata: 2,
       formatta: (d0, d1) => `${Math.round(d0)} – ${Math.round(d1) - 1}`,
-      ridisegna: d => graficoAnni(serie, annoA, annoB, magMin, true, d, intero),
+      ridisegna: d => graficoAnni(serie, annoA, annoB, magMin, true, d, intero, eventiA, eventiB, interazione),
     });
   }
   return blocco;
@@ -533,7 +545,7 @@ function graficoAnni(serie, annoA, annoB, magMin, grande = false, dominio = null
 
 // Cumulata mese per mese dei due anni sulla stessa scala; per l'anno in corso la linea si ferma al mese di oggi.
 // `dominio` = intervallo di mesi mostrato (per lo zoom), `origine` = tutto l'anno (per tornare a tutto).
-function graficoCumulata(c, annoA, annoB, adesso, grande = false, dominio = null, origine = null) {
+function graficoCumulata(c, annoA, annoB, adesso, grande = false, dominio = null, origine = null, eventiA = [], eventiB = [], interazione = null) {
   if (!c.a.n && !c.b.n) return null;
   const eventi = t('terremoti.arc.eventi').toLocaleLowerCase(localeIntl());
   const annoCorrente = new Date(adesso).getUTCFullYear();
@@ -567,7 +579,7 @@ function graficoCumulata(c, annoA, annoB, adesso, grande = false, dominio = null
   const y = v => basso - v / cima * (basso - alto);
   const titolo = t('terremoti.arc.graficoCumulata');
   const blocco = el('div', `terremoti-serie terremoti-confronto-grafico${grande ? ' grande' : ''}`);
-  blocco.append(titoloConInfo('h4', 'terremoti-titolo', titolo, 'confronto-cumulata', grande ? null : () => apriGrande(titolo, () => graficoCumulata(c, annoA, annoB, adesso, true))));
+  blocco.append(titoloConInfo('h4', 'terremoti-titolo', titolo, 'confronto-cumulata', grande ? null : () => apriGrande(titolo, () => graficoCumulata(c, annoA, annoB, adesso, true, null, null, eventiA, eventiB, interazione))));
   const svg = nodoSvg('svg', { viewBox: `0 0 ${L} ${A}`, role: 'img', 'aria-label': titolo });
   if (grande) svg.classList.add('grafico-zoom');
 
@@ -584,8 +596,21 @@ function graficoCumulata(c, annoA, annoB, adesso, grande = false, dominio = null
     if (grande) svg.append(nodoSvg('line', { x1: x(m), x2: x(m), y1: alto, y2: basso, class: 'griglia' }));
   }
 
-  const linea = (serie, classe, colore, anno) => {
+  // Eventi di ogni mese dell'anno (mesi UTC, gli stessi della cumulata): il punto del mese accende il suo gruppo
+  const perMese = (lista, anno) => {
+    const mappa = new Map();
+    for (const e of lista ?? []) {
+      const d = new Date(e.ts);
+      if (d.getUTCFullYear() !== anno) continue;
+      const m = d.getUTCMonth() + 1;
+      if (!mappa.has(m)) mappa.set(m, []);
+      mappa.get(m).push(e);
+    }
+    return mappa;
+  };
+  const linea = (serie, classe, colore, anno, delPeriodo) => {
     if (!visibile(serie)) return;
+    const eventiMese = perMese(delPeriodo, anno);
     const punti = [];
     for (const p of serie) if (p.mese >= da && p.mese <= a) punti.push({ mese: p.mese, v: p.cumulati });
     if (da > serie[0].mese && da <= serie.at(-1).mese && punti[0]?.mese !== da) punti.unshift({ mese: da, v: valore(serie, da) });
@@ -600,14 +625,20 @@ function graficoCumulata(c, annoA, annoB, adesso, grande = false, dominio = null
     }
     for (const p of serie) {
       if (p.mese < da || p.mese > a) continue;
-      svg.append(nodoSvg('circle', { cx: x(p.mese), cy: y(p.cumulati), r: 7, class: 'punto-hit', 'data-tip': `${meseCorto(p.mese)} ${anno}: ${numero(p.cumulati)} ${eventi}` }));
+      const tip = `${meseCorto(p.mese)} ${anno}: ${numero(p.cumulati)} ${eventi}`;
+      const hit = nodoSvg('circle', { cx: x(p.mese), cy: y(p.cumulati), r: 7, class: 'punto-hit', 'data-tip': tip });
+      rendiGruppo(hit, eventiMese.get(p.mese), interazione, tip); // il mese: sotto il mouse si accendono i suoi eventi
+      svg.append(hit);
     }
     const fine = punti.at(-1);
     svg.append(nodoSvg('circle', { cx: x(fine.mese), cy: y(fine.v), r: grande ? 4 : 2.8, fill: colore }));
-    svg.append(nodoSvg('circle', { cx: x(fine.mese), cy: y(fine.v), r: 7, class: 'punto-hit', 'data-tip': `${anno}: ${numero(fine.v)} ${eventi}` }));
+    const tipFine = `${anno}: ${numero(fine.v)} ${eventi}`;
+    const hitFine = nodoSvg('circle', { cx: x(fine.mese), cy: y(fine.v), r: 7, class: 'punto-hit', 'data-tip': tipFine });
+    rendiGruppo(hitFine, eventiMese.get(fine.mese), interazione, tipFine);
+    svg.append(hitFine);
   };
-  linea(serieA, 'linea-a', COLORE_A, annoA);
-  linea(serieB, 'linea-b', COLORE_B, annoB);
+  linea(serieA, 'linea-a', COLORE_A, annoA, eventiA);
+  linea(serieB, 'linea-b', COLORE_B, annoB, eventiB);
   if (grande) {
     svg.append(nodoSvg('line', { x1: sinistra, x2: sinistra, y1: alto, y2: basso, class: 'asse' }));
     titoloAsse(svg, t('terremoti.asse.mese'), sinistra + (destra - sinistra) / 2, A - 4);
@@ -632,7 +663,7 @@ function graficoCumulata(c, annoA, annoB, adesso, grande = false, dominio = null
       geometria: dim,
       minDurata: 2,
       formatta: (d0, d1) => `${meseCorto(Math.ceil(d0))} – ${meseCorto(Math.floor(d1))}`,
-      ridisegna: d => graficoCumulata(c, annoA, annoB, adesso, true, d, intero),
+      ridisegna: d => graficoCumulata(c, annoA, annoB, adesso, true, d, intero, eventiA, eventiB, interazione),
     });
   }
   return blocco;

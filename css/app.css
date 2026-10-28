@@ -2651,6 +2651,13 @@ details.scheda-sez-evento .scheda-sez-testo { display: contents; }
 .terremoti-confronto-grafico .griglia { stroke: var(--border-ui); stroke-width: .6; opacity: .55; }
 .terremoti-confronto-grafico .asse { stroke: var(--border-ui); stroke-width: 1; }
 .terremoti-confronto-grafico .punto-hit { fill: transparent; pointer-events: all; }
+/* grafici del confronto: barre e punti sono gruppi di eventi, come nei grafici della scheda */
+.terremoti-confronto-grafico .interattivo { cursor: crosshair; outline: none; }
+.terremoti-confronto-grafico .interattivo:hover { filter: brightness(1.1); }
+.terremoti-confronto-grafico .interattivo:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.terremoti-archivio-istogramma i.interattivo { cursor: crosshair; outline: none; }
+.terremoti-archivio-istogramma i.interattivo:hover { filter: brightness(1.12); box-shadow: 0 0 0 2px var(--accent); }
+.terremoti-archivio-istogramma i.interattivo:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .terremoti-confronto-grafico .griglia,
 .terremoti-confronto-grafico .asse,
 .terremoti-confronto-grafico text,

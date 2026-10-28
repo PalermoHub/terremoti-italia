@@ -386,7 +386,7 @@ function creaSync(apri) {
 
 // L'evento sotto il puntatore (o col focus da tastiera) resta evidenziato in mappa finché non si passa a un altro.
 // La pausa di 70 ms evita di spegnere e riaccendere l'evidenza mentre il puntatore va da un elemento al successivo.
-function creaInterazione({ evidenzia, nascondi } = {}) {
+export function creaInterazione({ evidenzia, nascondi } = {}) {
   if (typeof evidenzia !== 'function') return null;
   let corrente = null;
   let attesa = null;
@@ -452,7 +452,7 @@ function rendiApribile(gruppo, p, apri, sync, interazione) {
 
 // Una barra, un punto della legge di Omori o una sequenza: ognuno rappresenta un gruppo di eventi.
 // Al passaggio del mouse (o col focus) il gruppo si accende in mappa; il clic non serve.
-function rendiGruppo(nodo, eventi, interazione, etichetta = null) {
+export function rendiGruppo(nodo, eventi, interazione, etichetta = null) {
   if (!interazione || !eventi?.some(p => Number.isFinite(p?.lon) && Number.isFinite(p?.lat))) return;
   nodo.classList.add('interattivo');
   nodo.tabIndex = 0;

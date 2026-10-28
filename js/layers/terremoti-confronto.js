@@ -171,7 +171,7 @@ function creaLegenda() {
   legenda.hidden = !acceso;
   titolo = document.createElement('strong');
   titolo.textContent = t('terremoti.arc.titoloConfronto');
-  pannello = pannelloConfronto({ carica, territorio: creaFiltroTerritorio(mappa), griglia: mostraGriglia });
+  pannello = pannelloConfronto({ carica, territorio: creaFiltroTerritorio(mappa), griglia: mostraGriglia, ...creaEvidenzaMappa(mappa) });
   chiave = creaChiave();
   notaAnno = document.createElement('p');
   notaAnno.className = 'legenda-magnitudo-nota';
