@@ -98,22 +98,41 @@
 /* Il riquadro in fondo alla legenda ospita i comandi globali (Live Zoom e ricerca nel raggio): resta visibile
    anche quando nessuna legenda è rimasta sulla mappa, perché le altre stanno sotto gli strati nel pannello Layer. */
 #legende-box:not(:has(#legende > :not([hidden]):not(.legenda-vuota))):has(#legende-raggio > *) { display: flex; }
+/* Larghezza comune di minimappa e riquadro del logo. */
+:root { --pannello-dx-w: 190px; }
 /* Minimappa di orientamento in basso a destra, sopra il logo (js/core/minimappa.js): Italia intera con il
-   riquadro della vista; clic o trascinamento spostano la mappa grande, la × la chiude. */
-#minimappa-panoramica { position: fixed; z-index: var(--z-mappa-ui); right: calc(var(--scheda-l) + 68px); bottom: calc(var(--footer-h, 0px) + 152px); width: clamp(124px, 20vh, 160px); height: clamp(155px, 25vh, 200px); overflow: hidden; border: 1px solid var(--border-ui); border-radius: var(--r-md); background: var(--surface-alt); box-shadow: var(--ombra); cursor: grab; touch-action: none; transition: right var(--t-rapida), bottom var(--t-rapida); }
-#minimappa-panoramica[hidden] { display: none; }
+   riquadro della vista; clic o trascinamento spostano la mappa grande, la freccia la riduce a una barra. */
+#minimappa-panoramica { position: fixed; z-index: var(--z-mappa-ui); right: calc(var(--scheda-l) + 68px); bottom: calc(var(--footer-h, 0px) + 156px); width: var(--pannello-dx-w); height: clamp(155px, 25vh, 200px); overflow: hidden; border: 1px solid var(--border-ui); border-radius: var(--r-md); background: var(--surface-alt); box-shadow: var(--ombra); cursor: grab; touch-action: none; transition: right var(--t-rapida), bottom var(--t-rapida); }
 #minimappa-panoramica.trascinando { cursor: grabbing; }
-.minimappa-panoramica-chiudi { position: absolute; z-index: 2; top: 4px; right: 4px; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; padding: 0; border: 1px solid var(--border-ui); border-radius: 50%; background: color-mix(in srgb, var(--surface) 82%, transparent); color: var(--text); cursor: pointer; box-shadow: var(--ombra); }
-.minimappa-panoramica-chiudi:hover { background: var(--surface); color: var(--accent-strong); }
-.minimappa-panoramica-chiudi:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+#minimappa-panoramica.ridotta { height: 38px; cursor: default; }
+#minimappa-panoramica.ridotta .minimappa-panoramica-tela,
+#minimappa-panoramica.ridotta .minimappa-panoramica-attr,
+#minimappa-panoramica.ridotta .minimappa-panoramica-riduci { display: none; }
+.minimappa-panoramica-riduci { position: absolute; z-index: 2; top: 4px; right: 4px; display: flex; align-items: center; justify-content: center; width: 24px; height: 24px; padding: 0; border: 1px solid var(--border-ui); border-radius: 50%; background: color-mix(in srgb, var(--surface) 82%, transparent); color: var(--text); cursor: pointer; box-shadow: var(--ombra); }
+.minimappa-panoramica-riduci:hover { background: var(--surface); color: var(--accent-strong); }
+.minimappa-panoramica-riduci:focus-visible, .minimappa-panoramica-espandi:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+/* Barra della minimappa ridotta: resta sopra il logo, non sparisce. */
+.minimappa-panoramica-barra { display: none; align-items: center; gap: 8px; box-sizing: border-box; height: 100%; padding: 0 6px 0 10px; }
+#minimappa-panoramica.ridotta .minimappa-panoramica-barra { display: flex; cursor: pointer; }
+.minimappa-panoramica-barra-icona { display: inline-flex; flex: none; color: var(--accent-strong); }
+.minimappa-panoramica-barra-nome { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-xs); font-weight: 600; }
+.minimappa-panoramica-espandi { display: flex; flex: none; align-items: center; justify-content: center; width: 26px; height: 26px; padding: 0; border: 1px solid var(--border-ui); border-radius: 50%; background: var(--surface); color: var(--text); cursor: pointer; }
+.minimappa-panoramica-espandi:hover { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-strong); }
 .minimappa-panoramica-tela { position: absolute; inset: 0; }
 #minimappa-panoramica .maplibregl-canvas { outline: none; }
 .minimappa-panoramica-attr { position: absolute; z-index: 1; right: 0; bottom: 0; margin: 0; padding: 1px 4px; border-top-left-radius: 3px; background: color-mix(in srgb, var(--surface) 86%, transparent); color: var(--text-muted); font-size: 9px; line-height: 1.4; white-space: nowrap; }
 .minimappa-panoramica-attr a { color: inherit; text-decoration: none; }
 .minimappa-panoramica-attr a:hover { text-decoration: underline; }
-/* Il logo con le coordinate sale sopra la scala (che resta in basso a destra) e la minimappa gli sta sopra. */
+/* Il logo con le coordinate sale sopra la scala (che resta in basso a destra) e la minimappa gli sta sopra.
+   Logo e minimappa hanno la stessa larghezza; lo zoom è su una riga sotto le coordinate. */
 @media (min-width: 721px) {
-  #mappa-info { bottom: calc(var(--footer-h, 0px) + 88px); }
+  #mappa-info { bottom: calc(var(--footer-h, 0px) + 88px); width: var(--pannello-dx-w); box-sizing: border-box; justify-content: space-between; }
+  #mappa-info #piede-coord { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.15; }
+  #mappa-info #piede-coord .piede-zoom { color: var(--text-muted); }
+}
+@media (max-width: 720px) {
+  #mappa-info #piede-coord { display: inline; }
+  #mappa-info #piede-coord .piede-zoom::before { content: ' · '; }
 }
 @media (max-width: 720px) { #minimappa-panoramica { display: none; } }
 @media print { #minimappa-panoramica { display: none !important; } }

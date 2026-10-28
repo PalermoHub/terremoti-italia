@@ -84,12 +84,16 @@ map.once('style.load', async () => {
   ]);
   document.addEventListener('scheda:mostra', () => document.getElementById('scheda').hidden = false);
 
-  // coordinate sotto il puntatore e zoom nel piè di pagina
+  // coordinate sotto il puntatore e zoom nel piè di pagina; lo zoom sta su una riga sua, così il riquadro resta stretto
   const piedeCoord = document.getElementById('piede-coord');
+  const coordTesto = document.createElement('span');
+  const zoomTesto = Object.assign(document.createElement('span'), { className: 'piede-zoom' });
+  piedeCoord.replaceChildren(coordTesto, zoomTesto);
   let puntatore = null;
   const aggiornaCoord = () => {
     const c = puntatore ?? map.getCenter();
-    piedeCoord.textContent = `${c.lat.toFixed(4)}, ${c.lng.toFixed(4)} · zoom ${map.getZoom().toFixed(1)}`;
+    coordTesto.textContent = `${c.lat.toFixed(4)}, ${c.lng.toFixed(4)}`;
+    zoomTesto.textContent = `zoom ${map.getZoom().toFixed(1)}`;
   };
   map.on('mousemove', e => { puntatore = e.lngLat; aggiornaCoord(); });
   map.getCanvas().addEventListener('mouseleave', () => { puntatore = null; aggiornaCoord(); });

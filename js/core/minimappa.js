@@ -1,7 +1,7 @@
 // Minimappa di orientamento in basso a destra, sopra il logo con le coordinate: l'Italia intera, il riquadro della
 // vista attuale e il trascinamento per spostare la mappa principale. È una mappa MapLibre separata e non interattiva:
-// i gesti li gestiamo qui, così i clic sul riquadro non arrivano alla mappa grande. Si chiude con la × e si riapre
-// dal pulsante «Minimappa» della barra strumenti.
+// i gesti li gestiamo qui, così i clic sul riquadro non arrivano alla mappa grande. Non si chiude: si riduce a una
+// barra «Minimappa» e si riapre da lì o dal pulsante «Minimappa» della barra strumenti.
 import { t } from './i18n.js';
 import { svgIcona } from './icone.js';
 
@@ -10,6 +10,8 @@ const SORGENTE = 'minimappa-panoramica-vista';
 const STRATI = ['minimappa-panoramica-bordo', 'minimappa-panoramica-centro'];
 const VISTA_MINIMAPPA = [[3, 33], [22, 49]]; // l'Italia con un margine: anche la vista iniziale resta dentro il riquadro
 const VUOTO = { type: 'FeatureCollection', features: [] };
+const FRECCIA_GIU = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" aria-hidden="true"><path d="M6 9l6 6 6-6"/></svg>';
+const FRECCIA_SU = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="14" height="14" aria-hidden="true"><path d="M6 15l6-6 6 6"/></svg>';
 // OSM standard (raster): la stessa base delle miniature della scheda, indipendente dallo stile vettoriale della mappa.
 const STILE_OSM = {
   version: 8,
@@ -42,6 +44,7 @@ export function collegaMinimappa(map) {
   if (!globalThis.matchMedia?.('(min-width: 721px)').matches) return null; // su telefono il posto è della scheda
   if (document.getElementById(ID)) return null;
 
+  let ridotta = false;
   const box = document.createElement('div');
   box.id = ID;
   box.className = 'minimappa-panoramica';
@@ -58,25 +61,42 @@ export function collegaMinimappa(map) {
   const osm = Object.assign(document.createElement('a'), { href: 'https://www.openstreetmap.org/copyright', target: '_blank', rel: 'noopener', textContent: '© OpenStreetMap' });
   crediti.append(osm);
 
-  const chiudi = document.createElement('button');
-  chiudi.type = 'button';
-  chiudi.className = 'minimappa-panoramica-chiudi';
-  chiudi.title = chiudi.ariaLabel = t('minimappa.chiudi');
-  chiudi.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" width="14" height="14" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
-  box.append(tela, crediti, chiudi);
+  // Quando è ridotta resta questa barra: icona, nome e freccia per tornare alla mappa.
+  const barra = document.createElement('div');
+  barra.className = 'minimappa-panoramica-barra';
+  const iconaBarra = document.createElement('span');
+  iconaBarra.className = 'minimappa-panoramica-barra-icona';
+  iconaBarra.innerHTML = svgIcona('mappa', 16);
+  const nomeBarra = document.createElement('span');
+  nomeBarra.className = 'minimappa-panoramica-barra-nome';
+  nomeBarra.textContent = t('minimappa.titolo');
+  const espandi = document.createElement('button');
+  espandi.type = 'button';
+  espandi.className = 'minimappa-panoramica-espandi';
+  espandi.title = espandi.ariaLabel = t('minimappa.espandi');
+  espandi.innerHTML = FRECCIA_SU;
+  barra.append(iconaBarra, nomeBarra, espandi);
+
+  const riduci = document.createElement('button');
+  riduci.type = 'button';
+  riduci.className = 'minimappa-panoramica-riduci';
+  riduci.title = riduci.ariaLabel = t('minimappa.riduci');
+  riduci.innerHTML = FRECCIA_GIU;
+
+  box.append(tela, crediti, barra, riduci);
   document.getElementById('corpo')?.append(box);
 
-  // Pulsante nella barra strumenti: chiude e riapre la stessa minimappa (la × non lascia il posto vuoto).
-  const barra = document.getElementById('barra-strumenti');
+  // Pulsante nella barra strumenti: riduce o riapre la stessa minimappa (non la nasconde).
+  const strumenti = document.getElementById('barra-strumenti');
   let bottone = null;
-  if (barra) {
+  if (strumenti) {
     bottone = document.createElement('button');
     bottone.type = 'button';
     bottone.id = 'btn-minimappa';
     bottone.setAttribute('aria-controls', ID);
     bottone.innerHTML = svgIcona('mappa', 18);
-    bottone.addEventListener('click', () => visibile(box.hidden));
-    barra.insertBefore(bottone, document.getElementById('btn-tema') ?? null);
+    bottone.addEventListener('click', () => impostaRidotta(!ridotta));
+    strumenti.insertBefore(bottone, document.getElementById('btn-tema') ?? null);
   }
 
   const mini = new maplibregl.Map({
@@ -90,7 +110,7 @@ export function collegaMinimappa(map) {
   });
 
   const disegna = () => {
-    if (!mini.getSource(SORGENTE)) return;
+    if (ridotta || !mini.getSource(SORGENTE)) return;
     try {
       const b = map.getBounds();
       const c = map.getCenter();
@@ -116,20 +136,23 @@ export function collegaMinimappa(map) {
     return aggiunto;
   }
 
-  let trascina = false;
-  const aggiornaBottone = v => {
+  const aggiornaBottone = espanso => {
     if (!bottone) return;
-    bottone.setAttribute('aria-pressed', String(v));
-    const testo = t(v ? 'minimappa.nascondi' : 'minimappa.mostra');
+    bottone.setAttribute('aria-pressed', String(espanso));
+    const testo = t(espanso ? 'minimappa.riduci' : 'minimappa.espandi');
     bottone.title = bottone.ariaLabel = testo;
   };
-  function visibile(v) {
-    box.hidden = !v;
-    aggiornaBottone(v);
-    if (v) { mini.resize(); disegna(); }
+  function impostaRidotta(v) {
+    ridotta = Boolean(v);
+    box.classList.toggle('ridotta', ridotta);
+    box.title = ridotta ? t('minimappa.espandi') : t('minimappa.suggerimento');
+    aggiornaBottone(!ridotta);
+    if (!ridotta) requestAnimationFrame(() => { mini.resize(); disegna(); });
   }
   aggiornaBottone(true);
-  chiudi.addEventListener('click', () => { trascina = false; box.classList.remove('trascinando'); visibile(false); });
+  riduci.addEventListener('click', () => impostaRidotta(true));
+  espandi.addEventListener('click', () => impostaRidotta(false));
+  barra.addEventListener('click', e => { if (!e.target.closest?.('button')) impostaRidotta(false); }); // anche la barra intera riapre
 
   mini.on('style.load', () => { assicura(); disegna(); });
   mini.on('idle', () => { if (assicura()) disegna(); });
@@ -144,6 +167,7 @@ export function collegaMinimappa(map) {
   map.on('resize', pianifica);
 
   // Clic o trascinamento dentro la panoramica: il punto diventa il centro della mappa grande, allo zoom attuale.
+  let trascina = false;
   const sposta = e => {
     const r = tela.getBoundingClientRect();
     const punto = mini.unproject([e.clientX - r.left, e.clientY - r.top]);
@@ -151,7 +175,7 @@ export function collegaMinimappa(map) {
     map.easeTo({ center: [punto.lng, punto.lat], duration: trascina ? 0 : 300 });
   };
   box.addEventListener('pointerdown', e => {
-    if (e.button !== 0 || e.target.closest?.('a, button')) return; // i crediti e la × non spostano la mappa
+    if (ridotta || e.button !== 0 || e.target.closest?.('a, button')) return; // la barra ridotta, i crediti e i pulsanti non spostano la mappa
     trascina = true;
     box.classList.add('trascinando');
     try { box.setPointerCapture(e.pointerId); } catch { /* niente cattura: il trascinamento resta finché il puntatore è sopra */ }
@@ -174,7 +198,7 @@ export function collegaMinimappa(map) {
   box.addEventListener('pointercancel', fine);
 
   const telefono = globalThis.matchMedia?.('(max-width: 720px)');
-  telefono?.addEventListener?.('change', () => { if (!telefono.matches) mini.resize(); });
+  telefono?.addEventListener?.('change', () => { if (!telefono.matches && !ridotta) mini.resize(); });
 
   return { nodo: box, mappa: mini };
 }

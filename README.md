@@ -22,9 +22,10 @@ eventi più vicini (il totale è nel badge), il cerchio si inquadra per intero e
 torna ad aprire la scheda del punto come prima.
 
 **Minimappa**: in basso a destra, sopra il logo con le coordinate, una panoramica dell'Italia su base OSM standard con il
-riquadro della vista corrente; un clic o un trascinamento sposta la mappa principale allo zoom in uso. La × la chiude e il
-pulsante «Minimappa» della barra strumenti la riapre. Compare su desktop (su telefono il posto è della scheda); il logo con le
-coordinate sta sopra la scala, così non la copre.
+riquadro della vista corrente; un clic o un trascinamento sposta la mappa principale allo zoom in uso. La freccia la riduce a
+una barra «Minimappa» (non sparisce) e la barra — o il pulsante «Minimappa» della barra strumenti — la riapre. Compare su
+desktop (su telefono il posto è della scheda); il logo con le coordinate sta sopra la scala, così non la copre. Logo e
+minimappa hanno la stessa larghezza e lo zoom è su una riga sotto le coordinate.
 
 Come aggiungere un layer: un modulo in `js/layers/` con `id, titolo, gruppo, aggiungiSorgenti, aggiungiLayer, strati, scheda`
 (vedi `js/layers/allerte.js`), poi aggiungerlo a `MODULI` in `js/app.js`; i testi nuovi vanno in `js/locales/it.json` e `en.json`
