@@ -1450,6 +1450,8 @@
   "raggio.mag": "M {m}",
   "raggio.nota": "Tap an event to open its card.",
   "raggio.troncato": "Showing the {mostrati} nearest events of {tot}.",
+  "minimappa.aria": "Map overview",
+  "minimappa.suggerimento": "Click or drag to move the map",
   "livezoom.interruttore": "Live Zoom",
   "livezoom.descrizione": "On: the map zooms to the clicked point and fits the results whenever a filter changes. Off: a click only centres the point",
   "legenda.pannello.suMappa": "Legends on the map",

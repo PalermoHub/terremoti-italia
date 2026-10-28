@@ -15,6 +15,7 @@ import { collegaTabMobile } from './core/tab-mobile.js';
 import { traduciModuli } from './core/traduci-moduli.js';
 import { caricaLiveZoom, collegaLiveZoom, creaInterruttoreLegenda as interruttoreLiveZoomLegenda } from './core/live-zoom.js';
 import { creaRegolatoreRaggio } from './core/raggio-vicini.js';
+import { collegaMinimappa } from './core/minimappa.js';
 import { caricaTemaMagnitudo } from './core/tema-magnitudo.js';
 import { t } from './core/i18n.js';
 import eventi from './layers/eventi.js';
@@ -50,10 +51,11 @@ traduciModuli(MODULI);
 
 const map = creaMappa('mappa', () => segnala(t('app.basemap.errore')));
 collegaLiveZoom(map);
+const minimappa = collegaMinimappa(map);
 collegaPaddingMappa(map);
 const attesaDati = creaAvvisoAttesa(document.getElementById('avvisi'), t('avviso.attesaCaricamento'));
 const differiti = creaDifferiti(map, { segnala, suAttesa: p => attesaDati.durante(p) });
-window.dt = { map, moduli: Object.fromEntries(MODULI.map(m => [m.id, m])), pronto: false, differiti: () => Promise.resolve() };
+window.dt = { map, minimappa, moduli: Object.fromEntries(MODULI.map(m => [m.id, m])), pronto: false, differiti: () => Promise.resolve() };
 
 // Un errore su una sorgente disattiva solo gli strati che la usano e li nomina nell'avviso
 const STRATI = MODULI.flatMap(m => m.strati);

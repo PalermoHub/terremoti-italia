@@ -1450,6 +1450,8 @@
   "raggio.mag": "M {m}",
   "raggio.nota": "Tocca un evento per aprire la sua scheda.",
   "raggio.troncato": "Mostrati i {mostrati} eventi più vicini su {tot}.",
+  "minimappa.aria": "Panoramica della mappa",
+  "minimappa.suggerimento": "Clicca o trascina per spostare la mappa",
   "livezoom.interruttore": "Live Zoom",
   "livezoom.descrizione": "Acceso: la mappa zooma sul punto cliccato e si adatta ai risultati a ogni modifica del filtro. Spento: il clic centra soltanto",
   "legenda.pannello.suMappa": "Legende sulla mappa",

@@ -21,6 +21,10 @@ archivio storico) e rispettandone i filtri; le righe sono cliccabili e aprono la
 eventi più vicini (il totale è nel badge), il cerchio si inquadra per intero e lo stato resta nel browser. Spento, il clic
 torna ad aprire la scheda del punto come prima.
 
+**Minimappa**: in alto a destra nella parte visibile della mappa, una panoramica dell'Italia con il riquadro della vista
+corrente; un clic o un trascinamento sposta la mappa principale allo zoom in uso. Compare su desktop (su telefono il posto è
+della scheda) e segue il tema chiaro/scuro.
+
 Come aggiungere un layer: un modulo in `js/layers/` con `id, titolo, gruppo, aggiungiSorgenti, aggiungiLayer, strati, scheda`
 (vedi `js/layers/allerte.js`), poi aggiungerlo a `MODULI` in `js/app.js`; i testi nuovi vanno in `js/locales/it.json` e `en.json`
 (`npm run test:js` dice cosa manca). Un layer acceso di default deve avere `visibility: 'visible'` esplicita.
