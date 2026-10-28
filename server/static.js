@@ -6,7 +6,7 @@ const TIPI = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.mjs': 'text/javascript; charset=utf-8',
   '.css': 'text/css; charset=utf-8', '.json': 'application/json; charset=utf-8', '.svg': 'image/svg+xml', '.png': 'image/png',
   '.jpg': 'image/jpeg', '.ico': 'image/x-icon', '.woff2': 'font/woff2', '.woff': 'font/woff', '.pbf': 'application/x-protobuf',
-  '.webmanifest': 'application/manifest+json',
+  '.webmanifest': 'application/manifest+json', '.pmtiles': 'application/octet-stream',
 };
 
 // Percorso su disco per un indirizzo, o null se esce dalla radice
@@ -29,7 +29,19 @@ export function creaServer({ radice, gestisciExtra }) {
       // Un intervallo di glifi mancante non deve dare 404: MapLibre farebbe fallire tutto il tile (a zoom basso, nomi in molti alfabeti). Vuoto = nessun glifo.
       if (!ok && /^\/fonts\/glyphs\/[^/]+\/\d+-\d+\.pbf$/.test(req.url.split('?')[0])) { res.writeHead(200, { 'content-type': 'application/x-protobuf', 'content-length': 0 }); res.end(); return; }
       if (!ok) { res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' }); res.end('non trovato'); return; }
-      res.writeHead(200, { 'content-type': TIPI[extname(file)] ?? 'application/octet-stream', 'cache-control': 'no-store' });
+      const intestazioni = { 'content-type': TIPI[extname(file)] ?? 'application/octet-stream', 'cache-control': 'no-store', 'accept-ranges': 'bytes' };
+      // PMTiles legge il file a pezzi con richieste a intervalli (Range): senza, il browser dovrebbe scaricarlo intero
+      const dimensione = statSync(file).size;
+      const intervallo = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range ?? '');
+      if (intervallo && (intervallo[1] || intervallo[2])) {
+        const inizio = intervallo[1] ? Number(intervallo[1]) : Math.max(0, dimensione - Number(intervallo[2]));
+        const fine = intervallo[1] && intervallo[2] ? Math.min(Number(intervallo[2]), dimensione - 1) : dimensione - 1;
+        if (inizio > fine || inizio >= dimensione) { res.writeHead(416, { 'content-range': `bytes */${dimensione}` }); res.end(); return; }
+        res.writeHead(206, { ...intestazioni, 'content-range': `bytes ${inizio}-${fine}/${dimensione}`, 'content-length': fine - inizio + 1 });
+        if (req.method === 'HEAD') res.end(); else createReadStream(file, { start: inizio, end: fine }).pipe(res);
+        return;
+      }
+      res.writeHead(200, { ...intestazioni, 'content-length': dimensione });
       if (req.method === 'HEAD') res.end(); else createReadStream(file).pipe(res);
     } catch (e) {
       if (!res.headersSent) res.writeHead(500, { 'content-type': 'text/plain; charset=utf-8' });

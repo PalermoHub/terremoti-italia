@@ -19,7 +19,7 @@ Il codice sta in `js/core/evidenza-eventi.js`, in `js/layers/scheda-terremoti-do
 
 Il pannello Strati è diviso in quattro gruppi, in quest'ordine: **Terremoti** (tempo reale, archivio storico, confronto fra
 due periodi), **Faglie** (faglie capaci ITHACA, faglie EGDI, sorgenti sismogenetiche DISS), **Protezione Civile** (allerta
-meteo-idro) e **Territorio** (confini comunali). Ogni gruppo si apre e si chiude e porta il conteggio dei suoi strati accesi;
+meteo-idro) e **Territorio** (confini comunali, pericolosità sismica MPS04). Ogni gruppo si apre e si chiude e porta il conteggio dei suoi strati accesi;
 dentro, gli strati si riordinano con le frecce o trascinandoli e l'ordine dell'elenco è anche quello di disegno (il primo
 strato è il più in alto sulla mappa).
 
