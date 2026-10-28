@@ -222,6 +222,8 @@ export const caricaShakeMap = (urlBase = URL_SNAPSHOT) => fetch(`${urlBase}shake
   .then(r => (r.ok ? r.json() : []))
   .then(ids => { for (const id of ids) eventiShakeMap.add(String(id)); })
   .catch(() => { /* senza elenco il collegamento alla ShakeMap non compare: meglio nessun link di uno che porta a una pagina vuota */ });
+// Contorni copiati nel ramo `shakemap` (file <id>/<prodotto>.json) e la chiave del loro nome
+const PRODOTTI_SHAKEMAP = [['mmi', 'terremoti.ev.cont.mmi'], ['pga', 'terremoti.ev.cont.pga'], ['pgv', 'terremoti.ev.cont.pgv'], ['psa0p3', 'terremoti.ev.cont.psa0p3'], ['psa1p0', 'terremoti.ev.cont.psa1p0'], ['psa3p0', 'terremoti.ev.cont.psa3p0']];
 export const haShakeMap = p => eventiShakeMap.has(String(p.id));
 
 // Data e ora come le scrive l'INGV («2026-03-02 23:53:10»), nel fuso chiesto: UTC per l'ora ufficiale dell'evento, Roma per la stessa ora italiana
@@ -248,8 +250,11 @@ export function modelloEvento(p) {
       { chiave: t('terremoti.ev.posizione'), valore: coordinateEvento(p) },
       { chiave: t('terremoti.ev.id'), valore: p.id == null ? '' : String(p.id) },
       { chiave: t('terremoti.ev.localizzatoDa'), valore: p.autore ?? '' },
-      ...(haShakeMap(p) ? [{ chiave: 'ShakeMap', valore: 'shakemap.ingv.it', url: LINK_SHAKEMAP + p.id }] : []),
-    ].filter(c => c.valore),
+      ...(haShakeMap(p) ? [
+        { chiave: 'ShakeMap', valore: 'shakemap.ingv.it', url: LINK_SHAKEMAP + p.id },
+        { chiave: t('terremoti.ev.contorni'), scelta: { id: String(p.id), voci: PRODOTTI_SHAKEMAP.map(([prodotto, chiave]) => ({ prodotto, testo: t(chiave) })), vuota: t('terremoti.ev.contorniNessuno') } },
+      ] : []),
+    ].filter(c => c.valore || c.scelta),
     legende: [
       { titolo: t('terremoti.ev.legendaMagnitudo'), voci: CLASSI_MAGNITUDO.map((c, i) => ({ testo: t(`terremoti.ev.mag.${c.chiave}`), raggio: c.raggio, attiva: i === classe, badge: `M ${num(p.mag)}` })) },
       { titolo: t('terremoti.ev.legendaTempo'), voci: FASCE.map(f => ({ testo: tl(f.nome), colore: f.colore, attiva: f.nome === p.fascia, badge: tl(f.nome) })) },

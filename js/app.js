@@ -14,6 +14,7 @@ import { creaDifferiti } from './core/differiti.js';
 import { creaAvvisoAttesa } from './core/avviso-attesa.js';
 import { collegaTabMobile } from './core/tab-mobile.js';
 import { traduciModuli } from './core/traduci-moduli.js';
+import { collegaShakeMap } from './core/shakemap-mappa.js';
 import { caricaLiveZoom, collegaLiveZoom, creaInterruttoreLegenda as interruttoreLiveZoomLegenda } from './core/live-zoom.js';
 import { creaRegolatoreRaggio } from './core/raggio-vicini.js';
 import { collegaMinimappa } from './core/minimappa.js';
@@ -64,6 +65,7 @@ traduciModuli(MODULI);
 
 const map = creaMappa('mappa', () => segnala(t('app.basemap.errore')));
 collegaLiveZoom(map);
+collegaShakeMap(map);
 const minimappa = collegaMinimappa(map);
 collegaPaddingMappa(map);
 const attesaDati = creaAvvisoAttesa(document.getElementById('avvisi'), t('avviso.attesaCaricamento'));

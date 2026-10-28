@@ -179,6 +179,15 @@ export function disegnaLegendeEvento(legende) {
   return box;
 }
 
+// Elenco a discesa dei contorni ShakeMap dell'evento: la scelta li disegna in mappa (modulo shakemap-mappa.js), «nessuno» li toglie
+function disegnaSceltaContorni({ id, voci, vuota }) {
+  const s = el('select', 'scheda-evento-scelta');
+  s.append(Object.assign(el('option'), { value: '', textContent: vuota }), ...voci.map(v => Object.assign(el('option'), { value: v.prodotto, textContent: v.testo })));
+  s.addEventListener('change', () => document.dispatchEvent(new CustomEvent('scheda:shakemap', { detail: { id, prodotto: s.value || null } })));
+  document.dispatchEvent(new CustomEvent('scheda:shakemap', { detail: { id, prodotto: null } })); // scheda nuova: via i contorni dell'evento di prima
+  return s;
+}
+
 // Scheda dell'evento sismico: titolo e zona, griglia di campi e legende (cerchi di magnitudo, colori del tempo)
 function disegnaEvento(e) {
   const tx = (tag, classe, testo) => Object.assign(el(tag, classe), { textContent: testo }); // testi già tradotti: tl() non deve ritradurli
@@ -188,6 +197,7 @@ function disegnaEvento(e) {
     const cella = el('div', 'scheda-evento-campo');
     const chiave = tx('span', 'scheda-evento-chiave', c.chiave);
     if (c.nota) chiave.append(' ', tx('small', null, c.nota));
+    if (c.scelta) { cella.append(chiave, disegnaSceltaContorni(c.scelta)); griglia.append(cella); continue; }
     const valore = c.url ? Object.assign(tx('a', 'scheda-evento-valore', c.valore), { href: c.url, target: '_blank', rel: 'noopener' }) : tx('span', 'scheda-evento-valore', c.valore);
     cella.append(chiave, valore);
     griglia.append(cella);
