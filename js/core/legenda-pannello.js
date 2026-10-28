@@ -1,4 +1,4 @@
-// Legende sotto lo strato, nel pannello Layer (come nei software GIS); a scelta si tengono tutte sulla mappa.
+// Legende sulla mappa (default); a scelta si portano sotto lo strato, nel pannello Layer (come nei software GIS).
 // Ogni modulo dichiara `legendaPannello` (selettore della propria legenda, anche per singolo strato): la legenda resta il nodo
 // creato dal modulo (con i suoi filtri) e qui si sposta sotto il primo strato acceso del modulo. Con `legendaPerStrato` la legenda
 // è un blocco unico di parti, ognuna con `data-legenda-strato="<id strato>"`: ogni parte va sotto il proprio strato.
@@ -61,8 +61,8 @@ const vuota = casa => ![...casa.children].some(n => !n.hidden && !n.matches('str
 
 // `contenitore` = #legende sulla mappa; `occhio` = l'icona a occhio degli interruttori del pannello. Restituisce l'interruttore da inserire.
 export function collegaLegendePannello({ legende, contenitore, layer, occhio, storage = null }) {
-  let suMappa = false;
-  try { suMappa = storage?.getItem(CHIAVE_SU_MAPPA) === '1'; } catch { /* storage bloccato: vale la sessione */ }
+  let suMappa = true; // di default le legende stanno sulla mappa; vale la scelta salvata
+  try { suMappa = storage?.getItem(CHIAVE_SU_MAPPA) !== '0'; } catch { /* storage bloccato: vale la sessione */ }
   const aperti = new WeakMap();
   const noti = new Map(); // nodo -> voce: anche quelli staccati dal documento (il gruppo RNDT ridisegna le sue righe e porta via gli involucri)
   const case_ = new WeakMap(); // nodo -> contenitore d'origine, dove torna con le legende sulla mappa
