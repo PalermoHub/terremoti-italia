@@ -6,7 +6,7 @@ import { zoomGrafico } from '../core/zoom-grafico.js';
 import { barraNavigazione } from '../core/scheda-navigazione.js';
 import { ANNO_INIZIO, periodoAnno, serieAnnuale, scaricaRiepilogo } from './scheda-archivio.js';
 import { iconaAttesa } from '../core/scheda-util.js';
-import { SCELTE_GIORNI, SCELTE_MAGNITUDO, PROFONDITA, UNITA, MAG_STORICO, ANNI_STORICO, filtro, chiaveProfondita, altriTerremoti, accordionTerremoti, posizioneEvento, urlStorico, rispostaDaArchivio, eventiDaTesto, eventiDaFeatures, serieEventi, puntiMagnitudo, curvaCumulativa, omori, rilascioCumulativo, tempiTraEventi, spazioTempo, finestraTempo, proprietaStorico, voceTerremoto, inquadra, proiettaMiniatura, miniatura, etichettaBarra, periodoSequenza, statisticheEvento } from './scheda-terremoti.js';
+import { SCELTE_GIORNI, SCELTE_MAGNITUDO, PROFONDITA, UNITA, MAG_STORICO, ANNI_STORICO, filtro, chiaveProfondita, altriTerremoti, accordionTerremoti, posizioneEvento, urlStorico, rispostaDaArchivio, scaricaEventiTutti, eventiDaTesto, eventiDaFeatures, serieEventi, puntiMagnitudo, curvaCumulativa, omori, rilascioCumulativo, tempiTraEventi, spazioTempo, finestraTempo, proprietaStorico, voceTerremoto, inquadra, proiettaMiniatura, miniatura, etichettaBarra, periodoSequenza, statisticheEvento } from './scheda-terremoti.js';
 
 export const EVENTO_FILTRO = 'terremoti:filtro';
 
@@ -88,7 +88,7 @@ const oggiInput = () => valoreData(Date.now());
 
 // Un solo dialogo per volta: si apre dal menu e restituisce il periodo scelto (o nulla se si annulla)
 let dialogoPeriodo = null;
-function apriDialogoPeriodo({ da = null, a = null, alApplica, alChiudi = null }) {
+function apriDialogoPeriodo({ da = null, a = null, alApplica, alChiudi = null, limiteGiorni = null }) {
   if (dialogoPeriodo) dialogoPeriodo.close();
   const dlg = el('dialog', 'terremoti-periodo-dialog');
   dlg.setAttribute('aria-label', t('terremoti.periodoDialogTitolo'));
@@ -132,6 +132,7 @@ function apriDialogoPeriodo({ da = null, a = null, alApplica, alChiudi = null })
     if (inizio > fine) { sbaglia('terremoti.arc.errInvertito'); return; }
     if (new Date(inizio).getFullYear() < ANNO_INIZIO) { sbaglia('terremoti.arc.errPrima'); return; }
     if (inizio > Date.now()) { sbaglia('terremoti.arc.errFuturo'); return; }
+    if (limiteGiorni && (fine - inizio) / GIORNO_MS > limiteGiorni) { sbaglia('terremoti.periodoErroreLungo'); return; }
     alApplica({ da: inizio, a: fine });
     dlg.close();
   });
@@ -266,6 +267,20 @@ function caricaStorico(area) {
     promessa.catch(() => { storico = null; }); // un errore non si ricorda: si riprova alla prossima apertura
   }
   return storico.promessa;
+}
+
+// Eventi di un intervallo scelto nel grafico «Terremoti nel tempo»: formato testo, senza il tetto della mappa, con lo
+// stesso ripiego sull'archivio statico di `scaricaEventiTutti`. Si tiene per la sessione: riaprire lo stesso periodo è immediato.
+const cacheIntervalli = new Map();
+const MAX_CACHE_INTERVALLI = 6;
+function caricaIntervallo(area, da, a) {
+  const chiave = `${da}-${a}`;
+  if (cacheIntervalli.has(chiave)) return cacheIntervalli.get(chiave);
+  const promessa = scaricaEventiTutti({ da, a, magMin: MAG_STORICO, area }).then(r => eventiDaFeatures(r.eventi));
+  cacheIntervalli.set(chiave, promessa);
+  promessa.catch(() => cacheIntervalli.delete(chiave));
+  if (cacheIntervalli.size > MAX_CACHE_INTERVALLI) cacheIntervalli.delete(cacheIntervalli.keys().next().value);
+  return promessa;
 }
 
 // Riepilogo di tutto l'archivio (per la serie «per anno»), uno per magnitudo minima: se manca o fallisce, la serie resta quella degli ultimi anni
@@ -777,7 +792,9 @@ function disegnaSerie(serie, grande = false) {
   });
   blocco.append(barre);
   const nota = serie.totale
-    ? t('terremoti.serie.totale', { n: num(serie.totale), mag: Math.max(filtro.magMin, MAG_STORICO), soglia: serie.soglia, unita: testoUnita(serie.unita) })
+    ? serie.barre.length === 1
+      ? t('terremoti.serie.totaleUna', { n: num(serie.totale), mag: Math.max(filtro.magMin, MAG_STORICO) })
+      : t('terremoti.serie.totale', { n: num(serie.totale), mag: Math.max(filtro.magMin, MAG_STORICO), soglia: serie.soglia, unita: testoUnita(serie.unita) })
     : t('terremoti.serie.vuota');
   blocco.append(el('p', 'scheda-nota', nota));
   if (serie.sequenze.length) {
@@ -792,42 +809,121 @@ function disegnaSerie(serie, grande = false) {
       elenco.append(riga);
     }
     blocco.append(elenco);
-  } else if (serie.totale) blocco.append(el('p', 'scheda-nota', t('terremoti.nessunaSequenza')));
+  } else if (serie.totale && serie.barre.length > 1) blocco.append(el('p', 'scheda-nota', t('terremoti.nessunaSequenza')));
   return blocco;
 }
 
-// Contenuto della sezione: menu giorno/mese/anno e barre; si ridisegna al cambio di unità e di magnitudo minima. `area` = riquadro per il servizio INGV.
+// Contenuto della sezione: menu giorno/mese/anno (o periodo personalizzato) e barre; si ridisegna al cambio di unità,
+// di periodo e di magnitudo minima. `area` = riquadro per il servizio INGV.
 // Per lo storico: `sorgente()` dà gli eventi già in mappa e `adesso()` la fine del periodo mostrato, a cui ancorare le finestre dei grafici.
 export function graficoSerie(area, apri, { sorgente = null, adesso = null } = {}) {
   const radice = el('div', 'terremoti-elenco');
   const corpo = el('div');
-  let eventi = null;
+  let eventi = null; // serie di base: ultimi 5 anni, oppure gli eventi dello storico
+  let eventiCustom = null; // eventi del periodo scelto nel menu «Eventi per»
+  let periodoCustom = null;
+  let unitaCustom = null;
+  let baseInCorso = false;
+  let periodoInCorso = null;
   let propria = sorgente ? 'mese' : null; // lo storico ha la sua unità: un periodo passato non si legge a giorni
-  const unitaCorrente = () => propria ?? unita;
-  const disegna = () => {
-    const u = unitaCorrente();
-    const fine = adesso ? Math.min(adesso(), Date.now()) : Date.now();
-    const g = eventi && puntiMagnitudo(eventi, u, filtro.magMin, fine);
-    const archivio = !sorgente && u === 'anno' && eventi ? riepilogoArchivio(Math.max(filtro.magMin, MAG_STORICO), disegna) : null;
-    const serie = archivio ? serieAnnuale(archivio.perMese) : eventi && serieEventi(eventi, u, filtro.magMin, fine);
-    if (eventi) corpo.replaceChildren(disegnaSerie(serie), ...(archivio ? [el('p', 'scheda-nota', t('terremoti.serie.altriCinqueAnni'))] : []), disegnaMagnitudoTempo(g, apri), disegnaCurva(g, apri), disegnaRilascio(g, apri), disegnaOmori(g), disegnaAttese(g), disegnaSpazioTempo(g, apri));
+  const unitaCorrente = () => (periodoCustom ? unitaCustom : propria ?? unita);
+  const fineCorrente = () => (periodoCustom ? periodoCustom.a : adesso ? Math.min(adesso(), Date.now()) : Date.now());
+  // Un intervallo lungo si legge per mese o per anno: il grafico resta leggibile senza chiedere una seconda scelta.
+  const unitaDaPeriodo = p => {
+    const giorni = (p.a - p.da) / GIORNO_MS;
+    if (giorni <= 62) return 'giorno';
+    const da = new Date(p.da), a = new Date(p.a);
+    const mesi = (a.getFullYear() - da.getFullYear()) * 12 + (a.getMonth() - da.getMonth()) + 1;
+    return mesi <= 24 ? 'mese' : 'anno';
   };
-  const carica = () => {
-    const attesa = el('p', 'scheda-nota', t('terremoti.serie.carico'));
-    attesa.append(iconaAttesa());
-    corpo.replaceChildren(attesa);
-    (sorgente ? Promise.resolve(sorgente()) : caricaStorico(area)).then(e => { eventi = e; disegna(); }, () => {
-      const riprova = el('button', 'scheda-filtro', t('terremoti.serie.riprova'));
-      riprova.type = 'button';
-      riprova.addEventListener('click', carica);
-      corpo.replaceChildren(el('p', 'scheda-nota', t('terremoti.serie.errore')), riprova);
-    });
+  const attesa = () => {
+    const p = el('p', 'scheda-nota', t('terremoti.serie.carico'));
+    p.append(iconaAttesa());
+    return p;
+  };
+  const mostraErrore = riprova => {
+    const b = el('button', 'scheda-filtro', t('terremoti.serie.riprova'));
+    b.type = 'button';
+    b.addEventListener('click', riprova);
+    corpo.replaceChildren(el('p', 'scheda-nota', t('terremoti.serie.errore')), b);
+  };
+  const disegna = () => {
+    const dati = periodoCustom ? eventiCustom : eventi;
+    if (!dati) return;
+    const u = unitaCorrente();
+    const fine = fineCorrente();
+    const g = puntiMagnitudo(dati, u, filtro.magMin, fine, periodoCustom);
+    const archivio = !sorgente && !periodoCustom && u === 'anno' ? riepilogoArchivio(Math.max(filtro.magMin, MAG_STORICO), disegna) : null;
+    const serie = archivio ? serieAnnuale(archivio.perMese) : serieEventi(dati, u, filtro.magMin, fine, periodoCustom);
+    corpo.replaceChildren(disegnaSerie(serie), ...(archivio ? [el('p', 'scheda-nota', t('terremoti.serie.altriCinqueAnni'))] : []), disegnaMagnitudoTempo(g, apri), disegnaCurva(g, apri), disegnaRilascio(g, apri), disegnaOmori(g), disegnaAttese(g), disegnaSpazioTempo(g, apri));
+  };
+  const caricaBase = () => {
+    if (baseInCorso) return;
+    baseInCorso = true;
+    corpo.replaceChildren(attesa());
+    Promise.resolve().then(() => (sorgente ? sorgente() : caricaStorico(area))).then(e => {
+      eventi = e;
+      if (!periodoCustom) disegna(); // durante un periodo personalizzato comanda la sua richiesta
+    }, () => { if (!periodoCustom) mostraErrore(caricaBase); }).finally(() => { baseInCorso = false; });
+  };
+  const caricaPeriodo = () => {
+    const p = periodoCustom;
+    if (!p || periodoInCorso === p) return;
+    periodoInCorso = p;
+    corpo.replaceChildren(attesa());
+    caricaIntervallo(area, p.da, p.a).then(e => {
+      if (periodoCustom !== p) return; // nel frattempo si è tornati a un'unità predefinita
+      eventiCustom = e;
+      disegna();
+    }, () => { if (periodoCustom === p) mostraErrore(caricaPeriodo); }).finally(() => { if (periodoInCorso === p) periodoInCorso = null; });
   };
   const scelta = el('div', 'terremoti-filtri');
-  scelta.append(menu(t('terremoti.perUnita'), UNITA, unitaCorrente, testoUnita, v => { if (propria) propria = v; else unita = v; disegna(); }));
+  const lab = el('label', 'terremoti-filtro terremoti-filtro-unita');
+  const sel = el('select');
+  for (const u of UNITA) {
+    const o = el('option', null, testoUnita(u));
+    o.value = u;
+    sel.append(o);
+  }
+  const personalizzato = el('option', null, t('terremoti.periodoPersonalizzato'));
+  personalizzato.value = 'personalizzato';
+  sel.append(personalizzato);
+  const nota = el('small', 'terremoti-periodo-nota');
+  const allinea = () => {
+    sel.value = periodoCustom ? 'personalizzato' : unitaCorrente();
+    nota.hidden = !periodoCustom;
+    nota.textContent = periodoCustom ? t('terremoti.perUnitaPersonalizzato', { periodo: testoPeriodoBreve(periodoCustom), unita: testoUnita(unitaCorrente()) }) : '';
+  };
+  sel.addEventListener('change', () => {
+    if (sel.value === 'personalizzato') {
+      apriDialogoPeriodo({
+        da: periodoCustom?.da ?? null,
+        a: periodoCustom?.a ?? null,
+        alApplica: p => {
+          periodoCustom = p;
+          unitaCustom = unitaDaPeriodo(p);
+          eventiCustom = null;
+          allinea();
+          caricaPeriodo();
+        },
+        limiteGiorni: 1832, // il grafico parte dagli ultimi 5 anni: oltre, l'archivio si legge per anno
+        alChiudi: allinea,
+      });
+      return;
+    }
+    periodoCustom = null;
+    unitaCustom = null;
+    eventiCustom = null;
+    if (propria) propria = sel.value; else unita = sel.value;
+    allinea();
+    if (eventi) disegna(); else caricaBase();
+  });
+  lab.append(el('span', null, t('terremoti.perUnita')), sel, nota);
+  scelta.append(lab);
   radice.append(scelta, corpo);
   const segui = () => (radice.isConnected ? disegna() : document.removeEventListener(EVENTO_FILTRO, segui));
   document.addEventListener(EVENTO_FILTRO, segui);
-  carica();
+  allinea();
+  caricaBase();
   return radice;
 }

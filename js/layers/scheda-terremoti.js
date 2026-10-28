@@ -498,17 +498,30 @@ export function marcaSciami(barre) {
 }
 
 // Barre della serie (dalla più vecchia alla più recente) con il conteggio degli eventi M ≥ magMin e la magnitudo massima; `sciame` = barra anomala rispetto alle altre.
-// Le sequenze sono le barre di sciame consecutive, riunite.
-export function serieEventi(eventi, unita, magMin = MAG_STORICO, adesso = Date.now()) {
-  const n = FINESTRE[unita];
+// Le sequenze sono le barre di sciame consecutive, riunite. Con `intervallo` = { da, a } le barre coprono quel periodo invece
+// degli ultimi FINESTRE[unita] passi: è il periodo personalizzato del grafico «Terremoti nel tempo».
+export function serieEventi(eventi, unita, magMin = MAG_STORICO, adesso = Date.now(), intervallo = null) {
   const barre = [];
-  for (let i = n - 1; i >= 0; i--) {
-    const da = inizioBarra(inizioBarra(adesso, unita), unita, -i);
-    barre.push({ da, a: inizioBarra(da, unita, 1), n: 0, magMax: null, sciame: false });
+  if (intervallo) {
+    const fine = intervallo.a;
+    let da = inizioBarra(intervallo.da, unita);
+    while (da <= fine && barre.length < 600) { // il tetto protegge da un intervallo enorme con l'unità sbagliata
+      const a = inizioBarra(da, unita, 1);
+      barre.push({ da, a, n: 0, magMax: null, sciame: false });
+      da = a;
+    }
+    if (!barre.length) barre.push({ da: inizioBarra(fine, unita), a: inizioBarra(fine, unita, 1), n: 0, magMax: null, sciame: false });
+  } else {
+    const n = FINESTRE[unita];
+    for (let i = n - 1; i >= 0; i--) {
+      const da = inizioBarra(inizioBarra(adesso, unita), unita, -i);
+      barre.push({ da, a: inizioBarra(da, unita, 1), n: 0, magMax: null, sciame: false });
+    }
   }
-  const primo = barre[0].da;
+  const primo = intervallo ? intervallo.da : barre[0].da;
+  const ultimo = intervallo ? intervallo.a : adesso;
   for (const e of eventi) {
-    if (e.mag < Math.max(magMin, MAG_STORICO) || e.ts < primo || e.ts > adesso) continue;
+    if (e.mag < Math.max(magMin, MAG_STORICO) || e.ts < primo || e.ts > ultimo) continue;
     const b = barre.find(x => e.ts >= x.da && e.ts < x.a);
     if (!b) continue;
     b.n++;
@@ -520,18 +533,20 @@ export function serieEventi(eventi, unita, magMin = MAG_STORICO, adesso = Date.n
 
 // Grafico magnitudo-tempo: ogni evento è uno stelo alto quanto la magnitudo, sulla stessa finestra della serie a barre.
 // `x` e `y` sono quote 0-1 (y = 0 sulla base, 1 in cima all'asse); la scossa più forte è la mainshock, quelle dopo di lei le repliche.
-export function puntiMagnitudo(eventi, unita, magMin = MAG_STORICO, adesso = Date.now()) {
-  const da = inizioBarra(inizioBarra(adesso, unita), unita, -(FINESTRE[unita] - 1));
+// Con `intervallo` = { da, a } la finestra è quella scelta, non gli ultimi FINESTRE[unita] passi.
+export function puntiMagnitudo(eventi, unita, magMin = MAG_STORICO, adesso = Date.now(), intervallo = null) {
+  const da = intervallo ? intervallo.da : inizioBarra(inizioBarra(adesso, unita), unita, -(FINESTRE[unita] - 1));
+  const a = intervallo ? intervallo.a : adesso;
   const minimo = Math.max(magMin, MAG_STORICO);
-  const scelti = eventi.filter(e => e.mag >= minimo && e.ts >= da && e.ts <= adesso).sort((a, b) => a.ts - b.ts);
+  const scelti = eventi.filter(e => e.mag >= minimo && e.ts >= da && e.ts <= a).sort((x, y) => x.ts - y.ts);
   const base = Math.floor(minimo);
   const cima = Math.max(base + 2, Math.ceil(scelti.reduce((m, e) => Math.max(m, e.mag), 0)));
-  const durata = adesso - da;
+  const durata = Math.max(1, a - da);
   const punti = scelti.map(e => ({ ...e, x: (e.ts - da) / durata, y: (e.mag - base) / (cima - base) }));
-  const mainshock = punti.reduce((a, b) => (!a || b.mag > a.mag ? b : a), null);
+  const mainshock = punti.reduce((x, y) => (!x || y.mag > x.mag ? y : x), null);
   const repliche = mainshock ? punti.filter(p => p.ts > mainshock.ts).length : 0;
   const livelli = Array.from({ length: cima - base + 1 }, (_, i) => base + i);
-  return { da, a: adesso, base, cima, livelli, punti, mainshock, repliche };
+  return { da, a, base, cima, livelli, punti, mainshock, repliche };
 }
 
 // Zoom su un tratto del tempo: stessi dati di `g` ristretti a [da, a], con `x` rifatta su quel tratto (la scala delle magnitudo non cambia).

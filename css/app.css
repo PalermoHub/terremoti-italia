@@ -2321,6 +2321,7 @@ a.scheda-badge-tinta:hover, a.scheda-badge-tinta:focus-visible { background: col
 .terremoti-filtro select { margin: 0; padding: 5px; }
 .terremoti-periodo-nota { display: block; font-size: 10px; line-height: 1.2; color: var(--text-muted); white-space: normal; }
 .terremoti-periodo-nota[hidden] { display: none; }
+.terremoti-filtri > .terremoti-filtro-unita { grid-column: 1 / -1; }
 .terremoti-pf-sezione-tempo[hidden], .terremoti-pf-periodo[hidden] { display: none; }
 .terremoti-periodo-dialog { width: min(92vw, 380px); padding: 0; border: 1px solid var(--border-ui); border-radius: var(--r-md); background: var(--surface); color: var(--text); box-shadow: var(--ombra); }
 .terremoti-periodo-dialog::backdrop { background: rgb(0 0 0 / .35); }
