@@ -2,10 +2,9 @@ import { VISTA_ITALIA, ZOOM_SLIDER } from './config.js';
 import { collegaGeolocalizzazione } from './geolocalizzazione.js';
 import { segnala } from './pannello.js';
 
-// Tema chiaro/scuro: il pulsante della barra strumenti lo cambia e lo ricorda; l'interruttore dell'header lo segue
+// Tema chiaro/scuro: il pulsante della barra strumenti lo cambia e lo ricorda
 function collegaTema(bottone) {
-  const interruttore = document.getElementById('switch-tema');
-  const mostra = scuro => { bottone.setAttribute('aria-pressed', String(scuro)); interruttore?.setAttribute('aria-checked', String(scuro)); };
+  const mostra = scuro => bottone.setAttribute('aria-pressed', String(scuro));
   mostra(document.documentElement.dataset.tema === 'scuro');
   bottone.addEventListener('click', () => {
     const scuro = document.documentElement.dataset.tema !== 'scuro';
@@ -14,7 +13,6 @@ function collegaTema(bottone) {
     mostra(scuro);
     document.dispatchEvent(new CustomEvent('tema', { detail: scuro }));
   });
-  interruttore?.addEventListener('click', () => bottone.click());
 }
 
 // Barra degli strumenti: vista iniziale, posizione, schermo intero, tema, slider dello zoom sincronizzato con la mappa.

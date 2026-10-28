@@ -537,9 +537,7 @@ export function collegaTabellaDati({ bottone: comando, fornitori = [] } = {}) {
     const fondoStrumenti = strumenti && getComputedStyle(strumenti).display !== 'none'
       ? strumenti.getBoundingClientRect().bottom : 0;
     const sopra = Math.max(ricerca, fondoStrumenti);
-    const sotto = ['barra-tab', 'app-footer']
-      .map(id => document.getElementById(id)?.getBoundingClientRect().height ?? 0)
-      .reduce((a, b) => a + b, 0);
+    const sotto = document.getElementById('barra-tab')?.getBoundingClientRect().height ?? 0;
     return Math.max(ALTEZZA_MINIMA, window.innerHeight - sopra - sotto - 12);
   }
 

@@ -31,14 +31,11 @@
 
 </head>
 <body>
-<header id="app-header">
-<button id="switch-tema" type="button" role="switch" aria-checked="false" data-i18n-aria="html.tema" data-i18n-title="html.tema" aria-label="Tema scuro" title="Tema scuro"><span class="switch-pista"><span class="switch-manopola"></span></span></button>
-</header>
 <main id="corpo">
 <div id="mappa"></div>
 
 <div id="pannello" data-i18n-aria="html.strati.nav" aria-label="Strati della mappa"></div>
-<div id="legende-box"><button id="legende-riduci" type="button" aria-expanded="true" data-i18n="html.legende.riduci">▾ Riduci</button><div id="legende"></div></div>
+<div id="legende-box"><button id="legende-riduci" type="button" aria-expanded="true" data-i18n="html.legende.riduci">▾ Riduci</button><div id="legende"></div><div id="legende-raggio"></div><p class="legenda-avviso" data-i18n="html.piede.avviso.ti">Dati INGV e Protezione Civile: informativi, non sostituiscono le comunicazioni ufficiali.</p></div>
 
 <nav id="barra-strati" data-i18n-aria="html.strati.nav" aria-label="Strati della mappa">
   <h2 class="barra-titolo" data-i18n="html.strati.titolo">Strati</h2>
@@ -80,9 +77,6 @@
 <aside id="confronto-pannello" hidden data-i18n-aria="html.confronto.aria" aria-label="Confronto terremoti"></aside>
 <nav id="rail-pannelli" data-i18n-aria="html.rail.aria" aria-label="Pannelli laterali"></nav>
 </main>
-<footer id="app-footer">
-<p class="piede-avviso" data-i18n="html.piede.avviso.ti">Dati INGV e Protezione Civile: informativi, non sostituiscono le comunicazioni ufficiali.</p>
-</footer>
 <script defer src="js/vendor/maplibre-gl.js"></script>
 <script defer src="js/vendor/pmtiles.js"></script>
 <script type="module" src="js/avvio.js"></script>

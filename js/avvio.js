@@ -4,5 +4,5 @@ import { caricaDizionari, applicaDom, creaInterruttoreLingua } from './core/i18n
 
 await caricaDizionari();
 applicaDom(document);
-document.getElementById('switch-tema').after(creaInterruttoreLingua(document));
+document.getElementById('barra-strumenti').append(creaInterruttoreLingua(document));
 await import('./app.js');

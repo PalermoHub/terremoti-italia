@@ -35,9 +35,7 @@ document.getElementById('chiudi-strati').addEventListener('click', () => tab.imp
 caricaLiveZoom(localStorage);
 caricaTemaMagnitudo(localStorage);
 // riquadro in fondo alla legenda in mappa: l'interruttore di Live Zoom (si nasconde con la legenda ridotta)
-const riquadroLegenda = Object.assign(document.createElement('div'), { id: 'legende-raggio' });
-riquadroLegenda.append(interruttoreLiveZoomLegenda(localStorage));
-document.getElementById('legende-box').append(riquadroLegenda);
+document.getElementById('legende-raggio').append(interruttoreLiveZoomLegenda(localStorage));
 const riduciLegenda = document.getElementById('legende-riduci');
 riduciLegenda.addEventListener('click', () => {
   const ridotta = document.getElementById('legende-box').classList.toggle('ridotta');

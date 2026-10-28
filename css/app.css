@@ -811,8 +811,11 @@ dialog li { margin: 4px 0; }
 #legende-box { position: fixed; z-index: var(--z-mappa-ui); left: calc(var(--sx) + 12px); bottom: 28px; width: 260px; max-width: calc(100% - var(--sx) - 20px); background: var(--surface); border: 1px solid var(--border-ui); border-radius: var(--r-md); box-shadow: var(--ombra); }
 #legende-box:not(:has(#legende > :not([hidden]):not(.legenda-vuota))) { display: none; }
 #legende-riduci { width: 100%; padding: 8px 10px; border: 0; background: none; text-align: left; font-size: var(--fs-xs); font-weight: 700; color: var(--text); }
-#legende-box.ridotta #legende, #legende-box.ridotta #legende-raggio { display: none; }
+#legende-box.ridotta #legende, #legende-box.ridotta #legende-raggio, #legende-box.ridotta .legenda-avviso { display: none; }
 #legende-raggio { display: flex; flex-direction: column; gap: 2px; padding: 6px 10px 8px; border-top: 1px solid var(--border-ui); font-size: var(--fs-xs); color: var(--text); }
+#legende-raggio:empty { display: none; }
+/* avviso sulle fonti, in fondo alla legenda sotto l'interruttore di Live Zoom */
+.legenda-avviso { margin: 0; padding: 0 10px 8px; font-size: var(--fs-3xs); line-height: 1.4; color: var(--text-muted); }
 #legende-raggio input[type=range] { width: 100%; }
 .legende-raggio-cerchio { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 4px; cursor: pointer; }
 .legende-raggio-cerchio input { appearance: none; flex: none; position: relative; width: 34px; height: 18px; margin: 0; border: 1px solid var(--border-ui); border-radius: var(--r-pill); background: var(--surface-alt); cursor: pointer; transition: background var(--t-rapida), border-color var(--t-rapida); }
@@ -1064,7 +1067,7 @@ button.strato-chip:hover i { color: var(--text); }
 @media print {
   .scheda-disclaimer { display: block; margin: 12px 0 0; padding-top: 8px; border-top: 1px solid #999; font-size: 11px; line-height: 1.4; color: #333; break-inside: avoid; }
   html, body { height: auto; overflow: visible; background: #fff; }
-  #app-header, #app-footer, #mappa, #barra-strati, #zoom-box, #strati-chip, #legende-box, #area-ricerca, #apri-strati, #avvisi, #pannello,
+  #mappa, #barra-strati, #zoom-box, #strati-chip, #legende-box, #area-ricerca, #apri-strati, #avvisi, #pannello,
   .scheda-azioni, .scheda-tabs, .scheda-maniglia, .scheda-pref { display: none !important; }
   #scheda { position: static !important; width: auto !important; height: auto !important; max-height: none !important; box-shadow: none !important; border: 0 !important; display: block !important; }
   .scheda-corpo { overflow: visible !important; }
@@ -1510,7 +1513,7 @@ label.strato.trascinato .strato-btn--trascina, .rndt-gruppo-riga.trascinato .str
 
 /* invito a installare l'app: solo telefono, sopra la barra dei tab */
 .invito-installa {
-  position: fixed; z-index: var(--z-header); left: 12px; right: 12px; bottom: calc(var(--tab-h, 60px) + var(--footer-h, 36px) + 8px);
+  position: fixed; z-index: var(--z-header); left: 12px; right: 12px; bottom: calc(var(--tab-h, 60px) + var(--footer-h, 0px) + 8px);
   display: flex; flex-direction: column; gap: 8px; padding: 12px 14px; border: 2px solid var(--bianco); border-radius: var(--r-md);
   background: var(--invito-bg-hover); color: var(--bianco); font-size: var(--fs-sm); box-shadow: var(--ombra);
 }
@@ -1588,21 +1591,14 @@ body:has(#dt-consenso) .invito-installa { display: none; } /* prima la scelta su
 .agg-titolo-layer { margin: 10px 0 4px; font-weight: 700; font-size: var(--fs-sm); text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); }
 
 /* ==========================================================================
-   Struttura della pagina: header, mappa, footer (la pagina non scorre mai)
+   Struttura della pagina: la mappa occupa tutta la finestra (la pagina non scorre mai)
    ========================================================================== */
-body { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: auto minmax(0, 1fr) auto; height: 100dvh; }
+body { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); height: 100dvh; }
 /* contain: layout fa di #corpo il riferimento di tutti gli elementi fixed dell'interfaccia: restano dentro la mappa */
-/* posizioni esplicite: un elemento estraneo nel body (estensioni del browser, tooltip) non deve spostare le tre righe */
-#app-header { grid-area: 1 / 1; }
-#corpo { grid-area: 2 / 1; position: relative; min-height: 0; overflow: hidden; contain: layout; }
-#app-footer { grid-area: 3 / 1; }
+/* posizione esplicita: un elemento estraneo nel body (estensioni del browser, tooltip) non deve spostare la mappa */
+#corpo { grid-area: 1 / 1; position: relative; min-height: 0; overflow: hidden; contain: layout; }
 body { grid-auto-rows: 0; } /* righe in più, se ce ne sono, non rubano spazio */
 
-#app-header {
-  position: relative; z-index: var(--z-header); box-sizing: border-box; min-height: 64px; padding: 8px 16px;
-  display: flex; align-items: center; gap: 16px; background: var(--surface); border-bottom: 1px solid var(--border-ui);
-}
-#app-logo { flex: none; display: block; line-height: 0; }
 #menu-info { display: flex; align-items: center; gap: 2px; margin-left: auto; min-width: 0; }
 #menu-info button, #menu-info a { display: block; box-sizing: border-box; text-decoration: none; padding: 10px 12px; border: 0; border-bottom: 3px solid transparent; border-radius: var(--r-sm) var(--r-sm) 0 0; background: none; color: var(--text-muted); font: inherit; font-weight: 600; white-space: nowrap; cursor: pointer; }
 #menu-info button:hover, #menu-info a:hover { background: var(--surface-hover); color: var(--text); }
@@ -1645,9 +1641,11 @@ body { grid-auto-rows: 0; } /* righe in più, se ce ne sono, non rubano spazio *
 }
 #menu-info-toggle { display: none; margin-left: auto; width: 44px; height: 44px; padding: 0; align-items: center; justify-content: center; border: 0; border-radius: var(--r-sm); background: none; color: var(--text); cursor: pointer; }
 #menu-info-toggle:hover { background: var(--surface-hover); }
-#switch-lingua { display: inline-flex; align-items: center; gap: 4px; height: 36px; padding: 0 10px; border: 1px solid var(--border-ui); border-radius: var(--r-pill); background: var(--surface-alt); color: var(--text); font: inherit; font-size: .8125rem; font-weight: 600; cursor: pointer; }
-#switch-lingua:hover { background: var(--surface-hover); }
-#switch-lingua:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* lingua IT/EN nella barra degli strumenti: pillola della stessa altezza delle icone tonde */
+#barra-strumenti > #switch-lingua { display: inline-flex; align-items: center; gap: 4px; width: auto; min-width: 36px; height: 36px; padding: 0 10px; border: 1px solid var(--border); border-radius: var(--r-pill); background: var(--surface); box-shadow: var(--ombra); color: var(--text); font: inherit; font-size: .8125rem; font-weight: 600; cursor: pointer; }
+#barra-strumenti > #switch-lingua:hover { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-strong); }
+#barra-strumenti > #switch-lingua:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+#barra-strumenti > #switch-lingua svg { flex: none; }
 /* sotto i 1180 px le otto voci non stanno in una riga: menu a tendina con l'icona a tre righe */
 @media (max-width: 1180px) {
   #menu-info-toggle { display: flex; }
@@ -1665,28 +1663,10 @@ body { grid-auto-rows: 0; } /* righe in più, se ce ne sono, non rubano spazio *
   #menu-info #link-home { order: -1; } #menu-info [data-scheda="mappa"] { order: 0; } #menu-info [data-scheda="digitaltwin"] { order: 1; } #menu-info #menu-guide { order: 3; }
   #menu-info [data-scheda="fonti"] { order: 4; } #menu-info #menu-altro { order: 5; }
 }
-#app-logo img { display: block; height: 44px; width: auto; }
 
-#app-footer {
-  box-sizing: border-box; min-height: 36px; padding: 0 16px; display: flex; align-items: center; justify-content: space-between; gap: 16px;
-  background: var(--surface); border-top: 1px solid var(--border-ui); font-size: var(--fs-xs); color: var(--text-muted);
-}
-.piede-avviso { margin: 0; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.piede-avviso strong { color: var(--text); }
 #piede-coord { margin-left: auto; flex: none; font-family: ui-monospace, Consolas, monospace; font-weight: 500; }
-#piede-copyright { flex: 0 1 auto; min-width: 0; padding-block: 4px; }
-#piede-copyright .piede-licenza { display: inline-block; } /* se il testo va a capo, la frase della licenza passa intera sulla seconda riga */
-#piede-copyright a { color: var(--text); font-weight: 600; text-underline-offset: 2px; }
 #logo-ods { flex: none; display: block; line-height: 0; }
 #logo-ods img { display: block; height: 24px; width: auto; }
-
-@media (max-width: 720px) {
-  #app-header { flex-wrap: wrap; row-gap: 8px; padding: 8px 12px; min-height: 0; }
-  #app-header { column-gap: 8px; }
-  #app-logo img { height: 30px; }
-      #piede-coord, .piede-avviso, #piede-copyright .piede-licenza { display: none; }
-  #piede-copyright { font-size: var(--fs-2xs); }
-}
 
 /* stampa della mappa visibile (pulsante «Stampa» della barra strumenti): il foglio compare solo in stampa */
 #foglio-stampa { display: none; }
@@ -1711,11 +1691,6 @@ body { grid-auto-rows: 0; } /* righe in più, se ce ne sono, non rubano spazio *
 #stampa-menu select { width: auto; margin: 0; padding: 4px 8px; }
 #stampa-menu button { padding: 5px 14px; font: inherit; font-weight: 600; color: var(--accent-ink); background: var(--accent); border: 1px solid var(--accent); border-radius: var(--r-pill); cursor: pointer; }
 #stampa-menu button:disabled { opacity: .6; cursor: wait; }
-/* pagine statiche: il pulsante «Condividi» chiude la testata a destra (anche sul telefono, dopo tema e lingua) */
-#app-header > #btn-condividi { order: 10; flex: none; display: flex; align-items: center; justify-content: center; width: 36px; height: 36px; padding: 0; color: var(--text); background: var(--surface-alt); border: 1px solid var(--border-ui); border-radius: 50%; cursor: pointer; }
-#app-header > #btn-condividi:hover { background: var(--surface-hover); }
-#app-header > #btn-condividi:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-#app-header > #btn-condividi svg { width: 18px; height: 18px; }
 #condividi-menu { position: fixed; z-index: var(--z-barra); top: 70px; right: calc(var(--scheda-l) + 12px); width: min(360px, calc(100vw - 24px)); display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border-ui); border-radius: var(--r-lg); box-shadow: var(--ombra); font-size: var(--fs-sm); color: var(--text); }
 #condividi-menu[hidden] { display: none; }
 #condividi-menu h2 { margin: 0; font-size: var(--fs-sm); font-weight: 700; }
@@ -1777,8 +1752,8 @@ body:has(#rndt-pannello:not([hidden]):not(.collassato), #geoimage-pannello:not([
    Telefono (fino a 720 px): barra a quattro tab (Mappa, Strati, Aggiungi, Info), ricerca in alto,
    strumenti della mappa in colonna a destra. Sopra i 720 px resta l'interfaccia a barre laterali.
    ========================================================================== */
-:root { --tab-h: 64px; --footer-h: 36px; --emergenza: #d7263d; } /* rosso dell'emergenza: barra in modalità emergenza, badge «Emergenza» e scheda del percorso nella home */
-#barra-tab, #switch-tema, .menu-gruppo { display: none; }
+:root { --tab-h: 64px; --footer-h: 0px; --emergenza: #d7263d; } /* rosso dell'emergenza: barra in modalità emergenza, badge «Emergenza» e scheda del percorso nella home */
+#barra-tab, .menu-gruppo { display: none; }
 @media (max-width: 720px) {
   #barra-tab {
     position: fixed; z-index: calc(var(--z-foglio) + 1); left: 0; right: 0; bottom: 0; height: var(--tab-h); display: flex; padding: 0 6px; box-sizing: border-box;
@@ -1802,18 +1777,6 @@ body:has(#rndt-pannello:not([hidden]):not(.collassato), #geoimage-pannello:not([
   }
   #barra-tab .conta-strati[hidden] { display: none; }
 
-  /* tema scuro: interruttore nell'header, a destra */
-  #app-header > #btn-condividi { margin-left: 8px; }
-  #switch-tema { display: flex; align-items: center; margin-left: auto; width: 64px; height: 44px; padding: 0; border: 0; background: none; cursor: pointer; }
-  #switch-tema .switch-pista { position: relative; width: 56px; height: 28px; box-sizing: border-box; border: 1px solid var(--border-ui); border-radius: var(--r-pill); background: var(--surface-alt); transition: background var(--t-rapida), border-color var(--t-rapida); }
-  #switch-tema .switch-sole, #switch-tema .switch-luna { position: absolute; top: 6px; color: var(--text-muted); }
-  #switch-tema .switch-sole { left: 7px; }
-  #switch-tema .switch-luna { right: 7px; }
-  #switch-tema .switch-manopola { position: absolute; top: 2px; left: 2px; width: 22px; height: 22px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border-ui); box-shadow: var(--ombra); transition: transform var(--t-rapida), background var(--t-rapida); }
-  #switch-tema[aria-checked="true"] .switch-pista { background: var(--accent); border-color: var(--accent); }
-  #switch-tema[aria-checked="true"] .switch-sole, #switch-tema[aria-checked="true"] .switch-luna { color: var(--accent-ink); }
-  #switch-tema[aria-checked="true"] .switch-manopola { transform: translateX(28px); }
-  #switch-tema:focus-visible .switch-pista { outline: 2px solid var(--focus); outline-offset: 2px; }
 
   /* il pulsante «Strati» in alto e l'icona a tre righe lasciano il posto ai tab */
   #apri-strati, #menu-info-toggle { display: none; }
@@ -1827,9 +1790,10 @@ body:has(#rndt-pannello:not([hidden]):not(.collassato), #geoimage-pannello:not([
   .invito-clic { left: calc(50% - 32px); max-width: calc(100% - 88px); }
   .invito-clic p { text-align: center; }
 
-  /* strumenti della mappa: colonna a destra sotto la ricerca; tema scuro e catalogo RNDT stanno nei tab */
+  /* strumenti della mappa: colonna a destra sotto la ricerca; il catalogo RNDT sta nei tab */
   #barra-strumenti { top: 68px; right: 12px; left: auto; flex-direction: column; align-items: center; gap: 8px; }
-  #barra-strumenti > #btn-rndt, #barra-strumenti > #btn-tema { display: none; }
+  #barra-strumenti > #btn-rndt { display: none; }
+  #barra-strumenti > #switch-lingua { width: auto; min-width: 44px; height: 44px; padding: 0 12px; }
 
   /* modalità emergenza (Piano di emergenza acceso): barra con Mappa, Home, GPS, Talia ed Esci, nessuno strumento sulla mappa, solo la scheda dell'area */
   #barra-tab button:is([data-tab="home"], [data-tab="gps"], [data-tab="condividi"], [data-tab="talia"], [data-tab="esci"]) { display: none; }
@@ -1888,7 +1852,7 @@ body:has(#rndt-pannello:not([hidden]):not(.collassato), #geoimage-pannello:not([
 }
 /* modalità emergenza a telefono ruotato (touch, altezza fino a 500 px, oltre 720 px di larghezza): la stessa barra rossa in basso e la scheda dell'area a destra sopra la barra; niente testata, piede, barra dei pannelli né strumenti. Il resto dell'app, ruotato, resta quello desktop */
 @media (min-width: 721px) and (pointer: coarse) and (max-height: 500px) {
-  body.modo-emergenza #app-header, body.modo-emergenza #app-footer, body.modo-emergenza #rail-pannelli, body.modo-emergenza #barra-strumenti,
+  body.modo-emergenza #rail-pannelli, body.modo-emergenza #barra-strumenti,
   body.modo-emergenza #legende-raggio, body.modo-emergenza .invito-clic, body.modo-emergenza #zoom-box, body.modo-emergenza #barra-strati, body.modo-emergenza #pannello,
   body.modo-emergenza #barra-tab button:not([data-tab="mappa"], [data-tab="home"], [data-tab="gps"], [data-tab="condividi"], [data-tab="talia"], [data-tab="esci"]) { display: none; }
   body.modo-emergenza #pannello-filtri .filtri-ordinari { display: none; }
@@ -1946,13 +1910,13 @@ dialog.streetview-finestra.trascinata iframe { pointer-events: none; }
 
 /* ==========================================================================
    Tabella dei dati: cassetto in basso, tra la barra sinistra e la scheda destra.
-   È figlio del body (non di #corpo): poggia sul piè di pagina (36 px) e --tabella-h
+   È figlio del body (non di #corpo): poggia in fondo alla finestra e --tabella-h
    (impostata da ui.js sul body) fa salire sopra di esso i controlli della mappa.
    ========================================================================== */
 :root { --tabella-h: 0px; }
 #tabella-dati {
-  position: fixed; z-index: var(--z-barra); left: var(--sx); right: var(--scheda-l); bottom: var(--footer-h, 36px);
-  box-sizing: border-box; display: flex; flex-direction: column; min-height: 160px; max-height: calc(100dvh - 64px - var(--footer-h, 36px) - 8px);
+  position: fixed; z-index: var(--z-barra); left: var(--sx); right: var(--scheda-l); bottom: var(--footer-h, 0px);
+  box-sizing: border-box; display: flex; flex-direction: column; min-height: 160px; max-height: calc(100dvh - var(--footer-h, 0px) - 8px);
   background: var(--surface); border: 1px solid var(--border-ui); border-bottom: 0; border-radius: var(--r-lg) var(--r-lg) 0 0;
   box-shadow: var(--ombra); font-size: var(--fs-sm); color: var(--text); transition: left var(--t-rapida), right var(--t-rapida);
 }
@@ -2017,7 +1981,7 @@ body:has(#tabella-dati:not([hidden])) #area-ricerca { bottom: calc(40px + env(sa
    stacking context sotto il cassetto (figlio di body) e occupano la stessa fascia: con un foglio aperto il cassetto si nasconde
    e --tabella-h torna a 0 (!important batte il valore scritto in linea da ui.js) */
 @media (max-width: 720px) {
-  #tabella-dati { left: 0; right: 0; bottom: calc(var(--tab-h) + var(--footer-h)); max-height: min(60dvh, calc(100dvh - 64px - var(--tab-h) - var(--footer-h) - 8px)); }
+  #tabella-dati { left: 0; right: 0; bottom: calc(var(--tab-h) + var(--footer-h)); max-height: min(60dvh, calc(100dvh - var(--tab-h) - var(--footer-h) - 8px)); }
   body:has(#tabella-dati:not([hidden])) #area-ricerca { bottom: auto; }
   body:has(#tabella-dati:not([hidden])):not(.strati-aperti):not(.info-aperto):not(:has(#scheda:not([hidden]):not(.collassato), #rndt-pannello:not([hidden]):not(.collassato), #geoimage-pannello:not([hidden]):not(.collassato), #tema-ui-pannello:not([hidden]):not(.collassato), #chatbot-pannello:not([hidden]):not(.collassato), #storico-pannello:not([hidden]):not(.collassato), #confronto-pannello:not([hidden]):not(.collassato))) :is(.maplibregl-ctrl-bottom-right, .maplibregl-ctrl-bottom-left) { bottom: calc(var(--tabella-h) + var(--tab-h)); }
   body.strati-aperti #tabella-dati, body.info-aperto #tabella-dati,
@@ -2172,14 +2136,14 @@ body:has(#tabella-dati:not([hidden])) #area-ricerca { bottom: calc(40px + env(sa
 .strati3d-nav-centra, .strati3d-nav-guida { color: var(--accent) !important; }
 /* guida ai comandi */
 /* navigatore della vista 3D della mappa: in basso a sinistra, accanto al pannello (--sx); la legenda gli sale sopra */
-.strati3d-nav.mappa-nav { position: fixed; z-index: var(--z-mappa-ui); left: calc(var(--sx, 0px) + 12px); bottom: calc(var(--footer-h, 36px) + 12px); }
+.strati3d-nav.mappa-nav { position: fixed; z-index: var(--z-mappa-ui); left: calc(var(--sx, 0px) + 12px); bottom: calc(var(--footer-h, 0px) + 12px); }
 .strati3d-nav.mappa-nav[hidden] { display: none; }
-body.nav3d #legende-box { bottom: calc(var(--footer-h, 36px) + 146px); }
+body.nav3d #legende-box { bottom: calc(var(--footer-h, 0px) + 146px); }
 .strati3d-guida.mappa-guida { position: fixed; z-index: var(--z-mappa-ui); max-height: calc(100% - 80px); }
 @media (max-width: 720px) {
-  .strati3d-nav.mappa-nav { left: 8px; bottom: calc(var(--tab-h, 60px) + var(--footer-h, 36px) + 8px); flex-direction: row; padding: 6px; border-radius: 44px 14px 14px 44px; }
+  .strati3d-nav.mappa-nav { left: 8px; bottom: calc(var(--tab-h, 60px) + var(--footer-h, 0px) + 8px); flex-direction: row; padding: 6px; border-radius: 44px 14px 14px 44px; }
   .strati3d-nav.mappa-nav .strati3d-bussola { width: 84px; height: 84px; }
-  body.nav3d #legende-box { bottom: calc(var(--tab-h, 60px) + var(--footer-h, 36px) + 116px); }
+  body.nav3d #legende-box { bottom: calc(var(--tab-h, 60px) + var(--footer-h, 0px) + 116px); }
 }
 .strati3d-guida { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 3; width: min(720px, calc(100% - 32px)); max-height: calc(100% - 140px); overflow: auto;
   padding: 18px 22px; border-radius: var(--r-md); background: rgba(16, 20, 29, .96); border: 1px solid rgba(255, 255, 255, .16); box-shadow: 0 20px 60px rgba(0, 0, 0, .6); }
@@ -2330,11 +2294,9 @@ a.scheda-badge-tinta:hover, a.scheda-badge-tinta:focus-visible { background: col
 .cb-pulisci { flex: none; display: grid; place-items: center; width: 40px; height: 40px; padding: 0; border: 1px solid var(--border); border-radius: 50%; background: var(--surface); color: var(--text-muted); cursor: pointer; }
 .cb-pulisci:hover { background: var(--surface-hover); color: var(--text); }
 
-/* Cambio pagina senza sfarfallio: il browser (Chrome/Edge) tiene a schermo la pagina vecchia finché la nuova non è pronta;
-   testata e piede, uguali ovunque, restano fermi e cambia solo il contenuto in dissolvenza veloce. */
+/* Cambio pagina senza sfarfallio: il browser (Chrome/Edge) tiene a schermo la pagina vecchia finché la nuova non è pronta,
+   poi il contenuto sfuma nella nuova in dissolvenza veloce. */
 @view-transition { navigation: auto; }
-#app-header { view-transition-name: testata; }
-#app-footer { view-transition-name: piede; }
 ::view-transition-group(root) { animation-duration: .15s; }
 @media (prefers-reduced-motion: reduce) { ::view-transition-group(*) { animation: none; } }
 
@@ -2611,10 +2573,10 @@ details.scheda-sez-evento .scheda-sez-testo { display: contents; }
 .traffico-popup .scheda-evento-voce { gap: 4px; white-space: nowrap; }
 
 /* titolo e coordinate: sulla mappa, a destra, a sinistra della colonna di zoom e scala; seguono il pannello laterale come gli altri oggetti */
-#mappa-info { position: fixed; z-index: var(--z-mappa-ui); right: calc(var(--scheda-l) + 68px); bottom: calc(var(--footer-h, 36px) + 56px); display: flex; flex-direction: column; align-items: flex-end; gap: 2px; padding: 6px 10px; background: color-mix(in srgb, var(--surface) 88%, transparent); border: 1px solid var(--border-ui); border-radius: var(--r-md); box-shadow: var(--ombra); font-size: var(--fs-xs); color: var(--text-muted); pointer-events: none; transition: right var(--t-rapida); }
+#mappa-info { position: fixed; z-index: var(--z-mappa-ui); right: calc(var(--scheda-l) + 68px); bottom: calc(var(--footer-h, 0px) + 56px); display: flex; flex-direction: column; align-items: flex-end; gap: 2px; padding: 6px 10px; background: color-mix(in srgb, var(--surface) 88%, transparent); border: 1px solid var(--border-ui); border-radius: var(--r-md); box-shadow: var(--ombra); font-size: var(--fs-xs); color: var(--text-muted); pointer-events: none; transition: right var(--t-rapida); }
 #mappa-info #app-logo { font-size: var(--fs-sm); font-weight: 700; line-height: 1.2; color: var(--text); }
 #mappa-info #piede-coord { margin: 0; }
-@media (max-width: 720px) { #mappa-info { right: 8px; bottom: calc(var(--tab-h, 60px) + var(--footer-h, 36px) + 8px); } #mappa-info #piede-coord { display: inline; } }
+@media (max-width: 720px) { #mappa-info { right: 8px; bottom: calc(var(--tab-h, 60px) + var(--footer-h, 0px) + 8px); } #mappa-info #piede-coord { display: inline; } }
 
 #mappa-info { flex-direction: row; align-items: center; gap: 10px; pointer-events: auto; }
 #mappa-info .mappa-info-testi { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; pointer-events: none; }
