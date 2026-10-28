@@ -2668,6 +2668,9 @@ details.scheda-sez-evento .scheda-sez-testo { display: contents; }
 .terremoti-confronto-grafico .barra-b { fill: #f97316; }
 .terremoti-confronto-grafico .linea-mag { fill: none; stroke: var(--text); stroke-width: 1.3; }
 .terremoti-confronto-grafico .punto-mag { fill: var(--text); }
+.terremoti-confronto-grafico .linea-mediana { fill: none; stroke: var(--text-muted); stroke-width: 1; stroke-dasharray: 4 3; }
+.terremoti-confronto-grafico .et-mediana { paint-order: stroke; stroke: var(--surface); stroke-width: 3px; stroke-linejoin: round; }
+.terremoti-classi-comandi { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
 .terremoti-confronto-grafico .linea-a { fill: none; stroke: #0ea5e9; stroke-width: 2; }
 .terremoti-confronto-grafico .linea-b { fill: none; stroke: #f97316; stroke-width: 2; }
 .terremoti-confronto-grafico .griglia { stroke: var(--border-ui); stroke-width: .6; opacity: .55; }

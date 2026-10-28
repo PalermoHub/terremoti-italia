@@ -6,7 +6,7 @@ import { titoloConInfo, apriGrande } from '../core/info-grafico.js';
 import { zoomGrafico } from '../core/zoom-grafico.js';
 import { CLASSI_MAG, PROFONDITA } from './scheda-terremoti.js';
 import { apriDialogoPeriodo, creaInterazione, rendiGruppo } from './scheda-terremoti-dom.js';
-import { ANNO_INIZIO, periodoAnno, periodoAnnoIntero, periodoValido, annoDi, etichettaPeriodo, avvisoCompletezza, confrontaPeriodi, giorniPeriodo, scaricaRiepilogo, riepilogoDaEventi, serieAnnuale, grigliaDensita } from './scheda-archivio.js';
+import { ANNO_INIZIO, periodoAnno, periodoAnnoIntero, periodoValido, annoDi, etichettaPeriodo, avvisoCompletezza, confrontaPeriodi, giorniPeriodo, scaricaRiepilogo, riepilogoDaEventi, serieAnnuale, grigliaDensita, conclusioniConfronto, quoteEnergiaClassi, riferimentoAnnuale } from './scheda-archivio.js';
 
 const MAGNITUDO_ARCHIVIO = [2, 2.5, 3, 4, 5];
 const MAG_PREDEFINITA = 3; // a M ≥ 2 anni come il 2016 superano il tetto di eventi della mappa
@@ -282,6 +282,20 @@ const meseBreve = mese => new Date(`${mese}-01T00:00:00Z`).toLocaleDateString(lo
 const meseTesto = m => (m ? `${meseBreve(m.mese)} · ${numero(m.quota, m.quota < 10 ? 1 : 0)}%` : '–');
 const titoloMese = m => (m ? `${meseBreve(m.mese)} ${m.mese.slice(0, 4)}: ${numero(m.n)}` : null);
 
+// Le frasi del modello (conclusioniConfronto) in una sola riga di testo; `a` e `b` sono i nomi dei periodi
+function testoConclusioni(frasi, a, b) {
+  if (!frasi) return null;
+  const perc = n => numero(n, n < 10 ? 1 : 0);
+  return frasi.map(f => t(`terremoti.arc.concl.${f.chiave}`, {
+    a, b,
+    perc: f.perc == null ? '' : perc(f.perc),
+    volte: f.volte == null ? '' : numero(f.volte, f.volte < 10 ? 1 : 0),
+    quota: f.quota == null ? '' : perc(f.quota),
+    periodo: f.lato === 'a' ? a : b,
+    mese: f.mese ? meseBreve(f.mese) : '',
+  })).join(' ');
+}
+
 // Tabella dei due periodi e un istogramma con due barre per classe di magnitudo (stessa scala).
 // `condizioni` (magnitudo minima, profondità, territorio) e `avviso` (completezza del catalogo) sono le due righe sopra la tabella.
 export function disegnaConfronto(c, periodoA, periodoB, adesso, condizioni = null, avviso = null, grafici = null, soloAnni = true, eventiA = [], eventiB = [], interazione = null) {
@@ -305,6 +319,8 @@ export function disegnaConfronto(c, periodoA, periodoB, adesso, condizioni = nul
     tr.append(el('th', null, etichetta), cellaA, cellaB, el('td', null, d));
     return tr;
   };
+  const conclusione = testoConclusioni(conclusioniConfronto(c), nome(periodoA), nome(periodoB));
+  if (conclusione) elementi.push(el('p', 'terremoti-sintesi', conclusione)); // prima della tabella: dice cosa significano i numeri
   const intestazione = el('tr');
   intestazione.append(el('th'), el('th', null, nome(periodoA)), el('th', null, nome(periodoB)), el('th', null, t('terremoti.arc.differenza')));
   const dif = c.differenza;
@@ -406,14 +422,15 @@ function collegaTooltip(blocco) {
   blocco.addEventListener('wheel', nascondiTooltip, { passive: true });
 }
 
-// Istogramma per classe di magnitudo: due barre affiancate (periodo A e B) sulla stessa scala;
-// nel popup i conteggi stanno sopra ogni barra.
-function graficoClassi(c, periodoA, periodoB, grande = false, eventiA = [], eventiB = [], interazione = null) {
+// Istogramma per classe di magnitudo: due barre affiancate (periodo A e B) sulla stessa scala; nel popup i valori stanno sopra ogni barra.
+// `vista` = { energia, log }: barre per numero di eventi o per quota dell'energia del periodo, in scala lineare o logaritmica.
+// È condivisa con il popup, così l'ingrandimento mostra ciò che si stava guardando.
+function graficoClassi(c, periodoA, periodoB, grande = false, eventiA = [], eventiB = [], interazione = null, vista = { energia: false, log: false }) {
   const eventi = t('terremoti.arc.eventi').toLocaleLowerCase(localeIntl());
-  const max = Math.max(1, ...c.a.perClasse, ...c.b.perClasse);
   const titolo = t('terremoti.arc.classi');
+  const quote = { a: quoteEnergiaClassi(c.a), b: quoteEnergiaClassi(c.b) };
   const blocco = el('div', `terremoti-serie terremoti-archivio-classi${grande ? ' grande' : ''}`);
-  blocco.append(titoloConInfo('h4', 'terremoti-titolo', titolo, 'confronto-classi', grande ? null : () => apriGrande(titolo, () => graficoClassi(c, periodoA, periodoB, true, eventiA, eventiB, interazione))));
+  blocco.append(titoloConInfo('h4', 'terremoti-titolo', titolo, 'confronto-classi', grande ? null : () => apriGrande(titolo, () => graficoClassi(c, periodoA, periodoB, true, eventiA, eventiB, interazione, vista))));
   const chiave = el('div', 'terremoti-confronto-chiave');
   for (const [periodo, colore] of [[periodoA, COLORE_A], [periodoB, COLORE_B]]) {
     const voce = el('span');
@@ -423,24 +440,69 @@ function graficoClassi(c, periodoA, periodoB, grande = false, eventiA = [], even
     chiave.append(voce);
   }
   const istogramma = el('div', 'terremoti-archivio-istogramma');
+  const colonne = []; // { b, conteggio, periodo, classe, n, quota }
   CLASSI_MAG.forEach((classe, i) => {
     const gruppo = el('div');
     const barre = el('div', 'terremoti-archivio-barre');
     for (const [lato, periodo, n, delPeriodo] of [['a', periodoA, c.a.perClasse[i], eventiA], ['b', periodoB, c.b.perClasse[i], eventiB]]) {
       const colonna = el('div', 'terremoti-archivio-colonna');
       const b = el('i', `terremoti-archivio-${lato}`);
-      b.style.height = `${n ? Math.max(4, n / max * 100) : 0}%`;
-      b.dataset.tip = `${etichettaPeriodo(periodo)} · ${nomeClasse(classe)}: ${numero(n)} ${eventi}`;
-      if (grande) b.append(el('b', 'terremoti-archivio-conteggio', numero(n))); // sopra la barra, anche quando è a zero
+      const conteggio = grande ? el('b', 'terremoti-archivio-conteggio') : null; // sopra la barra, anche quando è a zero
+      if (conteggio) b.append(conteggio);
+      colonne.push({ b, conteggio, periodo, classe, n, quota: quote[lato][i] });
       // la barra è la classe di magnitudo di un periodo: sotto il mouse si accendono i suoi eventi in mappa
-      rendiGruppo(b, delPeriodo.filter(e => e.mag >= classe.da && e.mag < classe.a), interazione, b.dataset.tip);
+      rendiGruppo(b, delPeriodo.filter(e => e.mag >= classe.da && e.mag < classe.a), interazione);
       colonna.append(b);
       barre.append(colonna);
     }
     gruppo.append(barre, el('span', null, nomeClasse(classe)));
     istogramma.append(gruppo);
   });
-  blocco.append(chiave, istogramma);
+
+  const percento = q => `${numero(q * 100, q > 0 && q < 0.1 ? 1 : 0)}%`;
+  const nota = el('p', 'scheda-nota');
+  const aggiorna = () => {
+    const valore = k => (vista.energia ? k.quota * 100 : k.n);
+    const max = Math.max(1e-9, ...colonne.map(valore));
+    const scala = v => (vista.log ? Math.log10(1 + v) / Math.log10(1 + max) : v / max) * 100;
+    for (const k of colonne) {
+      const v = valore(k);
+      k.b.style.height = `${v ? Math.max(4, scala(v)) : 0}%`;
+      const dettaglio = vista.energia ? `${percento(k.quota)} ${t('terremoti.arc.dellEnergia')} (${numero(k.n)} ${eventi})` : `${numero(k.n)} ${eventi}`;
+      k.b.dataset.tip = `${etichettaPeriodo(k.periodo)} · ${nomeClasse(k.classe)}: ${dettaglio}`;
+      if (k.b.classList.contains('interattivo')) k.b.setAttribute('aria-label', k.b.dataset.tip);
+      if (k.conteggio) k.conteggio.textContent = vista.energia ? percento(k.quota) : numero(k.n);
+    }
+    nota.textContent = [vista.energia ? t('terremoti.arc.classiNotaEnergia') : '', vista.log ? t('terremoti.arc.classiNotaLog') : ''].filter(Boolean).join(' ');
+    nota.hidden = !nota.textContent;
+  };
+
+  const comandi = el('div', 'terremoti-classi-comandi');
+  const gruppoVista = el('div', 'terremoti-vista');
+  gruppoVista.setAttribute('role', 'group');
+  gruppoVista.setAttribute('aria-label', t('terremoti.arc.vistaClassi'));
+  const bottoni = [[false, 'terremoti.arc.vistaEventi'], [true, 'terremoti.arc.vistaEnergia']].map(([energia, testo]) => {
+    const bottone = el('button', null, t(testo));
+    bottone.type = 'button';
+    bottone.addEventListener('click', () => { vista.energia = energia; allinea(); aggiorna(); });
+    return [energia, bottone];
+  });
+  const allinea = () => bottoni.forEach(([energia, bottone]) => {
+    bottone.setAttribute('aria-pressed', String(energia === vista.energia));
+    bottone.classList.toggle('attivo', energia === vista.energia);
+  });
+  gruppoVista.append(...bottoni.map(([, bottone]) => bottone));
+  const scala = el('label', 'terremoti-pf-scala');
+  const casella = el('input');
+  casella.type = 'checkbox';
+  casella.checked = vista.log;
+  casella.addEventListener('change', () => { vista.log = casella.checked; aggiorna(); });
+  scala.append(casella, el('span', null, t('terremoti.pf.logaritmica')));
+  comandi.append(gruppoVista, scala);
+  allinea();
+  aggiorna();
+
+  blocco.append(chiave, comandi, istogramma, nota);
   collegaTooltip(blocco);
   return blocco;
 }
@@ -481,6 +543,7 @@ function graficoAnni(serie, annoA, annoB, magMin, grande = false, dominio = null
   const centro = anno => x(anno + 0.5);
   // gli eventi dei due anni confrontati, già in memoria: le altre barre (1985+) non hanno eventi da mostrare
   const delAnno = anno => (anno === annoA ? eventiA : anno === annoB ? eventiB : null);
+  const rif = riferimentoAnnuale(serie, magMin); // mediana degli anni confrontabili: dice se A e B sono anni fuori dall'ordinario
   barre.forEach(b => {
     const anno = annoBarra(b);
     if (anno + 1 <= da || anno >= a) return;
@@ -489,12 +552,18 @@ function graficoAnni(serie, annoA, annoB, magMin, grande = false, dominio = null
     const classe = anno === annoA ? 'barra-a' : anno === annoB ? 'barra-b' : 'barra-anno';
     const y = yConteggio(b.n);
     const rett = nodoSvg('rect', { x: cx - larghezza / 2, y, width: larghezza, height: Math.max(b.n ? 1 : 0, basso - y), class: classe });
-    const tip = `${anno}: ${numero(b.n)} ${eventi} · ${t('terremoti.arc.magMax')} ${b.magMax == null ? '–' : numero(b.magMax, 1)}`;
+    const sulla = rif && b.n && anno >= rif.da && anno <= rif.a ? ` · ${t('terremoti.arc.xMediana', { x: numero(b.n / rif.mediana, 1) })}` : '';
+    const tip = `${anno}: ${numero(b.n)} ${eventi} · ${t('terremoti.arc.magMax')} ${b.magMax == null ? '–' : numero(b.magMax, 1)}${sulla}`;
     rett.setAttribute('data-tip', tip);
     rendiGruppo(rett, delAnno(anno), interazione, tip); // la barra dell'anno: sotto il mouse si accendono i suoi eventi
     svg.append(rett);
   });
 
+  if (rif) {
+    const yMediana = yConteggio(rif.mediana);
+    svg.append(nodoSvg('line', { x1: sinistra, x2: destra, y1: yMediana, y2: yMediana, class: 'linea-mediana' }));
+    svg.append(testoSvg(sinistra + 3, yMediana - 3, t('terremoti.arc.mediana'), { 'text-anchor': 'start', class: 'et-mediana' }));
+  }
   const punti = [];
   barre.forEach(b => {
     const anno = annoBarra(b);
@@ -542,7 +611,7 @@ function graficoAnni(serie, annoA, annoB, magMin, grande = false, dominio = null
     titoloAsse(svg, t('terremoti.asse.eventiAnno'), 15, (alto + basso) / 2, true);
     titoloAsse(svg, t('terremoti.asse.magMax'), L - 8, (alto + basso) / 2, true);
   }
-  blocco.append(svg, el('p', 'scheda-nota', t('terremoti.arc.graficoAnniNota', { mag: magnitudo(magMin) })));
+  blocco.append(svg, el('p', 'scheda-nota', [t('terremoti.arc.graficoAnniNota', { mag: magnitudo(magMin) }), rif && t('terremoti.arc.graficoAnniMediana', { n: numero(rif.mediana), da: rif.da, a: rif.a })].filter(Boolean).join(' ')));
   collegaTooltip(blocco);
   if (grande) {
     zoomGrafico({

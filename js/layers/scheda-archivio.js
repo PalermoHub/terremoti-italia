@@ -77,13 +77,16 @@ function cumulataMensile(perMese) {
 
 function statistiche(r, giorni) {
   const perClasse = Array(CLASSI_MAG.length).fill(0);
+  const energiaClasse = Array(CLASSI_MAG.length).fill(0);
   let momento = 0, magMax = null;
   for (const { mag, n } of r.perMagnitudo) {
-    perClasse[classeMagnitudo(mag)] += n;
+    const i = classeMagnitudo(mag);
+    perClasse[i] += n;
+    energiaClasse[i] += momentoSismico(mag) * n;
     momento += momentoSismico(mag) * n;
     if (magMax == null || mag > magMax) magMax = mag;
   }
-  return { n: r.totale, magMax, perGiorno: r.totale / giorni, perClasse, energia: momento, meseMax: meseDominante(r.perMese, r.totale), cumulata: cumulataMensile(r.perMese), magEquivalente: r.totale ? magnitudoDaMomento(momento) : null };
+  return { n: r.totale, magMax, perGiorno: r.totale / giorni, perClasse, energiaClasse, energia: momento, meseMax: meseDominante(r.perMese, r.totale), cumulata: cumulataMensile(r.perMese), magEquivalente: r.totale ? magnitudoDaMomento(momento) : null };
 }
 
 // Confronto tra due riepiloghi; `giorni*` = giorni davvero trascorsi nel periodo (un anno in corso è parziale)
@@ -100,6 +103,51 @@ export function confrontaPeriodi(a, b, giorniA, giorniB) {
       perGiorno: sa.n ? sb.perGiorno - sa.perGiorno : null,
     },
   };
+}
+
+// Quota di energia (0–1) di ogni classe di magnitudo sul totale del periodo: pochi eventi forti pesano più dei tanti deboli
+export const quoteEnergiaClassi = s => s.energiaClasse.map(e => (s.energia ? e / s.energia : 0));
+
+// Sotto queste soglie le differenze sono rumore: «più eventi» solo oltre il 5 %, «stessa energia» tra ×0,8 e ×1,25
+const SOGLIA_EVENTI = 5;
+const SOGLIA_ENERGIA = 1.25;
+// Da questa quota di eventi in un solo mese, il conteggio dell'anno segue una sequenza più che l'attività di fondo
+export const QUOTA_MESE_SEQUENZA = 35;
+
+// Frasi che dicono cosa significano i numeri del confronto: ogni voce è { chiave, ...valori } e il testo lo compone chi disegna.
+// null se nessuno dei due periodi ha eventi.
+export function conclusioniConfronto(c) {
+  if (!c.a.n && !c.b.n) return null;
+  const frasi = [];
+  if (!c.a.n || !c.b.n) {
+    frasi.push({ chiave: c.a.n ? 'soloA' : 'soloB' });
+    return frasi;
+  }
+  const perc = c.differenza.nPercento;
+  frasi.push(Math.abs(perc) < SOGLIA_EVENTI ? { chiave: 'eventiPari' } : { chiave: perc > 0 ? 'eventiPiu' : 'eventiMeno', perc: Math.abs(perc) });
+  const r = c.differenza.energia;
+  if (r != null) {
+    if (r >= SOGLIA_ENERGIA) frasi.push({ chiave: 'energiaPiu', volte: r });
+    else if (r <= 1 / SOGLIA_ENERGIA) frasi.push({ chiave: 'energiaMeno', volte: 1 / r });
+    else frasi.push({ chiave: 'energiaPari' });
+  }
+  // il periodo più concentrato in un solo mese, se lo è abbastanza
+  const lati = ['a', 'b'].filter(l => c[l].meseMax?.quota >= QUOTA_MESE_SEQUENZA).sort((x, y) => c[y].meseMax.quota - c[x].meseMax.quota);
+  if (lati.length) frasi.push({ chiave: 'sequenza', lato: lati[0], mese: c[lati[0]].meseMax.mese, quota: c[lati[0]].meseMax.quota });
+  return frasi;
+}
+
+// Mediana degli eventi per anno, per dire se un anno è fuori dall'ordinario. Esclude l'anno in corso (parziale) e, a magnitudo
+// minima sotto 3, gli anni prima del 2005: lì la rete vedeva meno scosse piccole e la mediana risulterebbe troppo bassa.
+// Gli anni sono quelli locali delle barre (come annoBarra). Null senza almeno 3 anni utili.
+export function riferimentoAnnuale(serie, magMin, adesso = Date.now()) {
+  const corrente = new Date(adesso).getUTCFullYear();
+  const primo = magMin < 3 ? ANNO_RETE_COMPLETA : ANNO_INIZIO;
+  const anni = serie.barre.map(b => ({ anno: new Date(b.da).getFullYear(), n: b.n })).filter(b => b.anno >= primo && b.anno < corrente);
+  if (anni.length < 3) return null;
+  const ord = anni.map(b => b.n).sort((x, y) => x - y);
+  const mediana = (ord[Math.floor((ord.length - 1) / 2)] + ord[Math.ceil((ord.length - 1) / 2)]) / 2;
+  return mediana > 0 ? { mediana, da: anni[0].anno, a: anni.at(-1).anno } : null;
 }
 
 // Riepilogo (stessa forma di GET /terremoti/riepilogo) calcolato dagli eventi già scaricati: serve quando il confronto è ristretto a un territorio
