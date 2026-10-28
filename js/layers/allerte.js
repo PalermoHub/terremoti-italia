@@ -91,8 +91,9 @@ function pianifica() {
 export default {
   id: 'allerte',
   titolo: 'Allerte meteo-idro',
-  gruppo: 'eventi',
-  sezioniFisse: true, // ogni layer di Eventi resta una sezione a sé: il riordino non attraversa le intestazioni
+  gruppo: 'protezione-civile',
+  senzaIntestazione: true,
+  sezioniFisse: true, // la sezione del modulo resta a sé: il riordino non attraversa le intestazioni
   argomento: { titolo: 'Allerte meteo-idro', descrizione: 'L\'allerta meteo-idro della Protezione Civile per oggi e domani nelle zone di allerta d\'Italia.' },
   aggiungiSorgenti(map) {
     map.addSource(SRC_ALLERTE, { type: 'geojson', data: VUOTO, attribution: '<a href="https://mappe.protezionecivile.gov.it/it/mappe-rischi/bollettino-di-criticita/" target="_blank" rel="noopener">Protezione Civile (CC BY 4.0)</a>' });

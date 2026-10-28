@@ -2,9 +2,13 @@
 // il collegamento al DOM sta in pannello.js.
 export const CHIAVE = 'dt-layer-sezioni';
 
-// Id delle sezioni in ordine alfabetico di titolo (italiano, senza distinguere maiuscole e accenti).
+// Id delle sezioni: prima quelle con un `ordine` dichiarato (crescente), poi le altre in ordine alfabetico di titolo
+// (italiano, senza distinguere maiuscole e accenti).
 export function ordinaSezioni(voci) {
-  return [...voci].sort((a, b) => a.titolo.localeCompare(b.titolo, 'it', { sensitivity: 'base' })).map(v => v.id);
+  const ordine = v => (Number.isFinite(v.ordine) ? v.ordine : Infinity);
+  return [...voci]
+    .sort((a, b) => ordine(a) - ordine(b) || a.titolo.localeCompare(b.titolo, 'it', { sensitivity: 'base' }))
+    .map(v => v.id);
 }
 
 // Id delle sezioni lasciate aperte; storage assente, bloccato o corrotto: nessuna.

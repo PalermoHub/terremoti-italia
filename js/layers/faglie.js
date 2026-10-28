@@ -103,7 +103,8 @@ function creaLegenda() {
 export default {
   id: 'faglie',
   titolo: 'Faglie capaci (ITHACA)',
-  gruppo: 'eventi',
+  gruppo: 'faglie-gruppo',
+  senzaIntestazione: true,
   sezione: 'Faglie capaci',
   sezioniFisse: true,
   argomento: { titolo: 'Faglie capaci', descrizione: 'Le faglie capaci d\'Italia del catalogo ITHACA di ISPRA, colorate per cinematica.' },

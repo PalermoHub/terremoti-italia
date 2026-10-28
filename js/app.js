@@ -18,15 +18,18 @@ import { creaRegolatoreRaggio } from './core/raggio-vicini.js';
 import { collegaMinimappa } from './core/minimappa.js';
 import { caricaTemaMagnitudo } from './core/tema-magnitudo.js';
 import { t } from './core/i18n.js';
-import eventi from './layers/eventi.js';
+import protezioneCivile from './layers/protezione-civile.js';
+import terremotiGruppo from './layers/terremoti-gruppo.js';
+import faglieGruppo from './layers/faglie-gruppo.js';
+import territorio from './layers/territorio.js';
 import comuni from './layers/comuni.js';
 import allerte from './layers/allerte.js';
 import terremoti from './layers/terremoti.js';
 import terremotiStorico from './layers/terremoti-storico.js';
+import terremotiConfronto, { nodoConfronto } from './layers/terremoti-confronto.js';
 import faglie from './layers/faglie.js';
 import faglieEgdi from './layers/faglie-egdi.js';
 import diss from './layers/diss.js';
-import terremotiConfronto, { nodoConfronto } from './layers/terremoti-confronto.js';
 import { collegaConfronto, apriConfronto } from './core/scheda-confronto.js';
 import base from './layers/base.js';
 
@@ -45,8 +48,9 @@ riduciLegenda.addEventListener('click', () => {
   riduciLegenda.textContent = ridotta ? t('app.legenda.apri') : t('html.legende.riduci');
 });
 
-// ordine = ordine di sovrapposizione dei layer (il primo sta sotto); «eventi» precede i moduli che mettono i loro strati nel suo gruppo
-const MODULI = [base, eventi, comuni, allerte, terremoti, terremotiStorico, terremotiConfronto, faglie, diss, faglieEgdi];
+// ordine = ordine di sovrapposizione dei layer (il primo sta sotto). I quattro gruppi precedono i moduli che mettono lì i
+// loro strati: Protezione Civile (allerte), Terremoti (tempo reale, archivio, confronto), Faglie (ITHACA, EGDI, DISS), Territorio (confini)
+const MODULI = [base, protezioneCivile, terremotiGruppo, faglieGruppo, territorio, comuni, allerte, terremoti, terremotiStorico, terremotiConfronto, faglie, faglieEgdi, diss];
 traduciModuli(MODULI);
 
 const map = creaMappa('mappa', () => segnala(t('app.basemap.errore')));

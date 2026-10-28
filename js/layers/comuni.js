@@ -136,7 +136,8 @@ function fornitore(e) {
 export default {
   id: 'comuni',
   titolo: 'Territorio',
-  sezioneAperta: true, // nel pannello Strati la sezione si apre da sola la prima volta: lo strato si vede subito
+  gruppo: 'territorio', // la sezione «Territorio» la crea il modulo js/layers/territorio.js
+  senzaIntestazione: true,
   argomento: { titolo: 'Confini comunali', descrizione: 'I confini dei comuni d\'Italia sopra la base cartografica: passando il mouse su un comune se ne leggono nome, provincia e regione, e un clic apre la scheda dei suoi terremoti.' },
   aggiungiSorgenti(map) {
     // la sorgente serve anche alla ricerca per area: la crea il modulo che passa per primo

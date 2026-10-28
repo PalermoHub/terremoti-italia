@@ -191,7 +191,8 @@ export const nodoConfronto = () => pannello?.nodo ?? null;
 export default {
   id: 'terremoti-confronto',
   titolo: 'Confronto terremoti',
-  gruppo: 'eventi',
+  gruppo: 'terremoti-gruppo',
+  senzaIntestazione: true,
   sezione: 'Confronto terremoti',
   sezioniFisse: true,
   argomento: { titolo: 'Confronto terremoti', descrizione: 'I terremoti di due periodi a confronto, dall\'archivio locale dei dati INGV: gli eventi del periodo A e del periodo B insieme in mappa, in colori diversi, con la tabella delle differenze.' },

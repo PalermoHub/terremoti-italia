@@ -236,8 +236,9 @@ export function costruisciPannello(map, moduli, contenitore, barra) {
   for (const m of moduli) {
     // un modulo con `gruppo` mette i suoi strati in un gruppo già esistente (che deve precederlo in MODULI)
     const gruppo = (m.gruppo && document.getElementById(`gruppo-${m.gruppo}`)) || aggiungi(m.id, m.titolo, m);
-    // `sezione`: titolo sopra gli strati di un modulo che condivide il gruppo con altri
-    const titolo = m.sezione ?? (perGruppo.get(m.gruppo ?? m.id) > 1 && m.strati.length ? m.argomento?.titolo ?? m.titolo : null);
+    // `sezione`: titolo sopra gli strati di un modulo che condivide il gruppo con altri;
+    // `senzaIntestazione`: il modulo ci rinuncia, così nel gruppo restano solo i nomi degli strati
+    const titolo = m.senzaIntestazione ? null : m.sezione ?? (perGruppo.get(m.gruppo ?? m.id) > 1 && m.strati.length ? m.argomento?.titolo ?? m.titolo : null);
     if (titolo) {
       const h = document.createElement('h3');
       h.className = 'gruppo-sezione';
@@ -304,13 +305,18 @@ export function costruisciPannello(map, moduli, contenitore, barra) {
     nuovoTab('filtri', ETICHETTE.filtri).append(filtri);
     filtri.hidden = false;
   }
-  // sezioni in ordine alfabetico (anche per i gruppi che arriveranno)
-  if (layer) layer.append(...ordinaSezioni(sezioni.map(el => ({ id: el.id, titolo: el.querySelector('h2').textContent }))).map(id => document.getElementById(id)));
+  // sezioni in ordine: prima quelle con un `ordine` dichiarato (Terremoti, Faglie, Protezione Civile, Territorio),
+  // poi le altre in ordine alfabetico (anche per i gruppi che arriveranno)
+  if (layer) {
+    const ordine = new Map(moduli.map(m => [m.id, m.ordine]));
+    layer.append(...ordinaSezioni(sezioni.map(el => ({ id: el.id, titolo: el.querySelector('h2').textContent, ordine: ordine.get(el.id.replace('gruppo-', '')) }))).map(id => document.getElementById(id)));
+  }
   const contenitori = [...gruppi.map(g => g.el).filter(el => el !== layer), ...sezioni];
-  // albero ripiegabile e strati riordinabili
+  // albero ripiegabile e strati riordinabili: ogni gruppo porta subito la mappa nell'ordine dell'elenco (in alto = sopra),
+  // poi l'ordine di disegno globale parte da lì
   const layersDi = new Map(moduli.flatMap(m => m.strati.map(s => [s.id, s.layers])));
-  const inizialeDisegno = ordineStrati(map.getStyle().layers.map(l => l.id), moduli.flatMap(m => m.strati));
   for (const el of contenitori) abilitaRiordino(map, el, layersDi, storage);
+  const inizialeDisegno = ordineStrati(map.getStyle().layers.map(l => l.id), moduli.flatMap(m => m.strati));
   // i titoli dei sottogruppi (es. «Immobili comunali», «PEBA» in Territorio) si aprono e si chiudono; dopo un riordino si riapplicano
   for (const el of contenitori) rendiPieghevoli(el);
   document.addEventListener(EVENTO_GRUPPO, () => contenitori.forEach(el => aggiornaSottogruppi(el, { ignora: !!cercando, riapri: true })));

@@ -17,7 +17,13 @@ mappa con un alone; se c'è un popup aperto, si chiude da solo per non coprire i
 Il codice sta in `js/core/evidenza-eventi.js`, in `js/layers/scheda-terremoti-dom.js` e in
 `js/layers/terremoti-archivio.js`.
 
-Nel pannello Strati, sezione **Territorio**, lo strato **Confini comunali** (spento all'avvio) disegna i bordi dei comuni:
+Il pannello Strati è diviso in quattro gruppi, in quest'ordine: **Terremoti** (tempo reale, archivio storico, confronto fra
+due periodi), **Faglie** (faglie capaci ITHACA, faglie EGDI, sorgenti sismogenetiche DISS), **Protezione Civile** (allerta
+meteo-idro) e **Territorio** (confini comunali). Ogni gruppo si apre e si chiude e porta il conteggio dei suoi strati accesi;
+dentro, gli strati si riordinano con le frecce o trascinandoli e l'ordine dell'elenco è anche quello di disegno (il primo
+strato è il più in alto sulla mappa).
+
+Nel gruppo **Territorio**, lo strato **Confini comunali** (spento all'avvio) disegna i bordi dei comuni:
 passando il mouse su un comune si leggono nome, provincia, regione, codice ISTAT e il totale dei terremoti dal 1985, il confine
 si evidenzia, e un clic apre la scheda dei suoi terremoti. Le stesse cose (tooltip ed evidenza) valgono sull'area scelta nella
 ricerca per regione, provincia o comune, anche con lo strato spento.
@@ -37,7 +43,12 @@ minimappa hanno la stessa larghezza e lo zoom è su una riga sotto le coordinate
 
 Come aggiungere un layer: un modulo in `js/layers/` con `id, titolo, gruppo, aggiungiSorgenti, aggiungiLayer, strati, scheda`
 (vedi `js/layers/allerte.js`), poi aggiungerlo a `MODULI` in `js/app.js`; i testi nuovi vanno in `js/locales/it.json` e `en.json`
-(`npm run test:js` dice cosa manca). Un layer acceso di default deve avere `visibility: 'visible'` esplicita.
+(`npm run test:js` dice cosa manca). `gruppo` è l'id di uno dei quattro gruppi (`protezione-civile`, `terremoti-gruppo`,
+`faglie-gruppo`, `territorio`): il gruppo è un modulo senza strati in `js/layers/` (es. `js/layers/protezione-civile.js`) che
+deve precedere in `MODULI` i moduli che lo riempiono, e dichiara con `ordine` la sua posizione nel pannello. Per un gruppo
+nuovo basta un modulo così; i moduli che ci mettono gli strati usano `gruppo: '<id>'` e, se gli strati devono comparire senza
+il sottotitolo del modulo, `senzaIntestazione: true`.
+Un layer acceso di default deve avere `visibility: 'visible'` esplicita.
 
 Il server locale risponde 200 vuoto agli intervalli di glifi mancanti (`/fonts/glyphs/...`): un 404 farebbe fallire interi tile a zoom basso.
 

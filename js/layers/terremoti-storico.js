@@ -144,7 +144,8 @@ function creaLegenda() {
 export default {
   id: 'terremoti-storico',
   titolo: 'Terremoti storici',
-  gruppo: 'eventi',
+  gruppo: 'terremoti-gruppo',
+  senzaIntestazione: true,
   sezione: 'Terremoti storici',
   sezioniFisse: true,
   argomento: { titolo: 'Terremoti storici', descrizione: 'I terremoti di un anno o di un periodo qualsiasi dal 1985, dall\'archivio locale dei dati INGV: scegli l\'anno o il periodo e la magnitudo minima, oppure confronta due periodi.' },

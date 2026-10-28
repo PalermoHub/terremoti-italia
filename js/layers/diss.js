@@ -132,7 +132,8 @@ function creaLegenda() {
 export default {
   id: 'diss',
   titolo: 'Sorgenti sismogenetiche (INGV DISS)',
-  gruppo: 'eventi',
+  gruppo: 'faglie-gruppo',
+  senzaIntestazione: true,
   sezione: 'Sorgenti sismogenetiche',
   sezioniFisse: true,
   argomento: { titolo: 'Sorgenti sismogenetiche', descrizione: 'Le sorgenti sismogenetiche del catalogo DISS 3.3.1 dell\'INGV, colorate come nella mappa DISS.' },

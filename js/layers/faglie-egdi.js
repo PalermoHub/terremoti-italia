@@ -111,7 +111,8 @@ function creaLegenda() {
 export default {
   id: 'faglie-egdi',
   titolo: 'Faglie (EGDI)',
-  gruppo: 'eventi',
+  gruppo: 'faglie-gruppo',
+  senzaIntestazione: true,
   sezione: 'Faglie (EGDI)',
   sezioniFisse: true,
   argomento: { titolo: 'Faglie (EGDI)', descrizione: 'Le faglie d\'Italia del dataset HIKE di GeoERA, servito da EGDI, colorate per tipo.' },

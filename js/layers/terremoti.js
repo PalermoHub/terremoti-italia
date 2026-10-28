@@ -255,7 +255,8 @@ function voceDelComune(comune) {
 export default {
   id: 'terremoti',
   titolo: 'Terremoti in tempo reale',
-  gruppo: 'eventi',
+  gruppo: 'terremoti-gruppo',
+  senzaIntestazione: true,
   sezione: 'Terremoti',
   sezioniFisse: true,
   argomento: { titolo: 'Terremoti in tempo reale', descrizione: 'I terremoti degli ultimi 30 giorni in Italia e nei mari vicini, dal servizio dell\'INGV: magnitudo, profondità e zona, aggiornati ogni 2 minuti.' },

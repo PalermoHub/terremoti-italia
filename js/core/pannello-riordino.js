@@ -63,6 +63,9 @@ export function abilitaRiordino(map, gruppo, layersDi, storage, { daElenco = fal
   if (!iniziali.length) return;
   const stackIniziale = () => map.getStyle().layers.map(l => l.id);
   const layersGruppo = () => iniziali.flatMap(b => layersDi.get(b.id) ?? []);
+  // All'apertura la mappa segue l'elenco (in alto = sopra): i moduli aggiungono i layer dal basso, l'ordine mostrato
+  // invece è quello del pannello. `originale` è lo stack dopo l'allineamento, cioè quello che «Ripristina ordine» rimette.
+  applicaMosse(map, mosseMappa(stackIniziale(), blocchi(gruppo).map(b => layersDi.get(b.id) ?? [])));
   const originale = (() => { const s = new Set(layersGruppo()); return stackIniziale().filter(id => s.has(id)); })();
   const ordineIniziale = iniziali.map(b => b.id);
 
