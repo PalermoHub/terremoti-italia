@@ -136,11 +136,26 @@ export function collegaRicerca(map, { terremoti = null, storico = null, comuni =
   pannello.append(nodoEventi);
   if (terremoti?.menuMagnitudo) pannello.append(terremoti.menuMagnitudo());
   if (terremoti?.menuProfondita) pannello.append(terremoti.menuProfondita());
+  let annoScelto = ''; // ultima scelta non personalizzata del menu «Anno», per tornare indietro se si annulla
   if (storico?.mostraAnno) {
     const selAnno = el('select');
     selAnno.id = 'filtro-anno';
-    selAnno.append(Object.assign(el('option', null, t('filtri.annoRealTime')), { value: '' }), ...storico.anni().map(a => Object.assign(el('option', null, String(a)), { value: String(a) })));
-    selAnno.addEventListener('change', () => storico.mostraAnno(selAnno.value === '' ? null : Number(selAnno.value), undefined, terremoti?.profonditaScelta?.() ?? null));
+    selAnno.append(
+      Object.assign(el('option', null, t('filtri.annoRealTime')), { value: '' }),
+      ...storico.anni().map(a => Object.assign(el('option', null, String(a)), { value: String(a) })),
+      Object.assign(el('option', null, t('terremoti.periodoPersonalizzato')), { value: 'personalizzato' }),
+    );
+    selAnno.addEventListener('change', () => {
+      if (selAnno.value === 'personalizzato') {
+        storico.mostraPeriodoPersonalizzato?.((applicato) => {
+          if (applicato) { annoScelto = 'personalizzato'; selAnno.value = 'personalizzato'; }
+          else selAnno.value = annoScelto;
+        });
+        return;
+      }
+      annoScelto = selAnno.value;
+      storico.mostraAnno(selAnno.value === '' ? null : Number(selAnno.value), undefined, terremoti?.profonditaScelta?.() ?? null);
+    });
     const etAnno = el('label', null, t('filtri.anno'));
     etAnno.htmlFor = 'filtro-anno';
     pannello.append(etAnno, selAnno);
@@ -183,6 +198,7 @@ export function collegaRicerca(map, { terremoti = null, storico = null, comuni =
     soloEventi = false;
     const anno = document.getElementById('filtro-anno');
     if (anno) anno.value = '';
+    annoScelto = '';
     storico?.mostraAnno?.(null); // spegne l'archivio storico e torna al tempo reale
     terremoti?.ripristinaFiltro?.(); // periodo, magnitudo, profondità, finestra, classi e fasce d'età iniziali
     spegniStratiTranne(); // resta acceso il solo strato «Terremoti in tempo reale»

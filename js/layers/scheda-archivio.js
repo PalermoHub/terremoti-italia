@@ -1,4 +1,5 @@
 import { URL_ARCHIVIO, CLASSI_MAG, classeMagnitudo, marcaSciami, momentoSismico, magnitudoDaMomento } from './scheda-terremoti.js';
+import { localeIntl } from '../core/i18n.js';
 
 // Modello puro dell'archivio storico: periodi (anni UTC), serie annuale e confronto tra due periodi, a partire dai riepiloghi di GET /terremoti/riepilogo.
 export const ANNO_INIZIO = 1985;
@@ -8,6 +9,20 @@ export const ANNO_RETE_COMPLETA = 2005;
 const GIORNO_MS = 86400000;
 
 export const periodoAnno = anno => ({ da: Date.UTC(anno, 0, 1), a: Date.UTC(anno + 1, 0, 1) - 1 });
+
+// Anno UTC del periodo e periodo che copre esattamente un anno: servono ai menu «Anno» e al confronto,
+// che per i periodi personalizzati mostrano un intervallo di date invece del solo anno.
+export const annoDi = p => new Date(p.da).getUTCFullYear();
+export const periodoAnnoIntero = p => {
+  const intero = periodoAnno(annoDi(p));
+  return p.da === intero.da && p.a === intero.a;
+};
+const dataPeriodo = ts => new Date(ts).toLocaleDateString(localeIntl(), { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+export const etichettaPeriodo = p => {
+  if (periodoAnnoIntero(p)) return String(annoDi(p));
+  const da = dataPeriodo(p.da), a = dataPeriodo(p.a);
+  return da === a ? da : `${da} – ${a}`;
+};
 
 // null = periodo valido; altrimenti la chiave i18n dell'errore
 export function periodoValido({ da, a }, adesso = Date.now()) {

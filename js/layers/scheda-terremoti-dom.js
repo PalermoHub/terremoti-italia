@@ -71,24 +71,27 @@ export const testoPeriodoBreve = p => (stessoGiorno(p.da, p.a)
 export const testoPeriodo = (f = filtro) => (f.periodo ? testoPeriodoBreve(f.periodo) : testoGiorni(f.giorni));
 
 // data «YYYY-MM-DD» nei campi del calendario, e ritorno ai millisecondi locali
-const valoreData = ts => {
+const valoreData = (ts, utc = false) => {
   const d = new Date(ts);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const anno = utc ? d.getUTCFullYear() : d.getFullYear();
+  const mese = (utc ? d.getUTCMonth() : d.getMonth()) + 1;
+  const giorno = utc ? d.getUTCDate() : d.getDate();
+  return `${anno}-${String(mese).padStart(2, '0')}-${String(giorno).padStart(2, '0')}`;
 };
-const inizioGiorno = valore => {
+const inizioGiorno = (valore, utc = false) => {
   const [anno, mese, giorno] = valore.split('-').map(Number);
-  return new Date(anno, mese - 1, giorno).getTime();
+  return utc ? Date.UTC(anno, mese - 1, giorno) : new Date(anno, mese - 1, giorno).getTime();
 };
-const fineGiorno = ts => {
+const fineGiorno = (ts, utc = false) => {
   const d = new Date(ts);
-  d.setHours(23, 59, 59, 999);
+  if (utc) d.setUTCHours(23, 59, 59, 999); else d.setHours(23, 59, 59, 999);
   return d.getTime();
 };
 const oggiInput = () => valoreData(Date.now());
 
 // Un solo dialogo per volta: si apre dal menu e restituisce il periodo scelto (o nulla se si annulla)
 let dialogoPeriodo = null;
-function apriDialogoPeriodo({ da = null, a = null, alApplica, alChiudi = null, limiteGiorni = null }) {
+export function apriDialogoPeriodo({ da = null, a = null, alApplica, alChiudi = null, limiteGiorni = null, utc = false }) {
   if (dialogoPeriodo) dialogoPeriodo.close();
   const dlg = el('dialog', 'terremoti-periodo-dialog');
   dlg.setAttribute('aria-label', t('terremoti.periodoDialogTitolo'));
@@ -100,7 +103,7 @@ function apriDialogoPeriodo({ da = null, a = null, alApplica, alChiudi = null, l
   const campoData = (etichetta, valore) => {
     const lab = el('label');
     const input = el('input');
-    Object.assign(input, { type: 'date', min: `${ANNO_INIZIO}-01-01`, max: oggiInput(), value: valore ? valoreData(valore) : '' });
+    Object.assign(input, { type: 'date', min: `${ANNO_INIZIO}-01-01`, max: oggiInput(), value: valore ? valoreData(valore, utc) : '' });
     input.setAttribute('aria-label', etichetta);
     lab.append(el('span', null, etichetta), input);
     return { lab, input };
@@ -121,25 +124,28 @@ function apriDialogoPeriodo({ da = null, a = null, alApplica, alChiudi = null, l
   form.append(titolo, nota, campi, errore, azioni);
   dlg.append(form);
   const sbaglia = chiave => { errore.textContent = t(chiave); errore.hidden = false; };
+  let applicato = false;
   annulla.addEventListener('click', () => dlg.close());
   form.addEventListener('submit', ev => {
     ev.preventDefault();
-    const daTs = dal.input.value ? inizioGiorno(dal.input.value) : null;
-    const aTs = al.input.value ? inizioGiorno(al.input.value) : null;
+    const daTs = dal.input.value ? inizioGiorno(dal.input.value, utc) : null;
+    const aTs = al.input.value ? inizioGiorno(al.input.value, utc) : null;
     if (daTs == null && aTs == null) { sbaglia('terremoti.periodoErrore'); return; }
     const inizio = daTs ?? aTs;
-    const fine = fineGiorno(aTs ?? daTs);
+    const fine = fineGiorno(aTs ?? daTs, utc);
     if (inizio > fine) { sbaglia('terremoti.arc.errInvertito'); return; }
-    if (new Date(inizio).getFullYear() < ANNO_INIZIO) { sbaglia('terremoti.arc.errPrima'); return; }
+    const annoInizio = utc ? new Date(inizio).getUTCFullYear() : new Date(inizio).getFullYear();
+    if (annoInizio < ANNO_INIZIO) { sbaglia('terremoti.arc.errPrima'); return; }
     if (inizio > Date.now()) { sbaglia('terremoti.arc.errFuturo'); return; }
     if (limiteGiorni && (fine - inizio) / GIORNO_MS > limiteGiorni) { sbaglia('terremoti.periodoErroreLungo'); return; }
+    applicato = true;
     alApplica({ da: inizio, a: fine });
     dlg.close();
   });
   dlg.addEventListener('close', () => {
     if (dialogoPeriodo === dlg) dialogoPeriodo = null;
     dlg.remove();
-    alChiudi?.();
+    alChiudi?.(applicato);
   });
   dlg.addEventListener('click', ev => { if (ev.target === dlg) dlg.close(); }); // clic sullo sfondo
   document.body.append(dlg);

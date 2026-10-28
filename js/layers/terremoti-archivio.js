@@ -1,10 +1,12 @@
-// Pannello della legenda dello strato «Terremoti storici»: sceglie l'anno da mostrare in mappa e confronta due anni.
+// Pannello della legenda dello strato «Terremoti storici»: sceglie l'anno (o un periodo personalizzato) da mostrare
+// in mappa e confronta due anni interi oppure due intervalli di date.
 // Il confronto usa GET /terremoti/riepilogo (conteggi aggregati dal server), non gli eventi in mappa: resta corretto oltre il tetto di eventi della mappa.
 import { t, localeIntl } from '../core/i18n.js';
 import { titoloConInfo, apriGrande } from '../core/info-grafico.js';
 import { zoomGrafico } from '../core/zoom-grafico.js';
 import { CLASSI_MAG, PROFONDITA } from './scheda-terremoti.js';
-import { ANNO_INIZIO, periodoAnno, periodoValido, avvisoCompletezza, confrontaPeriodi, giorniPeriodo, scaricaRiepilogo, riepilogoDaEventi, serieAnnuale, grigliaDensita } from './scheda-archivio.js';
+import { apriDialogoPeriodo } from './scheda-terremoti-dom.js';
+import { ANNO_INIZIO, periodoAnno, periodoAnnoIntero, periodoValido, annoDi, etichettaPeriodo, avvisoCompletezza, confrontaPeriodi, giorniPeriodo, scaricaRiepilogo, riepilogoDaEventi, serieAnnuale, grigliaDensita } from './scheda-archivio.js';
 
 const MAGNITUDO_ARCHIVIO = [2, 2.5, 3, 4, 5];
 const MAG_PREDEFINITA = 3; // a M ≥ 2 anni come il 2016 superano il tetto di eventi della mappa
@@ -28,6 +30,46 @@ function scelta(etichetta, valori, predefinito, testoValore = String) {
   sel.value = String(predefinito);
   lab.append(el('span', null, etichetta), sel);
   return { nodo: lab, valore: () => Number(sel.value) };
+}
+
+// Scelta dell'anno o di un periodo personalizzato (stesso calendario degli altri filtri): valore = { da, a } in UTC.
+function sceltaPeriodo(etichetta, anni, predefinito) {
+  const lab = el('label', 'terremoti-filtro');
+  const sel = el('select');
+  for (const a of anni) {
+    const o = el('option', null, String(a));
+    o.value = String(a);
+    sel.append(o);
+  }
+  const personalizzato = el('option', null, t('terremoti.periodoPersonalizzato'));
+  personalizzato.value = 'personalizzato';
+  sel.append(personalizzato);
+  const nota = el('small', 'terremoti-periodo-nota');
+  let periodo = periodoAnno(predefinito);
+  let custom = false;
+  const allinea = () => {
+    sel.value = custom ? 'personalizzato' : String(annoDi(periodo));
+    nota.hidden = !custom;
+    nota.textContent = custom ? etichettaPeriodo(periodo) : '';
+  };
+  sel.addEventListener('change', () => {
+    if (sel.value === 'personalizzato') {
+      apriDialogoPeriodo({
+        da: periodo.da,
+        a: periodo.a,
+        utc: true,
+        alApplica: p => { periodo = p; custom = true; allinea(); },
+        alChiudi: allinea,
+      });
+      return;
+    }
+    periodo = periodoAnno(Number(sel.value));
+    custom = false;
+    allinea();
+  });
+  allinea();
+  lab.append(el('span', null, etichetta), sel, nota);
+  return { nodo: lab, valore: () => periodo, personalizzato: () => custom };
 }
 
 // Scelta della classe di profondità: valore = { chiave, min, max } (min/max null = nessun limite)
@@ -78,14 +120,14 @@ export function pannelloArchivio({ carica, annoIniziale, magIniziale = MAG_PREDE
   const nodo = el('div', 'terremoti-pannello terremoti-archivio');
   const { adesso, anni } = anniArchivio();
   const { messaggio, esegui } = stato();
-  const annoMappa = scelta(t('terremoti.arc.anno'), anni, annoIniziale ?? adesso - 1);
+  const periodoMappa = sceltaPeriodo(t('terremoti.arc.anno'), anni, annoIniziale ?? adesso - 1);
   const magMappa = scelta(t('terremoti.arc.magMin'), MAGNITUDO_ARCHIVIO, magIniziale, m => `≥ ${magnitudo(m)}`);
   const profMappa = sceltaProfondita(t('terremoti.arc.prof'));
   const mostra = el('button', 'terremoti-archivio-btn', t('terremoti.arc.mostraBtn'));
   mostra.type = 'button';
   const nota = el('p', 'uffici-nota');
   const vaiMostra = () => {
-    const p = periodoAnno(annoMappa.valore());
+    const p = periodoMappa.valore();
     const errore = periodoValido(p);
     if (errore) { messaggio.textContent = t(errore); return; }
     const mag = magMappa.valore();
@@ -101,7 +143,7 @@ export function pannelloArchivio({ carica, annoIniziale, magIniziale = MAG_PREDE
   };
   mostra.addEventListener('click', vaiMostra);
   const filtri = el('div', 'terremoti-filtri');
-  filtri.append(annoMappa.nodo, magMappa.nodo, profMappa.nodo);
+  filtri.append(periodoMappa.nodo, magMappa.nodo, profMappa.nodo);
   nodo.append(el('strong', null, t('terremoti.arc.mostra')), filtri, mostra, nota, messaggio, el('p', 'uffici-nota', t('terremoti.arc.utc')));
   return { nodo, mostra: vaiMostra };
 }
@@ -128,8 +170,8 @@ export function pannelloConfronto({ carica, territorio = null, griglia = null })
   const { adesso, anni } = anniArchivio();
   const ora = Date.now(); // `adesso` è l'anno per i menu; i grafici vogliono il momento
   const { messaggio, esegui } = stato();
-  const annoA = scelta(t('terremoti.arc.periodoA'), anni, adesso - 2);
-  const annoB = scelta(t('terremoti.arc.periodoB'), anni, adesso - 1);
+  const periodoA = sceltaPeriodo(t('terremoti.arc.periodoA'), anni, adesso - 2);
+  const periodoB = sceltaPeriodo(t('terremoti.arc.periodoB'), anni, adesso - 1);
   const mag = scelta(t('terremoti.arc.magMin'), MAGNITUDO_ARCHIVIO, MAG_PREDEFINITA, m => `≥ ${magnitudo(m)}`);
   const prof = sceltaProfondita(t('terremoti.arc.prof'));
   const confronta = el('button', 'terremoti-archivio-btn', t('terremoti.arc.confronta'));
@@ -153,7 +195,8 @@ export function pannelloConfronto({ carica, territorio = null, griglia = null })
   };
   interruttore.addEventListener('change', disegnaGriglia);
   const vaiConfronta = () => {
-    const pa = periodoAnno(annoA.valore()), pb = periodoAnno(annoB.valore());
+    const pa = periodoA.valore(), pb = periodoB.valore();
+    const soloAnni = periodoAnnoIntero(pa) && periodoAnnoIntero(pb);
     const m = mag.valore();
     const p = prof.valore();
     ultimo = null;
@@ -175,24 +218,26 @@ export function pannelloConfronto({ carica, territorio = null, griglia = null })
       interruttore.disabled = false;
       // Le condizioni scritte sopra la tabella: senza, un confronto copiato o fotografato non dice a quali dati si riferisce
       const condizioni = t(area ? 'terremoti.arc.condizioniTerritorio' : 'terremoti.arc.condizioni', { mag: magnitudo(m), prof: t(`terremoti.arc.prof.${p.chiave}`) });
-      const avviso = avvisoCompletezza(annoA.valore(), annoB.valore(), m);
+      const avviso = avvisoCompletezza(annoDi(pa), annoDi(pb), m);
       const c = confrontaPeriodi(ra, rb, giorniPeriodo(pa), giorniPeriodo(pb));
-      const grafici = el('div', 'terremoti-confronto-grafici');
-      const cumulata = graficoCumulata(c, annoA.valore(), annoB.valore(), ora);
-      if (cumulata) grafici.append(cumulata);
-      esito.replaceChildren(...disegnaConfronto(c, annoA.valore(), annoB.valore(), adesso, condizioni, avviso, grafici));
+      // I grafici per anno e la cumulata mese per mese hanno senso solo con due anni interi: con un periodo
+      // personalizzato restano la tabella, le classi di magnitudo e la mappa.
+      const grafici = soloAnni ? el('div', 'terremoti-confronto-grafici') : null;
+      const cumulata = grafici ? graficoCumulata(c, annoDi(pa), annoDi(pb), ora) : null;
+      if (grafici && cumulata) grafici.append(cumulata);
+      esito.replaceChildren(...disegnaConfronto(c, pa, pb, adesso, condizioni, avviso, grafici, soloAnni));
       nota.textContent = mappa.a.troncato || mappa.b.troncato ? t('terremoti.arc.troncatoConfronto', { n: Math.max(mappa.a.n, mappa.b.n) }) : '';
       disegnaGriglia();
       // il grafico degli anni arriva dopo la tabella, così il confronto non aspetta una seconda richiesta
-      riepilogoStorico(m).then(storico => {
-        const grafico = graficoAnni(serieAnnuale(storico.perMese, ora), annoA.valore(), annoB.valore(), m);
+      if (soloAnni) riepilogoStorico(m).then(storico => {
+        const grafico = graficoAnni(serieAnnuale(storico.perMese, ora), annoDi(pa), annoDi(pb), m);
         if (grafico) grafici.prepend(grafico);
       }).catch(() => { /* il grafico storico è un di più: senza, la tabella resta */ });
     }, vaiConfronta);
   };
   confronta.addEventListener('click', vaiConfronta);
   const filtri = el('div', 'terremoti-filtri');
-  filtri.append(annoA.nodo, annoB.nodo, mag.nodo, prof.nodo);
+  filtri.append(periodoA.nodo, periodoB.nodo, mag.nodo, prof.nodo);
   if (territorio) filtri.append(territorio.nodo);
   nodo.append(el('strong', null, t('terremoti.arc.confrontaTitolo')), filtri, confronta);
   if (griglia) nodo.append(casella, notaGriglia);
@@ -219,15 +264,21 @@ const meseBreve = mese => new Date(`${mese}-01T00:00:00Z`).toLocaleDateString(lo
 const meseTesto = m => (m ? `${meseBreve(m.mese)} · ${numero(m.quota, m.quota < 10 ? 1 : 0)}%` : '–');
 const titoloMese = m => (m ? `${meseBreve(m.mese)} ${m.mese.slice(0, 4)}: ${numero(m.n)}` : null);
 
-// Tabella dei due anni e un istogramma con due barre per classe di magnitudo (stessa scala).
+// Tabella dei due periodi e un istogramma con due barre per classe di magnitudo (stessa scala).
 // `condizioni` (magnitudo minima, profondità, territorio) e `avviso` (completezza del catalogo) sono le due righe sopra la tabella.
-export function disegnaConfronto(c, annoA, annoB, annoCorrente, condizioni = null, avviso = null, grafici = null) {
+export function disegnaConfronto(c, periodoA, periodoB, adesso, condizioni = null, avviso = null, grafici = null, soloAnni = true) {
   if (!c.a.n && !c.b.n) return [el('p', 'uffici-nota', t('terremoti.arc.nessunEvento'))];
   const elementi = [];
   if (condizioni) elementi.push(el('p', 'uffici-nota', condizioni));
   if (avviso) elementi.push(el('p', 'uffici-nota terremoti-archivio-avviso', t(avviso)));
+  if (!soloAnni) elementi.push(el('p', 'uffici-nota', t('terremoti.arc.soloTabella')));
   const tabella = el('table', 'terremoti-archivio-tabella');
-  const nome = anno => (anno === annoCorrente ? `${anno} (${t('terremoti.arc.parziale')})` : String(anno));
+  const annoCorrente = new Date(adesso).getUTCFullYear();
+  const nome = p => {
+    if (!periodoAnnoIntero(p)) return etichettaPeriodo(p);
+    const anno = annoDi(p);
+    return anno === annoCorrente ? `${anno} (${t('terremoti.arc.parziale')})` : String(anno);
+  };
   const riga = (etichetta, a, b, d, titoloA = null, titoloB = null) => {
     const tr = el('tr');
     const cellaA = el('td', null, a), cellaB = el('td', null, b);
@@ -237,7 +288,7 @@ export function disegnaConfronto(c, annoA, annoB, annoCorrente, condizioni = nul
     return tr;
   };
   const intestazione = el('tr');
-  intestazione.append(el('th'), el('th', null, nome(annoA)), el('th', null, nome(annoB)), el('th', null, t('terremoti.arc.differenza')));
+  intestazione.append(el('th'), el('th', null, nome(periodoA)), el('th', null, nome(periodoB)), el('th', null, t('terremoti.arc.differenza')));
   const dif = c.differenza;
   const magTesto = m => (m == null ? '–' : numero(m, 1));
   tabella.append(
@@ -253,7 +304,7 @@ export function disegnaConfronto(c, annoA, annoB, annoCorrente, condizioni = nul
   if (dif.energia != null) elementi.push(el('p', 'uffici-nota', t('terremoti.arc.rapporto')));
   elementi.push(el('p', 'uffici-nota', t('terremoti.arc.lettura')));
   if (grafici) elementi.push(grafici);
-  elementi.push(graficoClassi(c, annoA, annoB));
+  elementi.push(graficoClassi(c, periodoA, periodoB));
   return elementi;
 }
 
@@ -337,31 +388,31 @@ function collegaTooltip(blocco) {
   blocco.addEventListener('wheel', nascondiTooltip, { passive: true });
 }
 
-// Istogramma per classe di magnitudo: due barre affiancate (anno A e B) sulla stessa scala;
+// Istogramma per classe di magnitudo: due barre affiancate (periodo A e B) sulla stessa scala;
 // nel popup i conteggi stanno sopra ogni barra.
-function graficoClassi(c, annoA, annoB, grande = false) {
+function graficoClassi(c, periodoA, periodoB, grande = false) {
   const eventi = t('terremoti.arc.eventi').toLocaleLowerCase(localeIntl());
   const max = Math.max(1, ...c.a.perClasse, ...c.b.perClasse);
   const titolo = t('terremoti.arc.classi');
   const blocco = el('div', `terremoti-serie terremoti-archivio-classi${grande ? ' grande' : ''}`);
-  blocco.append(titoloConInfo('h4', 'terremoti-titolo', titolo, 'confronto-classi', grande ? null : () => apriGrande(titolo, () => graficoClassi(c, annoA, annoB, true))));
+  blocco.append(titoloConInfo('h4', 'terremoti-titolo', titolo, 'confronto-classi', grande ? null : () => apriGrande(titolo, () => graficoClassi(c, periodoA, periodoB, true))));
   const chiave = el('div', 'terremoti-confronto-chiave');
-  for (const [anno, colore] of [[annoA, COLORE_A], [annoB, COLORE_B]]) {
+  for (const [periodo, colore] of [[periodoA, COLORE_A], [periodoB, COLORE_B]]) {
     const voce = el('span');
     const pallino = el('i');
     pallino.style.background = colore;
-    voce.append(pallino, el('span', null, String(anno)));
+    voce.append(pallino, el('span', null, etichettaPeriodo(periodo)));
     chiave.append(voce);
   }
   const istogramma = el('div', 'terremoti-archivio-istogramma');
   CLASSI_MAG.forEach((classe, i) => {
     const gruppo = el('div');
     const barre = el('div', 'terremoti-archivio-barre');
-    for (const [lato, anno, n] of [['a', annoA, c.a.perClasse[i]], ['b', annoB, c.b.perClasse[i]]]) {
+    for (const [lato, periodo, n] of [['a', periodoA, c.a.perClasse[i]], ['b', periodoB, c.b.perClasse[i]]]) {
       const colonna = el('div', 'terremoti-archivio-colonna');
       const b = el('i', `terremoti-archivio-${lato}`);
       b.style.height = `${n ? Math.max(4, n / max * 100) : 0}%`;
-      b.dataset.tip = `${anno} · ${nomeClasse(classe)}: ${numero(n)} ${eventi}`;
+      b.dataset.tip = `${etichettaPeriodo(periodo)} · ${nomeClasse(classe)}: ${numero(n)} ${eventi}`;
       if (grande) b.append(el('b', 'terremoti-archivio-conteggio', numero(n))); // sopra la barra, anche quando è a zero
       colonna.append(b);
       barre.append(colonna);

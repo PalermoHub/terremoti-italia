@@ -3,6 +3,7 @@ import { AREA_EVENTI } from '../core/config.js';
 import { scaricaEventiTutti, eventoDaIngv, modelloPopupTerremoto, voceTerremoto, voceSerie, voceAltri, filtro, colonneTabellaTerremoti, espressioneMagnitudo, passaMagnitudo } from './scheda-terremoti.js';
 import { EVENTO_FILTRO, barraEventi, graficoSerie, elencoAltri } from './scheda-terremoti-dom.js';
 import { pannelloConfronto } from './terremoti-archivio.js';
+import { etichettaPeriodo } from './scheda-archivio.js';
 import { creaPopupTerremoti, simboliRighe } from './terremoti-popup.js';
 import { EVENTO_TABELLA } from '../core/tabella-dati.js';
 import { registraTooltipStrati } from '../core/tooltip.js';
@@ -118,13 +119,12 @@ function creaChiave() {
   };
   const testoA = riga(COLORE_A);
   const testoB = riga(COLORE_B);
-  const anno = p => new Date(p.da).getUTCFullYear();
   return {
     nodo,
     update(pa, pb) {
       const conta = lato => eventi.filter(e => e.lato === lato).length;
-      testoA.textContent = `${anno(pa)} · ${conta('a')}`;
-      testoB.textContent = `${anno(pb)} · ${conta('b')}`;
+      testoA.textContent = `${etichettaPeriodo(pa)} · ${conta('a')}`;
+      testoB.textContent = `${etichettaPeriodo(pb)} · ${conta('b')}`;
       nodo.hidden = false;
     },
     // Con il tema magnitudo il colore del cerchio è la magnitudo e l'anno resta il bordo: la chiave mostra anelli.
@@ -202,7 +202,7 @@ export default {
   gruppo: 'eventi',
   sezione: 'Confronto terremoti',
   sezioniFisse: true,
-  argomento: { titolo: 'Confronto terremoti', descrizione: 'I terremoti di due anni a confronto, dall\'archivio locale dei dati INGV: gli eventi dell\'anno A e dell\'anno B insieme in mappa, in colori diversi, con la tabella delle differenze.' },
+  argomento: { titolo: 'Confronto terremoti', descrizione: 'I terremoti di due periodi a confronto, dall\'archivio locale dei dati INGV: gli eventi del periodo A e del periodo B insieme in mappa, in colori diversi, con la tabella delle differenze.' },
   aggiungiSorgenti(map) {
     map.addSource(SRC, { type: 'geojson', data: VUOTO, attribution: '<a href="https://terremoti.ingv.it/" target="_blank" rel="noopener">INGV</a>' });
     map.addSource(GRIGLIA, { type: 'geojson', data: VUOTO });
@@ -262,7 +262,7 @@ export default {
   },
   legendaPannello: '.lg-terremoti-confronto',
   strati: [{
-    id: 'terremoti-confronto', etichetta: 'Confronto terremoti (due anni)', layers: [PUNTI, ANNI], attivo: false, legendaPannello: '.lg-terremoti-confronto',
+    id: 'terremoti-confronto', etichetta: 'Confronto terremoti (due periodi)', layers: [PUNTI, ANNI], attivo: false, legendaPannello: '.lg-terremoti-confronto',
     suCambio(attivo) {
       acceso = attivo;
       if (legenda) legenda.hidden = !attivo;
