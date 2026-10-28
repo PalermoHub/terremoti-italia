@@ -6,7 +6,8 @@ import { zoomGrafico } from '../core/zoom-grafico.js';
 import { barraNavigazione } from '../core/scheda-navigazione.js';
 import { ANNO_INIZIO, periodoAnno, serieAnnuale, scaricaRiepilogo } from './scheda-archivio.js';
 import { iconaAttesa } from '../core/scheda-util.js';
-import { SCELTE_GIORNI, SCELTE_MAGNITUDO, PROFONDITA, UNITA, MAG_STORICO, ANNI_STORICO, filtro, chiaveProfondita, altriTerremoti, accordionTerremoti, posizioneEvento, urlStorico, rispostaDaArchivio, scaricaEventiTutti, eventiDaTesto, eventiDaFeatures, serieEventi, puntiMagnitudo, curvaCumulativa, omori, rilascioCumulativo, tempiTraEventi, spazioTempo, finestraTempo, proprietaStorico, voceTerremoto, inquadra, proiettaMiniatura, miniatura, etichettaBarra, periodoSequenza, statisticheEvento } from './scheda-terremoti.js';
+import { SCELTE_GIORNI, SCELTE_MAGNITUDO, PROFONDITA, UNITA, MAG_STORICO, ANNI_STORICO, filtro, chiaveProfondita, altriTerremoti, accordionTerremoti, posizioneEvento, urlStorico, rispostaDaArchivio, scaricaEventiTutti, eventiDaTesto, eventiDaFeatures, serieEventi, puntiMagnitudo, curvaCumulativa, omori, rilascioCumulativo, tempiTraEventi, spazioTempo, finestraTempo, proprietaStorico, voceTerremoto, inquadra, proiettaMiniatura, miniatura, etichettaBarra, periodoSequenza, statisticheEvento, sintesiSerie, quoteClassi, SOGLIA_BASSA } from './scheda-terremoti.js';
+import { coloreMagnitudo, raggioMagnitudo } from '../core/magnitudo.js';
 
 export const EVENTO_FILTRO = 'terremoti:filtro';
 
@@ -855,6 +856,37 @@ function disegnaRilascio(g, apri, grande = false, origine = g, interazione = nul
   return blocco;
 }
 
+// Quota di eventi e quota di energia per classe di magnitudo: pochi eventi forti liberano quasi tutta l'energia.
+const percentuale = f => `${(f * 100).toLocaleString(localeIntl(), { maximumFractionDigits: f > 0 && f < 0.1 ? 1 : 0 })}%`;
+function disegnaQuoteClassi(g) {
+  const q = quoteClassi(g.punti);
+  if (!q) return el('div');
+  const blocco = el('div', 'terremoti-serie');
+  blocco.append(titoloConInfo('h4', 'terremoti-titolo', t('terremoti.quote.titolo'), 'quote-energia'));
+  const forte = t('terremoti.quote.forte', { mag: mag1(q.magMax), quota: percentuale(q.quotaMax) });
+  blocco.append(el('p', 'terremoti-sintesi', q.sotto.n && q.sotto.n < q.totale
+    ? `${t('terremoti.quote.sotto', { n: num(q.sotto.n), soglia: SOGLIA_BASSA, eventi: percentuale(q.sotto.quotaEventi), energia: percentuale(q.sotto.quotaEnergia) })} ${forte}`
+    : forte));
+  const legenda = el('div', 'terremoti-quote-legenda');
+  legenda.append(el('span', 'ev', t('terremoti.quote.quotaEventi')), el('span', 'en', t('terremoti.quote.quotaEnergia')));
+  const righe = el('div', 'terremoti-quote');
+  for (const c of q.classi) {
+    const riga = el('div', 'terremoti-quote-riga');
+    riga.title = t('terremoti.quote.riga', { classe: c.classe.a === Infinity ? `≥ ${c.classe.da}` : `${c.classe.da}–${c.classe.a}`, n: num(c.n), eventi: percentuale(c.quotaEventi), energia: percentuale(c.quotaEnergia) });
+    const barra = (f, classe) => {
+      const b = el('div', `terremoti-quote-barra ${classe}`);
+      const asta = el('i');
+      asta.style.width = `${f ? Math.max(f * 100, 1.5) : 0}%`;
+      b.append(asta, el('span', null, percentuale(f)));
+      return b;
+    };
+    riga.append(el('b', null, c.classe.a === Infinity ? `≥ ${c.classe.da}` : `${c.classe.da}–${c.classe.a}`), barra(c.quotaEventi, 'ev'), barra(c.quotaEnergia, 'en'));
+    righe.append(riga);
+  }
+  blocco.append(legenda, righe, el('p', 'scheda-nota', t('terremoti.quote.nota')));
+  return blocco;
+}
+
 // Tempi tra eventi successivi: istogramma delle attese, da brevissime (sciame) a lunghe (attività di fondo)
 const nomeAttesa = min => (min < 60 ? `${min}${t('terremoti.attesa.min')}` : min < 1440 ? `${min / 60}${t('terremoti.attesa.ore')}` : min < 525600 ? `${min / 1440}${t('terremoti.attesa.giorni')}` : `1${t('terremoti.attesa.anni')}`);
 const intervalloAttesa = c => (c.a === Infinity ? `> ${nomeAttesa(c.da)}` : c.da ? `${nomeAttesa(c.da)} – ${nomeAttesa(c.a)}` : `< ${nomeAttesa(c.a)}`);
@@ -917,9 +949,113 @@ function disegnaSpazioTempo(g, apri, grande = false, origine = g, interazione = 
   return blocco;
 }
 
-function disegnaSerie(serie, grande = false, interazione = null) {
+// Vista «Sequenza»: un punto per evento, nel tempo e per magnitudo; colore e grandezza seguono la classe di magnitudo.
+// Ha la stessa forma di `puntiMagnitudo` ({ da, a, base, cima, punti con x e y, mainshock }), così nel popup si zooma con `finestraTempo`.
+function sequenzaDaSerie(serie, eventi) {
+  const da = serie.barre[0].da, a = serie.barre[serie.barre.length - 1].a;
+  const minimo = eventi.reduce((m, p) => Math.min(m, p.mag), Infinity), massimo = eventi.reduce((m, p) => Math.max(m, p.mag), -Infinity);
+  const base = Math.floor(minimo), cima = Math.max(base + 2, Math.ceil(massimo));
+  const durata = Math.max(1, a - da);
+  const punti = eventi.map(p => ({ ...p, x: Math.min(1, Math.max(0, (p.ts - da) / durata)), y: (p.mag - base) / (cima - base) })).sort((u, v) => u.ts - v.ts);
+  const mainshock = punti.reduce((m, p) => (!m || p.mag > m.mag ? p : m), null);
+  return { da, a, base, cima, punti, mainshock, repliche: mainshock ? punti.filter(p => p.ts > mainshock.ts).length : 0 };
+}
+
+function disegnaSequenzaPunti(g, grande, apri, sync, interazione) {
+  const { L, A, MS, MD, MA, MB } = dimensioni(grande);
+  const px = x => MS + x * (L - MS - MD), py = y => A - MB - y * (A - MB - MA);
+  const svg = nodoSvg('svg', { viewBox: `0 0 ${L} ${A}`, class: `terremoti-mt terremoti-sequenza-punti${grande ? ' grande' : ''}`, role: 'img', 'aria-label': t('terremoti.vista.sequenza') });
+  for (let m = g.base; m <= g.cima; m++) {
+    const y = py((m - g.base) / (g.cima - g.base));
+    svg.append(nodoSvg('line', { x1: MS, x2: L - MD, y1: y, y2: y, class: 'asse' }));
+    const e = nodoSvg('text', { x: MS - 4, y: y + 3, 'text-anchor': 'end', class: 'et' });
+    e.textContent = `M${m}`;
+    svg.append(e);
+  }
+  asseDate(svg, g, grande);
+  titoliAssi(svg, grande, null, 'terremoti.asse.mag');
+  lineaForte(svg, g, grande, px);
+  const raggio = p => raggioMagnitudo(p.mag) * (grande ? 0.9 : 0.6);
+  const disegnaPunto = (nodo, p) => nodo.append(nodoSvg('circle', { cx: px(p.x), cy: py(p.y), r: raggio(p), fill: coloreMagnitudo(p.mag), class: 'pt-classe' }));
+  if (interazione && g.punti.length > MAX_GRUPPI) {
+    for (const p of g.punti) disegnaPunto(svg, p);
+    agganciaPunti(svg, g.punti, apri, sync, px, py, i => g.punti[i].y, interazione);
+  } else {
+    for (const p of g.punti) {
+      const gruppo = nodoSvg('g', { class: 'evento' }, `M ${mag1(p.mag)} · ${dataEvento(p.ts)}`);
+      disegnaPunto(gruppo, p);
+      if (rendiApribile(gruppo, p, apri, sync, interazione)) gruppo.append(nodoSvg('circle', { cx: px(p.x), cy: py(p.y), r: grande ? 10 : 7, class: 'zona-punto' }));
+      svg.append(gruppo);
+    }
+  }
+  return svg;
+}
+
+// Vista scelta nel grafico a barre («conteggio» o «sequenza»): resta la stessa quando il grafico si ridisegna
+let vistaSerie = 'conteggio';
+
+// Selettore Conteggio / Sequenza sopra il grafico a barre
+function selettoreVista(suCambio) {
+  const gruppo = el('div', 'terremoti-vista');
+  gruppo.setAttribute('role', 'group');
+  gruppo.setAttribute('aria-label', t('terremoti.vista.etichetta'));
+  const bottoni = ['conteggio', 'sequenza'].map(v => {
+    const b = el('button', null, t(`terremoti.vista.${v}`));
+    b.type = 'button';
+    b.addEventListener('click', () => { vistaSerie = v; allinea(); suCambio(); });
+    return [v, b];
+  });
+  const allinea = () => bottoni.forEach(([v, b]) => { b.setAttribute('aria-pressed', String(v === vistaSerie)); b.classList.toggle('attivo', v === vistaSerie); });
+  allinea();
+  gruppo.append(...bottoni.map(([, b]) => b));
+  return gruppo;
+}
+
+// `apri(p)` apre l'evento in mappa; `finestra` = tratto di tempo zoomato nel popup (solo vista «Sequenza»)
+function disegnaSerie(serie, grande = false, interazione = null, apri = null, finestra = null) {
+  // la vista «Sequenza» serve solo quando ogni evento della serie è disponibile (le barre annuali dell'archivio hanno solo i riepiloghi)
+  const tutti = serie.barre.flatMap(b => b.punti);
+  const conSequenza = tutti.length > 0 && tutti.length === serie.totale;
+  const origine = conSequenza ? sequenzaDaSerie(serie, tutti) : null;
+  const ridisegna = chiudi => {
+    adattaDimensioni(conSequenza && vistaSerie === 'sequenza' ? 'spaziotempo' : 'barre'); // la vista «Sequenza» ha minimappa e scheda a fianco
+    return disegnaSerie(serie, true, interazione, apri && (p => { chiudi(); apri(p); }));
+  };
   const blocco = el('div', 'terremoti-serie');
-  blocco.append(intestazione(t('terremoti.barre.titolo'), 'barre', grande, () => disegnaSerie(serie, true, interazione)));
+  const testa = el('div', 'terremoti-testa');
+  testa.append(intestazione(t('terremoti.barre.titolo'), 'barre', grande, ridisegna));
+  const sintesi = sintesiSerie(serie);
+  if (sintesi) {
+    const { picco, n, volte } = sintesi;
+    const quando = etichettaBarra(picco, serie.unita).lunga;
+    testa.append(el('p', 'terremoti-sintesi', volte >= 1.5
+      ? t('terremoti.serie.sintesi', { eventi: tn('terremoti.nEventi', n, { n: num(n) }), quando, volte: Math.round(volte).toLocaleString(localeIntl()) })
+      : t('terremoti.serie.sintesiPiatta', { eventi: tn('terremoti.nEventi', n, { n: num(n) }), quando })));
+  }
+  const nota = serie.totale
+    ? serie.barre.length === 1
+      ? t('terremoti.serie.totaleUna', { n: num(serie.totale), mag: Math.max(filtro.magMin, MAG_STORICO) })
+      : t('terremoti.serie.totale', { n: num(serie.totale), mag: Math.max(filtro.magMin, MAG_STORICO), soglia: serie.soglia, unita: testoUnita(serie.unita) })
+    : t('terremoti.serie.vuota');
+  blocco.append(testa);
+  // nel popup il cambio di vista rifà tutto il blocco (la vista «Sequenza» ha una griglia diversa)
+  const cambiaVista = () => {
+    adattaDimensioni(vistaSerie === 'sequenza' ? 'spaziotempo' : 'barre');
+    blocco.replaceWith(disegnaSerie(serie, true, interazione, apri));
+  };
+
+  if (grande && conSequenza && vistaSerie === 'sequenza') {
+    // popup: come gli altri grafici nel tempo, con zoom e spostamento, minimappa e scheda dell'evento
+    const g = finestra ?? origine;
+    const sync = creaSync(apri);
+    testa.append(selettoreVista(cambiaVista));
+    const svg = disegnaSequenzaPunti(g, true, apri, sync, interazione);
+    blocco.append(svg, el('p', 'scheda-nota', nota));
+    aggiungiMappa(blocco, sync, g.punti, g.mainshock);
+    zoomGrande(blocco, svg, g, origine, gw => disegnaSerie(serie, true, interazione, apri, gw));
+    return blocco;
+  }
+  const sequenzaPunti = conSequenza && !grande ? disegnaSequenzaPunti(origine, false, null, null, interazione) : null; // nel popup la vista «Sequenza» è un blocco a parte
   const barre = el('div', `terremoti-barre${grande ? ' grande' : ''}`);
   const ogni = grande ? (serie.unita === 'giorno' ? 2 : 1) : serie.unita === 'giorno' ? 5 : serie.unita === 'mese' ? 3 : 1; // etichette sotto una barra ogni tanto: nella scheda lo spazio è poco
   serie.barre.forEach((b, i) => {
@@ -933,12 +1069,15 @@ function disegnaSerie(serie, grande = false, interazione = null) {
     rendiGruppo(colonna, b.punti, interazione, colonna.title); // la barra è un gruppo: sotto il mouse si vedono tutti i suoi eventi
     barre.append(colonna);
   });
+  const mostraVista = () => {
+    const punti = Boolean(sequenzaPunti) && vistaSerie === 'sequenza';
+    barre.style.display = punti ? 'none' : ''; // `hidden` perde contro il display:flex delle barre
+    if (sequenzaPunti) sequenzaPunti.style.display = punti ? '' : 'none';
+  };
+  if (conSequenza) testa.append(selettoreVista(grande ? cambiaVista : mostraVista));
   blocco.append(barre);
-  const nota = serie.totale
-    ? serie.barre.length === 1
-      ? t('terremoti.serie.totaleUna', { n: num(serie.totale), mag: Math.max(filtro.magMin, MAG_STORICO) })
-      : t('terremoti.serie.totale', { n: num(serie.totale), mag: Math.max(filtro.magMin, MAG_STORICO), soglia: serie.soglia, unita: testoUnita(serie.unita) })
-    : t('terremoti.serie.vuota');
+  if (sequenzaPunti) blocco.append(sequenzaPunti);
+  mostraVista();
   blocco.append(el('p', 'scheda-nota', nota));
   if (serie.sequenze.length) {
     const elenco = el('div', 'terremoti-sequenze');
@@ -1014,11 +1153,12 @@ export function graficoSerie(area, apri, { sorgente = null, adesso = null, evide
     const serie = archivio ? serieAnnuale(archivio.perMese) : serieEventi(dati, u, filtro.magMin, fine, periodoCustom);
     if (archivio) collegaEventiBarre(serie, dati);
     corpo.replaceChildren(
-      disegnaSerie(serie, false, interazione),
+      disegnaSerie(serie, false, interazione, apri),
       ...(archivio ? [el('p', 'scheda-nota', t('terremoti.serie.altriCinqueAnni'))] : []),
       disegnaMagnitudoTempo(g, apri, false, g, interazione),
       disegnaCurva(g, apri, false, g, interazione),
       disegnaRilascio(g, apri, false, g, interazione),
+      disegnaQuoteClassi(g),
       disegnaOmori(g, false, interazione),
       disegnaAttese(g, false, interazione),
       disegnaSpazioTempo(g, apri, false, g, interazione),

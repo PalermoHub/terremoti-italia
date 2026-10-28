@@ -1,7 +1,7 @@
 // Pannello «Filtro sulla mappa» nella legenda dei terremoti: serie temporale (eventi per giorno) con slider a due maniglie e istogramma di magnitudo a classi cliccabili.
 // Scrive nel filtro condiviso (`finestra`, `classi`) e avvisa con EVENTO_FILTRO: mappa, menu ed elenco si aggiornano da soli.
-import { t, localeIntl } from '../core/i18n.js';
-import { GIORNI_MAX, CLASSI_MAG, filtro, intervallo, eventiPerGiorno, eventiPerClasse, prossimaFinestra } from './scheda-terremoti.js';
+import { t, tn, localeIntl } from '../core/i18n.js';
+import { GIORNI_MAX, CLASSI_MAG, filtro, intervallo, eventiPerGiorno, eventiPerClasse, prossimaFinestra, sintesiClassi, SOGLIA_BASSA, SOGLIA_ALTA } from './scheda-terremoti.js';
 import { titoloConInfo } from '../core/info-grafico.js';
 import { EVENTO_FILTRO } from './scheda-terremoti-dom.js';
 
@@ -83,11 +83,20 @@ export function pannelloFiltro(eventi) {
     return { b, asta, conto };
   });
 
+  // scala logaritmica: i pochi eventi forti non restano invisibili accanto ai tanti deboli
+  let logaritmica = false;
+  const scala = el('label', 'terremoti-pf-scala');
+  const casellaScala = el('input');
+  casellaScala.type = 'checkbox';
+  casellaScala.addEventListener('change', () => { logaritmica = casellaScala.checked; aggiorna(); });
+  scala.append(casellaScala, el('span', null, t('terremoti.pf.logaritmica')));
+  const sintesi = el('p', 'terremoti-sintesi');
+
   const sezioneTempo = el('div', 'terremoti-pf-sezione-tempo');
   sezioneTempo.append(titoloConInfo('p', 'terremoti-pf-et', t('terremoti.pf.tempo'), 'pf-tempo'), barre, slider);
   const notaPeriodo = el('p', 'uffici-nota terremoti-pf-periodo');
   notaPeriodo.hidden = true;
-  corpo.append(sezioneTempo, notaPeriodo, titoloConInfo('p', 'terremoti-pf-et', t('terremoti.pf.magnitudo'), 'pf-magnitudo'), istogramma, el('p', 'uffici-nota', t('terremoti.pf.nota')));
+  corpo.append(sezioneTempo, notaPeriodo, titoloConInfo('p', 'terremoti-pf-et', t('terremoti.pf.magnitudo'), 'pf-magnitudo'), istogramma, sintesi, scala, el('p', 'uffici-nota', t('terremoti.pf.nota')));
   nodo.append(testa, testoIntervallo, corpo);
   apri(false);
 
@@ -156,9 +165,16 @@ export function pannelloFiltro(eventi) {
     testoIntervallo.textContent = filtro.finestra ? t('terremoti.pf.intervallo', { da: giorno(dal), a: al === Infinity ? t('terremoti.pf.finoAdesso') : giorno(al) }) : '';
     const perClasse = eventiPerClasse(tutti, filtro, adesso);
     const maxClasse = Math.max(1, ...perClasse);
+    const altezza = n => (logaritmica ? Math.log10(1 + n) / Math.log10(1 + maxClasse) : n / maxClasse) * 100;
+    const riepilogo = sintesiClassi(perClasse);
+    sintesi.hidden = !riepilogo;
+    if (riepilogo) {
+      const alte = riepilogo.daAlta ? tn('terremoti.pf.sintesiAlte', riepilogo.daAlta, { soglia: SOGLIA_ALTA }) : t('terremoti.pf.sintesiNessuna', { soglia: SOGLIA_ALTA });
+      sintesi.textContent = t('terremoti.pf.sintesi', { quota: Math.round(riepilogo.quotaSotto * 100).toLocaleString(localeIntl()), soglia: SOGLIA_BASSA, alte });
+    }
     classi.forEach(({ b, asta, conto }, i) => {
       conto.textContent = perClasse[i].toLocaleString(localeIntl());
-      asta.style.height = `${perClasse[i] ? Math.max(6, perClasse[i] / maxClasse * 100) : 0}%`;
+      asta.style.height = `${perClasse[i] ? Math.max(6, altezza(perClasse[i])) : 0}%`;
       const accesa = !filtro.classi || filtro.classi.has(i);
       b.classList.toggle('spenta', !accesa);
       b.setAttribute('aria-pressed', String(accesa));

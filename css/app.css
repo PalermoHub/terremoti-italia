@@ -2345,6 +2345,24 @@ a.scheda-badge-tinta:hover, a.scheda-badge-tinta:focus-visible { background: col
 .terremoti-barra i { display: block; width: 100%; border-radius: 2px 2px 0 0; background: var(--accent); opacity: .7; }
 .terremoti-barra i.sciame { background: #e03131; opacity: 1; }
 .terremoti-barra span { height: 14px; font-size: 10px; line-height: 14px; color: var(--text-muted); white-space: nowrap; overflow: visible; }
+.terremoti-sintesi { margin: 4px 0 8px; font-size: var(--fs-sm); line-height: 1.4; color: var(--text); }
+.terremoti-vista { display: inline-flex; margin: 2px 0 6px; border: 1px solid var(--border-ui); border-radius: var(--r-sm); overflow: hidden; }
+.terremoti-vista button { padding: 3px 10px; border: 0; background: var(--surface); color: var(--text-muted); font: inherit; font-size: var(--fs-xs); cursor: pointer; }
+.terremoti-vista button + button { border-left: 1px solid var(--border-ui); }
+.terremoti-vista button.attivo { background: var(--accent); color: #1f1300; font-weight: 700; }
+.terremoti-sequenza-punti .pt-classe { stroke: rgba(0, 0, 0, .35); stroke-width: .5; fill-opacity: .9; }
+.terremoti-sequenza-punti .evento:hover .pt-classe, .terremoti-sequenza-punti .evento:focus .pt-classe { stroke: var(--text); stroke-width: 1.5; }
+.terremoti-quote-legenda { display: flex; gap: 14px; margin: 4px 0 6px; font-size: 10px; color: var(--text-muted); }
+.terremoti-quote-legenda span::before { content: ''; display: inline-block; width: 8px; height: 8px; margin-right: 4px; border-radius: 2px; background: var(--text-muted); opacity: .55; }
+.terremoti-quote-legenda .en::before { background: var(--accent); opacity: 1; }
+.terremoti-quote-riga { display: grid; grid-template-columns: 34px 1fr; gap: 1px 8px; align-items: center; margin-bottom: 8px; }
+.terremoti-quote-riga b { grid-row: 1 / span 2; font-size: 10px; font-weight: 600; color: var(--text-muted); white-space: nowrap; }
+.terremoti-quote-barra { display: flex; align-items: center; gap: 6px; height: 11px; }
+.terremoti-quote-barra i { display: block; height: 100%; border-radius: 0 2px 2px 0; }
+.terremoti-quote-barra.ev i { background: var(--text-muted); opacity: .55; }
+.terremoti-quote-barra.en i { background: var(--accent); }
+.terremoti-quote-barra span { font-size: 10px; line-height: 1; color: var(--text); white-space: nowrap; }
+.terremoti-pf-scala { display: flex; align-items: center; gap: 6px; margin: 4px 0; font-size: var(--fs-xs); color: var(--text-muted); cursor: pointer; }
 .terremoti-serie { margin: 14px 0; padding: 4px 12px 12px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface, rgba(127,127,127,.05)); }
 .terremoti-serie .scheda-nota { margin: 6px 0 0; }
 .terremoti-titolo { margin: 10px 0 4px; font-size: var(--fs-xs); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
@@ -2742,3 +2760,4 @@ details.scheda-sez-evento .scheda-sez-testo { display: contents; }
    magnitudo ha lo slider a due maniglie, tre nella scheda) e l'etichetta non sborda in quella accanto */
 .legenda .terremoti-filtri { display: grid; grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); align-items: start; gap: 8px; }
 .legenda .terremoti-filtro > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.terremoti-serie.con-mappa > .terremoti-testa { grid-column: 1 / -1; grid-row: 1; }

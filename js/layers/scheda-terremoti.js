@@ -683,6 +683,48 @@ export function rilascioCumulativo(g) {
   return { passi, totale: tot, magEquiv: magnitudoDaMomento(tot), quotaMax: momentoSismico(g.mainshock.mag) / tot };
 }
 
+// Sintesi della serie a barre: la barra più alta e quante volte supera la media delle barre. Null senza eventi o con una sola barra.
+export function sintesiSerie(serie) {
+  if (!serie.totale || serie.barre.length < 2) return null;
+  const picco = serie.barre.reduce((m, b) => (b.n > m.n ? b : m), serie.barre[0]);
+  return { picco, n: picco.n, volte: picco.n / (serie.totale / serie.barre.length) };
+}
+
+// Soglia di magnitudo dei titoli-conclusione («sotto M 3», «M 4 o più»)
+export const SOGLIA_BASSA = 3;
+export const SOGLIA_ALTA = 4;
+const quota = (parte, tutto) => (tutto ? parte / tutto : 0);
+
+// Eventi per classe di magnitudo, in quota del totale: dalle sole classi (istogramma del filtro), senza bisogno degli eventi.
+export function sintesiClassi(perClasse) {
+  const totale = perClasse.reduce((s, n) => s + n, 0);
+  if (!totale) return null;
+  const somma = filtra => perClasse.reduce((s, n, i) => (filtra(CLASSI_MAG[i]) ? s + n : s), 0);
+  return { totale, sotto: somma(c => c.a <= SOGLIA_BASSA), quotaSotto: quota(somma(c => c.a <= SOGLIA_BASSA), totale), daAlta: somma(c => c.da >= SOGLIA_ALTA) };
+}
+
+// Quota di eventi e quota di energia (momento sismico) per ogni classe di magnitudo, sugli eventi `punti` del grafico.
+// `sotto` = eventi sotto SOGLIA_BASSA e quanta energia liberano; `quotaMax` = quota di energia dell'evento più forte (`magMax`).
+export function quoteClassi(punti) {
+  if (!punti.length) return null;
+  const energia = Array(CLASSI_MAG.length).fill(0), eventi = Array(CLASSI_MAG.length).fill(0);
+  let sottoN = 0, sottoE = 0, totaleE = 0, forte = punti[0];
+  for (const p of punti) {
+    const i = classeMagnitudo(p.mag), m0 = momentoSismico(p.mag);
+    eventi[i]++;
+    energia[i] += m0;
+    totaleE += m0;
+    if (p.mag < SOGLIA_BASSA) { sottoN++; sottoE += m0; }
+    if (p.mag > forte.mag) forte = p;
+  }
+  return {
+    totale: punti.length,
+    classi: CLASSI_MAG.map((c, i) => ({ classe: c, n: eventi[i], quotaEventi: quota(eventi[i], punti.length), quotaEnergia: quota(energia[i], totaleE) })),
+    sotto: { n: sottoN, quotaEventi: quota(sottoN, punti.length), quotaEnergia: quota(sottoE, totaleE) },
+    magMax: forte.mag, quotaMax: quota(momentoSismico(forte.mag), totaleE),
+  };
+}
+
 // Tempi tra eventi successivi: classi (minuti) dall'attesa più breve alla più lunga. Un'attività di fondo ha attese lunghe e sparse;
 // uno sciame riempie le classi brevi. `cv` = deviazione standard / media delle attese: ≈ 1 se gli eventi arrivano a caso, > 1 se sono raggruppati.
 export const CLASSI_ATTESA = [0, 1, 10, 60, 360, 1440, 4320, 10080, 43200, 129600, 525600]; // minuti: inizio di ogni classe
