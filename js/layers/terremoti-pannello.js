@@ -3,7 +3,7 @@
 import { t, localeIntl } from '../core/i18n.js';
 import { GIORNI_MAX, CLASSI_MAG, filtro, intervallo, eventiPerGiorno, eventiPerClasse, prossimaFinestra } from './scheda-terremoti.js';
 import { titoloConInfo } from '../core/info-grafico.js';
-import { EVENTO_FILTRO, testoPeriodoBreve } from './scheda-terremoti-dom.js';
+import { EVENTO_FILTRO } from './scheda-terremoti-dom.js';
 
 const PASSO_RIPRODUZIONE_MS = 700;
 const GIORNO_MS = 86400000;
@@ -136,7 +136,7 @@ export function pannelloFiltro(eventi) {
     // l'istogramma di magnitudo e il comando «Azzera».
     sezioneTempo.hidden = personalizzato;
     notaPeriodo.hidden = !personalizzato;
-    notaPeriodo.textContent = personalizzato ? t('terremoti.pf.periodoNota', { periodo: testoPeriodoBreve(filtro.periodo) }) : '';
+    notaPeriodo.textContent = personalizzato ? t('terremoti.pf.periodoNota') : '';
     riproduci.hidden = personalizzato;
     if (personalizzato) ferma();
     if (!personalizzato) {
@@ -152,10 +152,8 @@ export function pannelloFiltro(eventi) {
       });
     }
     const [dal, al] = intervallo(filtro, adesso);
-    testoIntervallo.hidden = !filtro.finestra && !filtro.periodo; // la riga dice l'intervallo scelto, anche a grafici chiusi
-    testoIntervallo.textContent = filtro.periodo
-      ? testoPeriodoBreve(filtro.periodo)
-      : filtro.finestra ? t('terremoti.pf.intervallo', { da: giorno(dal), a: al === Infinity ? t('terremoti.pf.finoAdesso') : giorno(al) }) : '';
+    testoIntervallo.hidden = !filtro.finestra; // la riga dice l'intervallo scelto, anche a grafici chiusi
+    testoIntervallo.textContent = filtro.finestra ? t('terremoti.pf.intervallo', { da: giorno(dal), a: al === Infinity ? t('terremoti.pf.finoAdesso') : giorno(al) }) : '';
     const perClasse = eventiPerClasse(tutti, filtro, adesso);
     const maxClasse = Math.max(1, ...perClasse);
     classi.forEach(({ b, asta, conto }, i) => {

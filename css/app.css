@@ -831,6 +831,7 @@ dialog li { margin: 4px 0; }
 /* Tema magnitudo (js/core/tema-magnitudo.js): le classi al posto delle fasce d'età nella legenda dei terremoti.
    `.legenda div` disporrebbe le righe in fila: il contenitore resta un blocco, una riga per classe. */
 .legenda .legenda-fasce, .legenda .legenda-magnitudo-classi { display: block; }
+.legenda [hidden] { display: none; }
 .legenda-magnitudo-riga { display: flex; align-items: center; gap: 6px; padding: 2px 0; font-size: var(--fs-xs); cursor: pointer; }
 .legenda-magnitudo-riga input { position: absolute; width: 1px; height: 1px; margin: 0; opacity: 0; pointer-events: none; }
 .legenda-magnitudo-riga:has(input:not(:checked)) { opacity: .4; }
@@ -869,7 +870,7 @@ dialog li { margin: 4px 0; }
 /* Legenda sotto lo strato, nel pannello Layer (js/core/legenda-pannello.js) */
 .legenda-sostituita, .legenda-vuota { display: none; }
 .legenda-in-pannello { margin: 0 0 8px 38px; padding: 4px 8px 6px; border-left: 2px solid var(--border-ui); font-size: var(--fs-xs); }
-.legenda-in-pannello:has(> .legenda[hidden]), .legenda-in-pannello:has(> .legenda > [hidden]), .legenda-in-pannello:has(> .legenda-sostituita) { display: none; }
+.legenda-in-pannello:has(> .legenda[hidden]), .legenda-in-pannello:has(> .legenda-sostituita) { display: none; }
 .legenda-in-pannello > summary { cursor: pointer; font-weight: 700; color: var(--text-muted); list-style: none; }
 .legenda-in-pannello > summary::-webkit-details-marker { display: none; }
 .legenda-in-pannello > summary::before { content: '▸ '; }

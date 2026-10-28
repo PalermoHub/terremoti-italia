@@ -73,8 +73,10 @@ function intervalloDaCaricare(adesso) {
 async function aggiorna() {
   const mia = ++richiesta;
   const adesso = Date.now();
-  const { da, a } = intervalloDaCaricare(adesso);
   const chiave = chiavePeriodo(filtro.periodo);
+  // un periodo già tutto nel passato non cambia: si evita di rileggerlo a ogni giro del timer
+  if (periodoNelPassato() && caricato === chiave) { pianifica(); return; }
+  const { da, a } = intervalloDaCaricare(adesso);
   try {
     const scarico = await scaricaEventi({ da, a, magMin: MAGNITUDO_MIN, area: AREA });
     if (mia !== richiesta) return;

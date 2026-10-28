@@ -140,6 +140,7 @@ function apriDialogoPeriodo({ da = null, a = null, alApplica, alChiudi = null })
     dlg.remove();
     alChiudi?.();
   });
+  dlg.addEventListener('click', ev => { if (ev.target === dlg) dlg.close(); }); // clic sullo sfondo
   document.body.append(dlg);
   dialogoPeriodo = dlg;
   dlg.showModal();
