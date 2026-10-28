@@ -347,6 +347,47 @@ const MASSIMO_MAPPA = 5000; // come MASSIMO_EVENTI del server
 const MASSIMO_TESTO = 200000; // come MASSIMO_TESTO del server: il formato testo non ha il tetto della mappa
 const GIORNI_SNAPSHOT = 29; // lo snapshot copre gli ultimi 30 giorni: un intervallo che parte prima va cercato nell'archivio
 
+// Senza il server locale (GitHub Pages, Live Server) lo snapshot e l'archivio per anno possono essere vecchi di ore o di
+// giorni: per la finestra viva si chiede allora direttamente all'INGV, che risponde con CORS aperto e ha gli eventi appena
+// registrati. Se l'INGV non risponde (429), valgono lo snapshot e l'archivio come prima.
+export const URL_INGV = 'https://webservices.ingv.it/fdsnws/event/1/query';
+const PAGINA_INGV = 1000; // come il server: l'INGV numera `offset` da 1
+const PAGINE_INGV = 20; // freno: 20.000 eventi in una richiesta dal browser sono già troppi
+const VIVO_DA_MS = 31 * GIORNO_MS; // più indietro è storia: la servono i file per anno, non l'INGV
+const VIVO_A_MS = 2 * GIORNO_MS;
+const secondi = ms => new Date(ms).toISOString().slice(0, 19);
+
+// Eventi dell'intervallo dal servizio FDSN dell'INGV, a pagine e senza duplicati (un evento nuovo può spostare le pagine)
+async function scaricaDaIngv({ da, a, magMin, area }, fetchFn = fetch) {
+  const visti = new Map();
+  for (let p = 0; p < PAGINE_INGV; p++) {
+    const q = new URLSearchParams({
+      format: 'geojson', starttime: secondi(da), endtime: secondi(a), orderby: 'time', minmag: String(magMin),
+      minlon: String(area.minlon), minlat: String(area.minlat), maxlon: String(area.maxlon), maxlat: String(area.maxlat),
+      limit: String(PAGINA_INGV), offset: String(1 + p * PAGINA_INGV),
+    });
+    const r = await fetchFn(`${URL_INGV}?${q}`);
+    if (r.status === 204) return { eventi: [...visti.values()], troncato: false };
+    if (!r.ok) throw new Error(`INGV ${r.status}`);
+    const features = (await r.json()).features ?? [];
+    for (const feat of features) if (feat?.properties?.eventId != null) visti.set(String(feat.properties.eventId), feat);
+    if (features.length < PAGINA_INGV) return { eventi: [...visti.values()], troncato: false };
+  }
+  return { eventi: [...visti.values()], troncato: true };
+}
+
+// Ripiego senza server: INGV per la finestra viva, altrimenti l'archivio per anno o lo snapshot
+async function daFontiStatiche({ da, a, magMin, profMin, profMax, area, adesso, fetchFn, massimo, stato }) {
+  if (a > adesso - VIVO_A_MS && da > adesso - VIVO_DA_MS) {
+    const vivo = await scaricaDaIngv({ da, a, magMin, area }, fetchFn).catch(() => null);
+    if (vivo) return vivo;
+  }
+  if (da < adesso - GIORNI_SNAPSHOT * GIORNO_MS) return rispostaDaArchivio({ da, a, magMin, profMin, profMax }, fetchFn, massimo);
+  const s = await fetchFn(`${URL_SNAPSHOT}terremoti.json`).catch(() => null);
+  if (!s?.ok) throw new Error(`archivio ${stato ?? 'non raggiungibile'}`);
+  return rispostaDaSnapshot(await s.json(), { da, a, magMin, profMin, profMax }, massimo);
+}
+
 // Riga compatta dell'archivio statico → feature GeoJSON dell'INGV
 const featureDaRiga = ([eventId, time, lat, lon, prof, mag, magType, place, type]) => ({
   type: 'Feature', geometry: { type: 'Point', coordinates: prof == null ? [lon, lat] : [lon, lat, prof] },
@@ -409,15 +450,10 @@ export async function scaricaEventi({ da, a, magMin, profMin = null, profMax = n
   const q = new URLSearchParams({ da: String(da), a: String(a), magmin: String(magMin), bbox: [area.minlon, area.minlat, area.maxlon, area.maxlat].join(',') });
   if (profMin != null) q.set('profmin', String(profMin));
   if (profMax != null) q.set('profmax', String(profMax));
-  let dati;
   const r = await fetchFn(`/terremoti?${q}`).catch(() => null);
-  if (r?.ok) dati = await r.json();
-  else if (da < adesso - GIORNI_SNAPSHOT * GIORNO_MS) dati = await rispostaDaArchivio({ da, a, magMin, profMin, profMax }, fetchFn);
-  else {
-    const s = await fetchFn(`${URL_SNAPSHOT}terremoti.json`).catch(() => null);
-    if (!s?.ok) throw new Error(`archivio ${r?.status ?? 'non raggiungibile'}`);
-    dati = rispostaDaSnapshot(await s.json(), { da, a, magMin, profMin, profMax });
-  }
+  // un server statico può rispondere 200 con l'HTML della pagina invece del JSON: in quel caso valgono le fonti statiche
+  let dati = r?.ok ? await r.json().catch(() => null) : null;
+  if (!dati) dati = await daFontiStatiche({ da, a, magMin, profMin, profMax, area, adesso, fetchFn, massimo: MASSIMO_MAPPA, stato: r?.status });
   return { eventi: eventiNelFiltro(dati.eventi, area, profMin, profMax), troncato: Boolean(dati.troncato) };
 }
 
@@ -432,12 +468,7 @@ export async function scaricaEventiTutti({ da, a, magMin, profMin = null, profMa
   if (r?.ok) {
     const righe = eventiDaTesto(await r.text());
     dati = { eventi: righe.map(featureDaEventoTesto), troncato: righe.length >= MASSIMO_TESTO };
-  } else if (da < adesso - GIORNI_SNAPSHOT * GIORNO_MS) dati = await rispostaDaArchivio({ da, a, magMin, profMin, profMax }, fetchFn, Infinity);
-  else {
-    const s = await fetchFn(`${URL_SNAPSHOT}terremoti.json`).catch(() => null);
-    if (!s?.ok) throw new Error(`archivio ${r?.status ?? 'non raggiungibile'}`);
-    dati = rispostaDaSnapshot(await s.json(), { da, a, magMin, profMin, profMax }, Infinity);
-  }
+  } else dati = await daFontiStatiche({ da, a, magMin, profMin, profMax, area, adesso, fetchFn, massimo: Infinity, stato: r?.status });
   return { eventi: eventiNelFiltro(dati.eventi, area, profMin, profMax), troncato: Boolean(dati.troncato) };
 }
 
