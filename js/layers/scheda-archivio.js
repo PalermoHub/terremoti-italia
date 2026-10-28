@@ -150,6 +150,17 @@ export function riferimentoAnnuale(serie, magMin, adesso = Date.now()) {
   return mediana > 0 ? { mediana, da: anni[0].anno, a: anni.at(-1).anno } : null;
 }
 
+// Dove cade un anno rispetto agli altri anni confrontabili (gli stessi di riferimentoAnnuale): volte la mediana e posizione
+// in classifica (1 = anno con più eventi). Null se l'anno è fuori dall'intervallo di riferimento o senza eventi.
+export function posizioneAnnuale(serie, anno, magMin, adesso = Date.now()) {
+  const rif = riferimentoAnnuale(serie, magMin, adesso);
+  if (!rif || anno < rif.da || anno > rif.a) return null;
+  const anni = serie.barre.map(b => ({ anno: new Date(b.da).getFullYear(), n: b.n })).filter(b => b.anno >= rif.da && b.anno <= rif.a);
+  const questo = anni.find(b => b.anno === anno);
+  if (!questo?.n) return null;
+  return { anno, n: questo.n, volte: questo.n / rif.mediana, posto: anni.filter(b => b.n > questo.n).length + 1, su: anni.length, mediana: rif.mediana, da: rif.da, a: rif.a };
+}
+
 // Frequenza cumulata (Gutenberg-Richter): per ogni magnitudo presente, quanti eventi hanno magnitudo uguale o maggiore.
 // In scala logaritmica è quasi una retta: la sua pendenza dice quanti eventi forti ci sono rispetto ai deboli.
 export function frequenzaCumulata(perMagnitudo, magMin = -Infinity) {

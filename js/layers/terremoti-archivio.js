@@ -6,7 +6,7 @@ import { titoloConInfo, apriGrande } from '../core/info-grafico.js';
 import { zoomGrafico } from '../core/zoom-grafico.js';
 import { CLASSI_MAG, PROFONDITA } from './scheda-terremoti.js';
 import { apriDialogoPeriodo, creaInterazione, rendiGruppo } from './scheda-terremoti-dom.js';
-import { ANNO_INIZIO, periodoAnno, periodoAnnoIntero, periodoValido, annoDi, etichettaPeriodo, avvisoCompletezza, confrontaPeriodi, giorniPeriodo, scaricaRiepilogo, riepilogoDaEventi, serieAnnuale, grigliaDensita, conclusioniConfronto, quoteEnergiaClassi, riferimentoAnnuale, frequenzaCumulata, valoreB, serieGiornaliera, eventiPerEnergia, eventiMagMax, eventiDelMese } from './scheda-archivio.js';
+import { ANNO_INIZIO, periodoAnno, periodoAnnoIntero, periodoValido, annoDi, etichettaPeriodo, avvisoCompletezza, confrontaPeriodi, giorniPeriodo, scaricaRiepilogo, riepilogoDaEventi, serieAnnuale, grigliaDensita, conclusioniConfronto, quoteEnergiaClassi, riferimentoAnnuale, posizioneAnnuale, frequenzaCumulata, valoreB, serieGiornaliera, eventiPerEnergia, eventiMagMax, eventiDelMese } from './scheda-archivio.js';
 
 const MAGNITUDO_ARCHIVIO = [2, 2.5, 3, 4, 5];
 const MAG_PREDEFINITA = 3; // a M ≥ 2 anni come il 2016 superano il tetto di eventi della mappa
@@ -241,8 +241,14 @@ export function pannelloConfronto({ carica, territorio = null, griglia = null, e
       disegnaGriglia();
       // il grafico degli anni arriva dopo la tabella, così il confronto non aspetta una seconda richiesta
       if (soloAnni) riepilogoStorico(m).then(storico => {
-        const grafico = graficoAnni(serieAnnuale(storico.perMese, ora), annoDi(pa), annoDi(pb), m, false, null, null, eventiA, eventiB, interazione);
+        const serie = serieAnnuale(storico.perMese, ora);
+        const grafico = graficoAnni(serie, annoDi(pa), annoDi(pb), m, false, null, null, eventiA, eventiB, interazione);
         if (grafico) grafici.prepend(grafico);
+        // dove cadono A e B rispetto agli altri anni: a parole, perché le barre da sole non danno il posto in classifica
+        const posizioni = [...new Set([annoDi(pa), annoDi(pb)])].map(anno => posizioneAnnuale(serie, anno, m, ora)).filter(Boolean);
+        if (grafico && posizioni.length) grafico.after(el('p', 'terremoti-sintesi', posizioni.map(p => t('terremoti.arc.posizioneAnno', {
+          anno: p.anno, n: numero(p.n), x: numero(p.volte, p.volte < 10 ? 1 : 0), mediana: numero(p.mediana), da: p.da, a: p.a, posto: p.posto, su: p.su,
+        })).join(' ')));
       }).catch(() => { /* il grafico storico è un di più: senza, la tabella resta */ });
     }, vaiConfronta);
   };

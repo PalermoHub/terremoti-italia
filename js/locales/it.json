@@ -3400,6 +3400,7 @@
   "terremoti.arc.classiNotaLog": "Scala logaritmica: le classi con pochi eventi restano visibili.",
   "terremoti.arc.mediana": "mediana",
   "terremoti.arc.xMediana": "{x}× la mediana",
+  "terremoti.arc.posizioneAnno": "{anno}: {n} eventi, {x}× la mediana annuale ({mediana}, anni {da}–{a}); {posto}º anno su {su} per numero di eventi.",
   "terremoti.arc.graficoAnniMediana": "Linea tratteggiata: mediana di {n} eventi l'anno ({da}–{a}, anno in corso escluso).",
   "terremoti.arc.evidTutti": "Passa il mouse: in mappa si accendono tutti gli eventi del periodo",
   "terremoti.arc.evidMagMax": "Passa il mouse: in mappa si accende l'evento più forte",

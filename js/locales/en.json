@@ -3400,6 +3400,7 @@
   "terremoti.arc.classiNotaLog": "Logarithmic scale: classes with few events stay visible.",
   "terremoti.arc.mediana": "median",
   "terremoti.arc.xMediana": "{x}× the median",
+  "terremoti.arc.posizioneAnno": "{anno}: {n} events, {x}× the yearly median ({mediana}, years {da}–{a}); #{posto} of {su} years by number of events.",
   "terremoti.arc.graficoAnniMediana": "Dashed line: median of {n} events per year ({da}–{a}, current year excluded).",
   "terremoti.arc.evidTutti": "Hover: all the events of the period light up on the map",
   "terremoti.arc.evidMagMax": "Hover: the strongest event lights up on the map",
