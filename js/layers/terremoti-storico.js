@@ -256,6 +256,7 @@ export default {
     });
   },
   periodoCorrente: () => periodoRicerca,
+  periodoVisibile: () => (acceso ? periodoMostrato : null), // quello in mappa, scelto dalla ricerca o dal pannello Archivio
   strati: [{
     id: 'terremoti-storico', etichetta: 'Terremoti storici (archivio)', layers: [PUNTI, ANNI], attivo: false, legendaPannello: '.lg-terremoti-storico',
     suCambio(attivo) {

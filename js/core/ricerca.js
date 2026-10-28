@@ -29,7 +29,7 @@ export function collegaRicerca(map, { terremoti = null, storico = null, comuni =
   const bottoneFiltri = document.getElementById('cerca-filtri');
   const pannello = document.getElementById('cerca-pannello');
   const azzera = document.getElementById('cerca-ripristina');
-  if (!campo || !elenco || !bottoneFiltri || !pannello || !azzera) return;
+  if (!campo || !elenco || !bottoneFiltri || !pannello || !azzera) return null;
 
   let indice = null;
   let scelta = { ...SCELTA_VUOTA };
@@ -206,7 +206,7 @@ export function collegaRicerca(map, { terremoti = null, storico = null, comuni =
   });
 
   // ---- applica la scelta ----
-  function applica(nuova, { casa = false } = {}) {
+  function applica(nuova, { casa = false, senzaVista = false } = {}) {
     giro++;
     scelta = nuova;
     disegnaMenu();
@@ -218,7 +218,7 @@ export function collegaRicerca(map, { terremoti = null, storico = null, comuni =
     map.setPaintProperty(CONTORNO, 'line-opacity', scelta.com != null ? 1 : 0);
     map.setPaintProperty(RIEMPIMENTO, 'fill-opacity', scelta.com != null ? 0.14 : 0.2);
     const voce = indice ? voceScelta(indice, scelta) : null;
-    if (voce) inquadra(voce.riquadro);
+    if (voce && !senzaVista) inquadra(voce.riquadro);
     else if (casa) map.fitBounds(VISTA_ITALIA, { padding: 24, bearing: 0, pitch: 0 });
     applicaEventi();
   }
@@ -248,4 +248,17 @@ export function collegaRicerca(map, { terremoti = null, storico = null, comuni =
   }
 
   disegnaMenu();
+
+  // Per il link condiviso: l'area scelta e «solo i terremoti dell'area». Il ripristino non sposta la vista, che arriva dal link.
+  return {
+    stato: () => (haScelta(scelta) ? { ...scelta, soloEventi } : null),
+    async imposta({ reg = null, prov = null, com = null, soloEventi: solo = false }) {
+      await caricaIndice();
+      applica({ reg, prov, com }, { senzaVista: true });
+      campo.value = voceScelta(indice, scelta)?.nome ?? '';
+      soloEventi = solo && !casellaEventi.disabled;
+      casellaEventi.checked = soloEventi;
+      applicaEventi();
+    },
+  };
 }

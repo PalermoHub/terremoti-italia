@@ -29,7 +29,7 @@ function scelta(etichetta, valori, predefinito, testoValore = String) {
   }
   sel.value = String(predefinito);
   lab.append(el('span', null, etichetta), sel);
-  return { nodo: lab, valore: () => Number(sel.value) };
+  return { nodo: lab, valore: () => Number(sel.value), imposta: v => { if ([...sel.options].some(o => o.value === String(v))) sel.value = String(v); } };
 }
 
 // Scelta dell'anno o di un periodo personalizzato (stesso calendario degli altri filtri): valore = { da, a } in UTC.
@@ -69,7 +69,7 @@ function sceltaPeriodo(etichetta, anni, predefinito) {
   });
   allinea();
   lab.append(el('span', null, etichetta), sel, nota);
-  return { nodo: lab, valore: () => periodo, personalizzato: () => custom };
+  return { nodo: lab, valore: () => periodo, personalizzato: () => custom, imposta: p => { periodo = p; custom = !periodoAnnoIntero(p); allinea(); } };
 }
 
 // Scelta della classe di profondità: valore = { chiave, min, max } (min/max null = nessun limite)
@@ -83,7 +83,7 @@ function sceltaProfondita(etichetta, predefinito = 0) {
   });
   sel.value = String(predefinito);
   lab.append(el('span', null, etichetta), sel);
-  return { nodo: lab, valore: () => PROFONDITA[Number(sel.value)] ?? PROFONDITA[0] };
+  return { nodo: lab, valore: () => PROFONDITA[Number(sel.value)] ?? PROFONDITA[0], imposta: chiave => { const i = PROFONDITA.findIndex(p => p.chiave === chiave); if (i >= 0) sel.value = String(i); } };
 }
 
 const numero = (n, d = 0) => n.toLocaleString(localeIntl(), { minimumFractionDigits: d, maximumFractionDigits: d });
@@ -195,7 +195,9 @@ export function pannelloConfronto({ carica, territorio = null, griglia = null, e
     notaGriglia.hidden = !(interruttore.checked && ultimo);
   };
   interruttore.addEventListener('change', disegnaGriglia);
+  let eseguito = false; // il link condiviso porta il confronto solo se è stato lanciato
   const vaiConfronta = () => {
+    eseguito = true;
     const pa = periodoA.valore(), pb = periodoB.valore();
     const soloAnni = periodoAnnoIntero(pa) && periodoAnnoIntero(pb);
     const m = mag.valore();
@@ -203,7 +205,7 @@ export function pannelloConfronto({ carica, territorio = null, griglia = null, e
     ultimo = null;
     interruttore.disabled = true;
     if (griglia) { griglia(null); notaGriglia.hidden = true; }
-    esegui(nodo, async () => {
+    return esegui(nodo, async () => {
       let area = null;
       if (territorio?.attivo()) {
         try { area = await territorio.prepara(); } catch { messaggio.textContent = t('terremoti.arc.territorioErrore'); }
@@ -245,7 +247,20 @@ export function pannelloConfronto({ carica, territorio = null, griglia = null, e
   if (griglia) nodo.append(casella, notaGriglia);
   if (interazione) nodo.append(el('p', 'scheda-nota terremoti-grafici-aiuto', t('terremoti.grafici.aiuto')));
   nodo.append(nota, messaggio, esito, el('p', 'uffici-nota', t('terremoti.arc.utc')));
-  return { nodo, confronta: vaiConfronta };
+  return {
+    nodo,
+    confronta: vaiConfronta,
+    // scelte del confronto lanciato (per il link condiviso), o null se non ce n'è uno
+    stato: () => (eseguito ? { a: periodoA.valore(), b: periodoB.valore(), mag: mag.valore(), prof: prof.valore().chiave, territorio: territorio?.stato() ?? null } : null),
+    async imposta(s) {
+      periodoA.imposta(s.a);
+      periodoB.imposta(s.b);
+      mag.imposta(s.mag);
+      prof.imposta(s.prof);
+      if (territorio && s.territorio) await territorio.imposta(s.territorio);
+      await vaiConfronta();
+    },
+  };
 }
 
 // Differenza con segno; un valore che arrotondato è zero si scrive «0», mai «-0.0»

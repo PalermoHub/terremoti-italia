@@ -71,7 +71,7 @@ function storageSicuro() { try { return globalThis.localStorage; } catch (e) { r
 function sessioneSicura() { try { return globalThis.sessionStorage; } catch (e) { return null; } }
 
 export async function caricaDizionari({ fetchFn = fetch, storage, navigatore, base = new URL('../locales/', import.meta.url) } = {}) {
-  const l = rilevaLingua(storage ?? storageSicuro(), navigatore ?? globalThis.navigator, sessioneSicura());
+  const l = linguaDaUrl() ?? rilevaLingua(storage ?? storageSicuro(), navigatore ?? globalThis.navigator, sessioneSicura());
   const leggi = async nome => {
     try {
       const r = await fetchFn(new URL(`${nome}.json`, base));
@@ -83,7 +83,18 @@ export async function caricaDizionari({ fetchFn = fetch, storage, navigatore, ba
   return l;
 }
 
-export function impostaLingua(l, { storage = storageSicuro(), sessione = sessioneSicura(), ricarica = () => location.reload() } = {}) {
+// La lingua di un link condiviso (?lng=) vale per quella visita e non sostituisce la scelta salvata
+function linguaDaUrl() {
+  try { const l = new URLSearchParams(globalThis.location?.search).get('lng'); return LINGUE.includes(l) ? l : null; } catch (e) { return null; }
+}
+
+// ricarica la pagina senza ?lng, altrimenti il link condiviso rimetterebbe la lingua di prima
+function ricaricaSenzaLinguaUrl() {
+  const u = new URL(location.href);
+  if (u.searchParams.has('lng')) { u.searchParams.delete('lng'); location.replace(u); } else location.reload();
+}
+
+export function impostaLingua(l, { storage = storageSicuro(), sessione = sessioneSicura(), ricarica = ricaricaSenzaLinguaUrl } = {}) {
   if (l === corrente) return;
   try { storage?.setItem(CHIAVE, l); } catch (e) {
     // localStorage bloccato (navigazione privata): la scelta vale per la sessione della scheda

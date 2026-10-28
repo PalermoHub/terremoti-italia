@@ -19,6 +19,7 @@ import { creaRegolatoreRaggio } from './core/raggio-vicini.js';
 import { collegaMinimappa } from './core/minimappa.js';
 import { caricaTemaMagnitudo } from './core/tema-magnitudo.js';
 import { t } from './core/i18n.js';
+import { collegaCondividi, applicaStatoDaUrl } from './core/condividi.js';
 import protezioneCivile from './layers/protezione-civile.js';
 import terremotiGruppo from './layers/terremoti-gruppo.js';
 import faglieGruppo from './layers/faglie-gruppo.js';
@@ -110,7 +111,7 @@ map.once('style.load', async () => {
   const esiti = await Promise.allSettled(MODULI.filter(m => m.avvia).map(m => m.avvia(map)));
   esiti.forEach(e => { if (e.status === 'rejected') segnala(t('avviso.stratoNonCaricato.dettaglio', { nome: e.reason?.message ?? e.reason })); });
 
-  collegaRicerca(map, { terremoti, storico: terremotiStorico, comuni });
+  const ricerca = collegaRicerca(map, { terremoti, storico: terremotiStorico, comuni });
   collegaStrumenti(map);
   // Tabella dei dati: righe degli strati accesi, esportabili in CSV e JSON
   collegaTabellaDati({
@@ -119,5 +120,8 @@ map.once('style.load', async () => {
   });
   collegaInfo({ bottone: document.getElementById('btn-info') });
   collegaStampa(map, document.getElementById('btn-stampa'), document.getElementById('stampa-menu'));
+  const condivisi = { storico: terremotiStorico, confronto: terremotiConfronto, ricerca, map };
+  collegaCondividi(document.getElementById('btn-condividi'), { moduli: condivisi });
+  await applicaStatoDaUrl(location.search, condivisi); // strati e filtri del link condiviso, a strati già avviati
   window.dt.pronto = true;
 });

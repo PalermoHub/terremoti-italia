@@ -44,6 +44,8 @@ export function creaFiltroTerritorio(map) {
   return {
     nodo,
     attivo: () => haScelta(scelta),
+    stato: () => (haScelta(scelta) ? { ...scelta } : null),
+    async imposta(s) { await pronto(); scelta = { ...SCELTA_VUOTA, ...s }; disegna(); },
     // null = tutta Italia; altrimenti { dentro(p), riquadro } con p = {lon, lat}
     async prepara() {
       if (!haScelta(scelta)) return null;

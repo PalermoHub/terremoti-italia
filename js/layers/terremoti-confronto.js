@@ -254,6 +254,13 @@ export default {
     },
   },
   legendaPannello: '.lg-terremoti-confronto',
+  statoCondiviso: () => (acceso ? pannello?.stato() ?? null : null),
+  // Dal link condiviso: accende lo strato senza il confronto predefinito, poi carica quello scelto
+  async impostaCondiviso(s) {
+    const casella = document.querySelector('#strato-terremoti-confronto');
+    if (casella && !casella.checked) { primaVolta = false; casella.checked = true; casella.dispatchEvent(new Event('change', { bubbles: true })); }
+    await pannello?.imposta(s);
+  },
   strati: [{
     id: 'terremoti-confronto', etichetta: 'Confronto terremoti (due periodi)', layers: [PUNTI, ANNI], attivo: false, legendaPannello: '.lg-terremoti-confronto',
     suCambio(attivo) {
