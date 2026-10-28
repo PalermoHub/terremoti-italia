@@ -6,6 +6,8 @@ import { svgIcona } from './icone.js';
 // i due pannelli quando si aprono e si chiudono. I testi sono HTML nostro nei dizionari (info.<scheda>.html).
 const SCHEDE = ['metodologia', 'guida', 'credits'];
 const SOGLIA_TORNA_SU = 80;
+const ICONE_SCHEDE = { metodologia: 'ingranaggio', guida: 'mappa', credits: 'info' };
+const CON_INDICE = new Set(['metodologia', 'guida']);
 
 const el = (tag, classe, html) => {
   const n = document.createElement(tag);
@@ -22,6 +24,33 @@ const bottone = (id, classe, html, etichetta) => {
   b.title = etichetta;
   return b;
 };
+
+// Indice in testa al pannello: un link per ogni <h3>, che scorre fino alla sezione. Gli h4 restano sotto la loro sezione.
+function aggiungiIndice(pannello, nome) {
+  const titoli = [...pannello.querySelectorAll('h3')];
+  if (titoli.length < 4) return;
+  const nav = el('nav', 'info-indice');
+  nav.setAttribute('aria-label', t('info.indice'));
+  nav.append(el('strong', 'info-indice-titolo', t('info.indice')));
+  const lista = el('ol');
+  titoli.forEach((h, i) => {
+    h.id = `info-${nome}-${i + 1}`;
+    const a = el('a', '', h.textContent);
+    a.href = `#${h.id}`;
+    const li = el('li');
+    li.append(a);
+    lista.append(li);
+  });
+  nav.append(lista);
+  nav.addEventListener('click', e => {
+    const a = e.target.closest('a');
+    if (!a) return;
+    e.preventDefault();
+    const h = pannello.querySelector(`#${a.hash.slice(1)}`);
+    h?.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' });
+  });
+  pannello.prepend(nav);
+}
 
 export function collegaInfo({ bottone: comando } = {}) {
   if (!comando) return null;
@@ -48,7 +77,7 @@ export function collegaInfo({ bottone: comando } = {}) {
   const linguette = new Map();
   const pannelli = new Map();
   for (const nome of SCHEDE) {
-    const b = el('button', 'info-scheda', t(`info.${nome}`));
+    const b = el('button', 'info-scheda', `${svgIcona(ICONE_SCHEDE[nome], 16)}<span>${t(`info.${nome}`)}</span>`);
     b.type = 'button';
     b.id = `info-tab-${nome}`;
     b.setAttribute('role', 'tab');
@@ -60,6 +89,7 @@ export function collegaInfo({ bottone: comando } = {}) {
     p.setAttribute('role', 'tabpanel');
     p.setAttribute('aria-labelledby', b.id);
     p.tabIndex = 0;
+    if (CON_INDICE.has(nome)) aggiungiIndice(p, nome);
     pannelli.set(nome, p);
   }
 

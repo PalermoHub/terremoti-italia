@@ -14,4 +14,5 @@
 
 ## Librerie
 - MapLibre GL JS (BSD-3-Clause), PMTiles (BSD-3-Clause), copiate in `js/vendor/`.
+- qgis_headless_wsl2 (pigreco): QGIS headless su WSL2, https://github.com/pigreco/qgis_headless_wsl2 · video https://www.youtube.com/watch?v=FQEmhktDRaQ
 - Font Montserrat e Atkinson in `css/fonts/`; font delle etichette Noto Sans in `fonts/glyphs/` (copiati da OpenFreeMap).
