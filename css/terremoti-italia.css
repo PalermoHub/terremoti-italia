@@ -92,8 +92,11 @@
 .raggio-nota { margin: 6px 0 0; }
 /* Il riquadro con Live Zoom e ricerca nel raggio sta sopra la barra di ricerca: altrimenti la coprirebbe (e la
    barra coprirebbe cursore e interruttore del cerchio). */
-@media (min-width: 721px) {
+@media (min-width: 721px) and (max-width: 1099px) {
   #legende-box { --legende-bottom: 100px; bottom: 100px; }
+}
+@media (min-width: 1100px) {
+  #legende-box { --legende-bottom: calc(40px + env(safe-area-inset-bottom, 0px)); bottom: var(--legende-bottom); }
 }
 /* Il riquadro in fondo alla legenda ospita i comandi globali (Live Zoom e ricerca nel raggio): resta visibile
    anche quando nessuna legenda è rimasta sulla mappa, perché le altre stanno sotto gli strati nel pannello Layer. */

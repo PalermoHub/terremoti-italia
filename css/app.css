@@ -898,7 +898,7 @@ details.scheda-sez > summary { display: flex; align-items: center; gap: 6px; min
 @media (min-width: 721px) {
   #area-ricerca { left: calc(var(--sx) + (100% - var(--sx) - var(--scheda-l)) / 2); }
 }
-@media (min-width: 721px) and (max-width: 1320px) { #legende-box { --legende-bottom: 100px; bottom: 100px; } }
+@media (min-width: 721px) and (max-width: 1099px) { #legende-box { --legende-bottom: 100px; bottom: 100px; } }
 
 @media (max-width: 720px) {
   #barra-strati { display: none; }
