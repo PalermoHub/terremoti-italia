@@ -542,15 +542,15 @@ dialog li { margin: 4px 0; }
    Scheda del luogo: pannello laterale a tutta altezza, una colonna,
    testata fissa e corpo scorrevole (su mobile: foglio dal basso)
    ========================================================================== */
-#scheda, #storico-pannello, #confronto-pannello {
+#scheda, #storico-pannello, #confronto-pannello, #mappe-pannello {
   position: fixed; z-index: var(--z-mappa-ui); background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm);
   top: auto; bottom: 120px; right: 8px; left: 8px; width: auto; max-height: 45%; overflow: hidden; padding: 0;
   display: flex; flex-direction: column; touch-action: pan-y;
 }
 /* mobile: a tutto schermo (pulsante nella testata) per leggere la scheda con comodo */
 #scheda.scheda-piena { top: 0; bottom: 0; left: 0; right: 0; max-height: none; border-radius: 0; border-width: 0; z-index: var(--z-foglio); }
-#scheda[hidden], #storico-pannello[hidden], #confronto-pannello[hidden] { display: none; }
-#scheda h2, #storico-pannello h2, #confronto-pannello h2 { font-size: var(--fs-md); margin: 0; }
+#scheda[hidden], #storico-pannello[hidden], #confronto-pannello[hidden], #mappe-pannello[hidden] { display: none; }
+#scheda h2, #storico-pannello h2, #confronto-pannello h2, #mappe-pannello h2 { font-size: var(--fs-md); margin: 0; }
 .scheda-testata { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
 .scheda-azioni { flex: none; display: flex; gap: 2px; }
 .scheda-x, .scheda-espandi, .scheda-personalizza { flex: none; display: flex; align-items: center; justify-content: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; background: none; color: var(--text-muted); }
@@ -559,7 +559,7 @@ dialog li { margin: 4px 0; }
 .scheda-contesto { margin: 6px 0 4px; padding: 6px 8px; background: var(--avviso); border-radius: var(--r-sm); font-size: var(--fs-xs); font-weight: 600; }
 
 .scheda-intestazione { flex: none; padding: 14px 18px 10px; background: var(--surface-alt); border-bottom: 1px solid var(--border); }
-#scheda .scheda-intestazione h2, #storico-pannello .scheda-intestazione h2, #confronto-pannello .scheda-intestazione h2 { font-size: var(--fs-lg); font-weight: 700; letter-spacing: -.01em; overflow-wrap: anywhere; }
+#scheda .scheda-intestazione h2, #storico-pannello .scheda-intestazione h2, #confronto-pannello .scheda-intestazione h2, #mappe-pannello .scheda-intestazione h2 { font-size: var(--fs-lg); font-weight: 700; letter-spacing: -.01em; overflow-wrap: anywhere; }
 .scheda-intestazione .scheda-contesto { margin: 10px 0 0; background: var(--avviso-scheda); color: var(--avviso-scheda-ink); border-left: 3px solid var(--accent-strong); border-radius: var(--r-xs) var(--r-sm) var(--r-sm) var(--r-xs); font-weight: 500; }
 .scheda-pref { margin-top: 10px; padding: 10px 12px; max-height: 40vh; overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-sm); }
 .scheda-pref[hidden] { display: none; }
@@ -646,7 +646,7 @@ dialog li { margin: 4px 0; }
 .scheda-acc > summary:hover, .scheda-tipo > summary:hover, details.scheda-sez > summary:hover { background: var(--accent-soft); }
 
 @media (min-width: 721px) {
-  #scheda, #storico-pannello, #confronto-pannello {
+  #scheda, #storico-pannello, #confronto-pannello, #mappe-pannello {
     top: 0; right: var(--rail-w); bottom: 0; left: auto; width: var(--scheda-w); max-height: none; padding: 0; overflow: hidden;
     display: flex; flex-direction: column; border-width: 0 0 0 1px; border-radius: 0;
     box-shadow: var(--ombra-pannello-dx);
@@ -655,7 +655,7 @@ dialog li { margin: 4px 0; }
   .scheda-espandi { display: none; }
   /* con la scheda aperta, barra strumenti, ricerca e fogli si centrano sulla parte di mappa rimasta visibile */
   body { --scheda-l: var(--rail-w); }
-  body:has(#scheda:not([hidden]):not(.collassato), #rndt-pannello:not([hidden]):not(.collassato), #geoimage-pannello:not([hidden]):not(.collassato), #tema-ui-pannello:not([hidden]):not(.collassato), #chatbot-pannello:not([hidden]):not(.collassato), #storico-pannello:not([hidden]):not(.collassato), #confronto-pannello:not([hidden]):not(.collassato)) { --scheda-l: calc(var(--scheda-w) + var(--rail-w)); }
+  body:has(#scheda:not([hidden]):not(.collassato), #rndt-pannello:not([hidden]):not(.collassato), #geoimage-pannello:not([hidden]):not(.collassato), #tema-ui-pannello:not([hidden]):not(.collassato), #chatbot-pannello:not([hidden]):not(.collassato), #storico-pannello:not([hidden]):not(.collassato), #confronto-pannello:not([hidden]):not(.collassato), #mappe-pannello:not([hidden]):not(.collassato)) { --scheda-l: calc(var(--scheda-w) + var(--rail-w)); }
   #barra-strumenti, #area-ricerca, #pannello { left: calc((100% - var(--scheda-l)) / 2); transition: left var(--t-media) ease; }
   /* la barra non esce mai dalla mappa visibile: se non ci sta, scorre di lato */
   #barra-strumenti { max-width: calc(100% - var(--scheda-l) - 16px); overflow-x: auto; scrollbar-width: none; }
@@ -1253,7 +1253,7 @@ details.scheda-sez[open] > summary > .scheda-riassunto { display: none; }
 #rndt-pannello .ordt-detail-title { font-size: var(--fs-md); }
 
 /* barra verticale dei pannelli a destra: tab con testo ruotato, pannello attivo evidenziato */
-#scheda.collassato, #rndt-pannello.collassato, #geoimage-pannello.collassato, #tema-ui-pannello.collassato, #chatbot-pannello.collassato, #storico-pannello.collassato, #confronto-pannello.collassato { display: none; }
+#scheda.collassato, #rndt-pannello.collassato, #geoimage-pannello.collassato, #tema-ui-pannello.collassato, #chatbot-pannello.collassato, #storico-pannello.collassato, #confronto-pannello.collassato, #mappe-pannello.collassato { display: none; }
 #rail-pannelli { display: none; }
 @media (min-width: 721px) {
   #rail-pannelli {
@@ -1734,7 +1734,7 @@ body:has(#crediti[open]) :is(.invito-clic, .invito-mai) { display: none; }
 @media (min-width: 721px) { #barra-gruppi .btn-pannello-mobile { display: none; } }
 @media (max-width: 720px) { body.strati-aperti #barra-gruppi .btn-pannello-mobile { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; } }
 /* l'invito all'avvio non sta sopra un pannello aperto */
-body:has(#rndt-pannello:not([hidden]):not(.collassato), #geoimage-pannello:not([hidden]):not(.collassato), #tema-ui-pannello:not([hidden]):not(.collassato), #chatbot-pannello:not([hidden]):not(.collassato), #storico-pannello:not([hidden]):not(.collassato), #confronto-pannello:not([hidden]):not(.collassato)) .invito-clic { display: none; }
+body:has(#rndt-pannello:not([hidden]):not(.collassato), #geoimage-pannello:not([hidden]):not(.collassato), #tema-ui-pannello:not([hidden]):not(.collassato), #chatbot-pannello:not([hidden]):not(.collassato), #storico-pannello:not([hidden]):not(.collassato), #confronto-pannello:not([hidden]):not(.collassato), #mappe-pannello:not([hidden]):not(.collassato)) .invito-clic { display: none; }
 
 /* Visore delle immagini della guida */
 .guida-figura img, img.dt-fig { cursor: zoom-in; }
@@ -1990,10 +1990,10 @@ body:has(#tabella-dati:not([hidden])) #area-ricerca { bottom: calc(40px + env(sa
 @media (max-width: 720px) {
   #tabella-dati { left: 0; right: 0; bottom: calc(var(--tab-h) + var(--footer-h)); max-height: min(60dvh, calc(100dvh - var(--tab-h) - var(--footer-h) - 8px)); }
   body:has(#tabella-dati:not([hidden])) #area-ricerca { bottom: auto; }
-  body:has(#tabella-dati:not([hidden])):not(.strati-aperti):not(.info-aperto):not(:has(#scheda:not([hidden]):not(.collassato), #rndt-pannello:not([hidden]):not(.collassato), #geoimage-pannello:not([hidden]):not(.collassato), #tema-ui-pannello:not([hidden]):not(.collassato), #chatbot-pannello:not([hidden]):not(.collassato), #storico-pannello:not([hidden]):not(.collassato), #confronto-pannello:not([hidden]):not(.collassato))) :is(.maplibregl-ctrl-bottom-right, .maplibregl-ctrl-bottom-left) { bottom: calc(var(--tabella-h) + var(--tab-h)); }
+  body:has(#tabella-dati:not([hidden])):not(.strati-aperti):not(.info-aperto):not(:has(#scheda:not([hidden]):not(.collassato), #rndt-pannello:not([hidden]):not(.collassato), #geoimage-pannello:not([hidden]):not(.collassato), #tema-ui-pannello:not([hidden]):not(.collassato), #chatbot-pannello:not([hidden]):not(.collassato), #storico-pannello:not([hidden]):not(.collassato), #confronto-pannello:not([hidden]):not(.collassato), #mappe-pannello:not([hidden]):not(.collassato))) :is(.maplibregl-ctrl-bottom-right, .maplibregl-ctrl-bottom-left) { bottom: calc(var(--tabella-h) + var(--tab-h)); }
   body.strati-aperti #tabella-dati, body.info-aperto #tabella-dati,
-  body:has(#scheda:not([hidden]):not(.collassato), #rndt-pannello:not([hidden]):not(.collassato), #geoimage-pannello:not([hidden]):not(.collassato), #tema-ui-pannello:not([hidden]):not(.collassato), #chatbot-pannello:not([hidden]):not(.collassato), #storico-pannello:not([hidden]):not(.collassato), #confronto-pannello:not([hidden]):not(.collassato)) #tabella-dati { display: none; }
-  body.strati-aperti, body.info-aperto, body:has(#scheda:not([hidden]):not(.collassato), #rndt-pannello:not([hidden]):not(.collassato), #geoimage-pannello:not([hidden]):not(.collassato), #tema-ui-pannello:not([hidden]):not(.collassato), #chatbot-pannello:not([hidden]):not(.collassato), #storico-pannello:not([hidden]):not(.collassato), #confronto-pannello:not([hidden]):not(.collassato)) { --tabella-h: 0px !important; }
+  body:has(#scheda:not([hidden]):not(.collassato), #rndt-pannello:not([hidden]):not(.collassato), #geoimage-pannello:not([hidden]):not(.collassato), #tema-ui-pannello:not([hidden]):not(.collassato), #chatbot-pannello:not([hidden]):not(.collassato), #storico-pannello:not([hidden]):not(.collassato), #confronto-pannello:not([hidden]):not(.collassato), #mappe-pannello:not([hidden]):not(.collassato)) #tabella-dati { display: none; }
+  body.strati-aperti, body.info-aperto, body:has(#scheda:not([hidden]):not(.collassato), #rndt-pannello:not([hidden]):not(.collassato), #geoimage-pannello:not([hidden]):not(.collassato), #tema-ui-pannello:not([hidden]):not(.collassato), #chatbot-pannello:not([hidden]):not(.collassato), #storico-pannello:not([hidden]):not(.collassato), #confronto-pannello:not([hidden]):not(.collassato), #mappe-pannello:not([hidden]):not(.collassato)) { --tabella-h: 0px !important; }
   .tabella-barra { flex-wrap: wrap; overflow-x: visible; }
   .tabella-barra > .tabella-filtro { flex: 1 1 170px; width: auto; }
   .tabella-barra > .tabella-esporti { margin-left: 0; }
@@ -2404,8 +2404,8 @@ a.scheda-badge-tinta:hover, a.scheda-badge-tinta:focus-visible { background: col
 .scheda-mini-punto { position: absolute; left: 50%; top: 50%; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; background: #e03131; border: 2px solid #fff; box-shadow: 0 0 0 1px rgba(0, 0, 0, .35); }
 .scheda-mini-attr { position: absolute; right: 0; bottom: 0; padding: 0 3px; font-size: 9px; background: rgba(255, 255, 255, .8); color: #333; }
 .scheda-mini:hover, .scheda-mini:focus-visible { border-color: var(--accent); }
-.legenda .terremoti-pannello, #confronto-pannello .terremoti-pannello { display: flex; flex-direction: column; align-items: stretch; gap: 4px; margin: 6px 0; }
-.legenda .terremoti-pannello p, #confronto-pannello .terremoti-pannello p { margin: 0; text-align: left; }
+.legenda .terremoti-pannello, #confronto-pannello .terremoti-pannello, #mappe-pannello .terremoti-pannello { display: flex; flex-direction: column; align-items: stretch; gap: 4px; margin: 6px 0; }
+.legenda .terremoti-pannello p, #confronto-pannello .terremoti-pannello p, #mappe-pannello .terremoti-pannello p { margin: 0; text-align: left; }
 .terremoti-pf-et { margin-top: 4px; font-size: var(--fs-xs); color: var(--text-muted); }
 .legenda .terremoti-pf-barre { display: flex; align-items: flex-end; gap: 1px; height: 44px; }
 .legenda .terremoti-pf-barre i { flex: 1 1 0; min-width: 0; width: auto; height: 0; border: 0; border-radius: 1px 1px 0 0; background: var(--accent); opacity: .85; }
@@ -2548,6 +2548,13 @@ a.scheda-tel { min-height: 40px; }
 .terremoti-serie.con-mappa > .zoom-freccia.dx { justify-self: end; }
 .terremoti-mt .sel line:not(.zona) { stroke-width: 2.5; opacity: 1; }
 .terremoti-mt .fissato circle:not(.zona-punto) { stroke: #f08c00; stroke-width: 3; }
+/* sezione verticale nel popup con minimappa e scheda: stessa griglia, il grafico è un svg.grafico-zoom e la legenda va sotto */
+.terremoti-serie.con-mappa > svg.grafico-zoom { grid-column: 1; grid-row: 3; width: 100%; height: var(--alt-grafico); margin: 0; border: 1px solid var(--border-ui); border-radius: var(--r-sm); }
+.grafico-grande-popup .terremoti-serie.con-mappa.terremoti-confronto-grafico.grande > svg { width: 100%; margin: 0; }
+.terremoti-serie.con-mappa > .terremoti-confronto-chiave { grid-column: 1; grid-row: 5; }
+.punto-sezione { transition: opacity .1s; }
+.evento.sel .punto-sezione { stroke: var(--text, #222); stroke-width: 2.5; opacity: 1; }
+.evento.fissato .punto-sezione { stroke: #f08c00; stroke-width: 3; opacity: 1; }
 /* grafici molto fitti (unità «anno»): un solo tracciato per gli steli, e un unico rilevatore del puntatore */
 .terremoti-mt .steli { stroke: var(--accent); stroke-width: 1; opacity: .6; fill: none; }
 .terremoti-mt .stelo-forte { stroke: #e03131; stroke-width: 1.5; }
@@ -2766,3 +2773,24 @@ details.scheda-sez-evento .scheda-sez-testo { display: contents; }
 .legenda .terremoti-filtri { display: grid; grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); align-items: start; gap: 8px; }
 .legenda .terremoti-filtro > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .terremoti-serie.con-mappa > .terremoti-testa { grid-column: 1 / -1; grid-row: 1; }
+
+/* Sezione verticale: azioni, grafico profondità/distanza e legenda delle profondità */
+.legenda .terremoti-sezione-azioni { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+/* i cerchi del grafico: bordo del colore dello sfondo, così restano distinti dove si sovrappongono */
+.terremoti-confronto-grafico .punto-sezione { fill-opacity: .72; stroke: var(--surface); stroke-width: .5; }
+
+/* Rampa di colori delle mappe di densità e per territorio */
+.terremoti-rampa { margin: 8px 0 0; }
+.terremoti-rampa-barra { display: block; height: 10px; border-radius: 5px; border: 1px solid var(--border-ui); }
+.terremoti-rampa-estremi { display: block; margin-top: 2px; font-size: .85em; color: var(--text-muted); text-align: right; }
+
+/* Pannello «Mappe»: un tab per mappa sotto il titolo */
+.mappe-tab { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.mappe-tab-btn { padding: 4px 10px; border: 1px solid var(--border-ui); border-radius: 999px; background: none; color: var(--text-muted); font: inherit; font-size: var(--fs-sm, .85em); cursor: pointer; }
+.mappe-tab-btn[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: #1f1300; font-weight: 700; }
+#mappe-pannello .terremoti-filtri { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+#mappe-pannello .terremoti-archivio-btn { padding: 7px 12px; border: 1px solid var(--accent); border-radius: var(--r-sm); background: var(--accent); color: #1f1300; font: inherit; font-weight: 700; text-align: center; cursor: pointer; }
+#mappe-pannello .terremoti-archivio-btn.secondario { background: none; color: var(--text); border-color: var(--border-ui); }
+#mappe-pannello .terremoti-sezione-azioni { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+#mappe-pannello .terremoti-pannello[hidden] { display: none; }
+.terremoti-sezione-prof { margin: 6px 0 0; font-size: .85em; }

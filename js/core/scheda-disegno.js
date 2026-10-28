@@ -196,7 +196,8 @@ function disegnaEvento(e) {
   return box;
 }
 
-export function disegnaAccordion(a) {
+// `suRiga(elemento, nodo)`, se c'è, è chiamata per ogni elemento (per collegarvi eventi, come l'evidenza in mappa).
+export function disegnaAccordion(a, suRiga = null) {
   const radice = el('details', 'scheda-acc');
   if (a.aperto) radice.open = true;
   const riassunto = el('summary');
@@ -214,6 +215,7 @@ export function disegnaAccordion(a) {
     if (e.strato) tipo.dataset.strato = e.strato;
     for (const r of e.righe) tipo.append(disegnaRiga(r));
     if (e.miniatura) tipo.addEventListener('toggle', () => { if (tipo.open && !tipo.querySelector('.scheda-mini')) tipo.append(disegnaMiniatura(e.miniatura, e.titolo)); }); // le tessere si scaricano solo all'apertura
+    suRiga?.(e, tipo);
     radice.append(tipo);
   }
   return radice;

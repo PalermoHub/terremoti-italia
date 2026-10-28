@@ -318,7 +318,7 @@ export function accordionTerremoti(elenco, adesso = Date.now()) {
     icona: 'terremoto', aperto: n > 0 && n <= 10,
     riassunto: n > mostrati.length ? t('terremoti.altriParziale', { mostrati: mostrati.length, n }) : tn('terremoti.altri', n),
     elementi: mostrati.map(p => ({
-      titolo: titoloTerremoto(p), anteprima: quantoTempoFa(p.ts, adesso),
+      evento: p, titolo: titoloTerremoto(p), anteprima: quantoTempoFa(p.ts, adesso),
       miniatura: miniatura(p),
       righe: [...righeTerremoto(p, adesso), { etichetta: 'Scheda INGV', valore: 'terremoti.ingv.it', urlValore: LINK + p.id }],
     })),

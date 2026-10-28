@@ -29,6 +29,11 @@ import allerte from './layers/allerte.js';
 import terremoti from './layers/terremoti.js';
 import terremotiStorico from './layers/terremoti-storico.js';
 import terremotiConfronto, { nodoConfronto } from './layers/terremoti-confronto.js';
+import terremotiSezione, { nodoMappa as nodoSezione } from './layers/terremoti-sezione.js';
+import terremotiProfondita, { nodoMappa as nodoProfondita } from './layers/terremoti-profondita.js';
+import terremotiDensita, { nodoMappa as nodoDensita } from './layers/terremoti-densita.js';
+import terremotiCoropletica, { nodoMappa as nodoCoropletica } from './layers/terremoti-coropletica.js';
+import { collegaMappe } from './core/pannello-mappe.js';
 import faglie from './layers/faglie.js';
 import faglieEgdi from './layers/faglie-egdi.js';
 import diss from './layers/diss.js';
@@ -52,7 +57,7 @@ riduciLegenda.addEventListener('click', () => {
 
 // ordine = ordine di sovrapposizione dei layer (il primo sta sotto). I quattro gruppi precedono i moduli che mettono lì i
 // loro strati: Protezione Civile (allerte), Terremoti (tempo reale, archivio, confronto), Faglie (ITHACA, EGDI, DISS), Territorio (confini)
-const MODULI = [base, protezioneCivile, terremotiGruppo, faglieGruppo, territorio, comuni, allerte, terremoti, terremotiStorico, terremotiConfronto, faglie, faglieEgdi, diss];
+const MODULI = [base, protezioneCivile, terremotiGruppo, faglieGruppo, territorio, comuni, allerte, terremoti, terremotiStorico, terremotiConfronto, terremotiSezione, terremotiProfondita, terremotiDensita, terremotiCoropletica, faglie, faglieEgdi, diss];
 traduciModuli(MODULI);
 
 const map = creaMappa('mappa', () => segnala(t('app.basemap.errore')));
@@ -83,10 +88,18 @@ map.once('style.load', async () => {
   const storico = collegaStorico(document.getElementById('storico-pannello'));
   const confrontoPannello = document.getElementById('confronto-pannello');
   collegaConfronto(confrontoPannello, nodoConfronto());
+  const mappePannello = document.getElementById('mappe-pannello');
+  const mappe = collegaMappe(mappePannello, [
+    { id: 'terremoti-sezione', etichetta: t('mappe.tab.sezione'), nodo: nodoSezione() },
+    { id: 'terremoti-profondita', etichetta: t('mappe.tab.profondita'), nodo: nodoProfondita() },
+    { id: 'terremoti-densita', etichetta: t('mappe.tab.densita'), nodo: nodoDensita() },
+    { id: 'terremoti-coropletica', etichetta: t('mappe.tab.territorio'), nodo: nodoCoropletica() },
+  ]);
   collegaRail(document.getElementById('rail-pannelli'), [
     { id: 'scheda', etichetta: t('app.rail.scheda'), pannello: document.getElementById('scheda') },
     { id: 'storico', etichetta: t('scheda.tab.storico'), pannello: document.getElementById('storico-pannello'), apri: () => storico.apri() },
     { id: 'confronto', etichetta: t('rail.confronto'), pannello: confrontoPannello, apri: () => apriConfronto(confrontoPannello) },
+    { id: 'mappe', etichetta: t('rail.mappe'), pannello: mappePannello, apri: () => mappe.apri() },
   ]);
   document.addEventListener('scheda:mostra', () => document.getElementById('scheda').hidden = false);
 

@@ -313,9 +313,9 @@ const SVG = 'http://www.w3.org/2000/svg';
 const DIM = { L: 320, A: 150, MS: 28, MD: 8, MA: 8, MB: 18 };
 const DIM_GRANDE = { L: 900, A: 420, MS: 58, MD: 18, MA: 18, MB: 48 };
 const ALTEZZA_RIQUADRI = 460; // grafico, minimappa e scheda dell'evento: sempre alti uguali, qualunque sia il monitor
-const CON_MAPPA = new Set(['mt', 'cum', 'energia', 'spaziotempo']); // grafici con minimappa e scheda a fianco
+const CON_MAPPA = new Set(['mt', 'cum', 'energia', 'spaziotempo', 'sezione']); // grafici con minimappa e scheda a fianco
 // Il viewBox del popup segue lo spazio vero della colonna del grafico (schermo meno minimappa e scheda), così i testi restano leggibili
-function adattaDimensioni(id) {
+export function adattaDimensioni(id) {
   const conMappa = CON_MAPPA.has(id);
   const popup = conMappa ? Math.min(1760, window.innerWidth - 24) : Math.min(1000, window.innerWidth - 48);
   const colonna = conMappa ? Math.max(520, popup - 28 - 300 - 320 - 28 - 14) : popup - 70;
@@ -323,6 +323,7 @@ function adattaDimensioni(id) {
   DIM_GRANDE.A = conMappa ? ALTEZZA_RIQUADRI : Math.min(520, Math.max(360, Math.round(colonna * 0.45)));
 }
 const dimensioni = grande => (grande ? DIM_GRANDE : DIM);
+export const dimensioniPopup = () => ({ L: DIM_GRANDE.L, A: DIM_GRANDE.A });
 const dataBreve = ts => new Date(ts).toLocaleDateString(localeIntl(), { day: 'numeric', month: 'short', year: '2-digit' });
 const mag1 = m => m.toLocaleString(localeIntl(), { minimumFractionDigits: 1 });
 
@@ -361,10 +362,11 @@ function titoliAssi(svg, grande, chiaveX, chiaveY) {
 }
 // Evento scelto con il clic nel popup: resta evidenziato in grafico e in minimappa anche dopo zoom e pan
 let selezionato = null;
+export const azzeraSelezione = () => { selezionato = null; };
 const idEvento = p => String(p.id ?? p.ts);
 
 // Collega grafico e minimappa del popup: il passaggio del mouse evidenzia l'evento in entrambi, il clic lo fissa (secondo clic: lo toglie)
-function creaSync(apri) {
+export function creaSync(apri) {
   const gruppi = new Map(), punti = new Map();
   let sopra = null;
   const ascoltatori = [];
@@ -422,7 +424,7 @@ export function creaInterazione({ evidenzia, nascondi } = {}) {
 
 // Rende un elemento del grafico sensibile: nella scheda il clic apre l'evento in mappa; nel popup (con `sync`) lo evidenzia anche nella minimappa.
 // In entrambi i casi il passaggio del mouse (o il focus) lo evidenzia in mappa tramite `interazione`.
-function rendiApribile(gruppo, p, apri, sync, interazione) {
+export function rendiApribile(gruppo, p, apri, sync, interazione) {
   const coordinate = Number.isFinite(p.lon) && Number.isFinite(p.lat);
   if (!coordinate || !(apri || sync || interazione)) return false;
   gruppo.classList.add('apribile');
@@ -518,7 +520,7 @@ function disegnaSequenza(s, sync, profEvento) {
 }
 // Ultimo inquadramento della minimappa: il grafico ridisegna il blocco a ogni zoom, e la mappa parte da qui per zoomare a vista
 let inquadraturaPrecedente = null;
-function creaMinimappa(punti, sync, forteId) {
+function creaMinimappa(punti, sync, forteId, colore = null) {
   const geo = punti.filter(p => Number.isFinite(p.lon) && Number.isFinite(p.lat));
   if (!geo.length) return null;
   const MAPPA_A = DIM_GRANDE.A; // grafico, mappa e scheda sono alti uguali; i testi stanno sopra e sotto i riquadri
@@ -542,7 +544,9 @@ function creaMinimappa(punti, sync, forteId) {
     const { x, y } = proietta(p);
     const forte = idEvento(p) === forteId;
     const gruppo = nodoSvg('g', { class: forte ? 'forte' : 'evento' }, `M ${mag1(p.mag)} · ${p.luogo ? `${p.luogo} · ` : ''}${dataEvento(p.ts)}`);
-    gruppo.append(nodoSvg('circle', { cx: x, cy: y, r: Math.max(3, (p.mag - 1) * 2) }));
+    const cerchio = nodoSvg('circle', { cx: x, cy: y, r: Math.max(3, (p.mag - 1) * 2) });
+    if (colore) cerchio.style.fill = colore(p); // es. colore per profondità nella sezione verticale
+    gruppo.append(cerchio);
     gruppo.addEventListener('click', () => sync.seleziona(p));
     gruppo.addEventListener('pointerenter', () => sync.passa(p));
     gruppo.addEventListener('pointerleave', () => sync.passa(null));
@@ -595,8 +599,8 @@ function creaMinimappa(punti, sync, forteId) {
   });
   return { aiuto, quadro, scheda, apri, dettaglio };
 }
-function aggiungiMappa(blocco, sync, punti, forte) {
-  const mappa = creaMinimappa(punti, sync, forte && idEvento(forte));
+export function aggiungiMappa(blocco, sync, punti, forte, colore = null) {
+  const mappa = creaMinimappa(punti, sync, forte && idEvento(forte), colore);
   if (!mappa) return;
   blocco.classList.add('con-mappa');
   blocco.style.setProperty('--alt-grafico', `${DIM_GRANDE.A}px`);

@@ -19,7 +19,7 @@ function el(tag, classe, testo) {
   return e;
 }
 
-function scelta(etichetta, valori, predefinito, testoValore = String) {
+export function scelta(etichetta, valori, predefinito, testoValore = String) {
   const lab = el('label', 'terremoti-filtro');
   const sel = el('select');
   for (const v of valori) {
@@ -33,7 +33,7 @@ function scelta(etichetta, valori, predefinito, testoValore = String) {
 }
 
 // Scelta dell'anno o di un periodo personalizzato (stesso calendario degli altri filtri): valore = { da, a } in UTC.
-function sceltaPeriodo(etichetta, anni, predefinito) {
+export function sceltaPeriodo(etichetta, anni, predefinito) {
   const lab = el('label', 'terremoti-filtro');
   const sel = el('select');
   for (const a of anni) {
@@ -91,7 +91,7 @@ const numero = (n, d = 0) => n.toLocaleString(localeIntl(), { minimumFractionDig
 const magnitudo = m => m.toLocaleString(localeIntl(), { maximumFractionDigits: 1 });
 
 // Stato di un pannello: bottoni occupati durante lo scarico e, se l'archivio non risponde, errore con «Riprova»
-function stato() {
+export function stato() {
   const messaggio = el('p', 'uffici-nota');
   messaggio.setAttribute('role', 'status');
   const esegui = async (nodo, azione, riprova) => {
@@ -378,18 +378,18 @@ const DIM_ANNI_GRANDE = { L: 900, A: 420, MS: 58, MD: 46, MA: 22, MB: 54 };
 const DIM_CUM = { L: 400, A: 150, MS: 36, MD: 10, MA: 10, MB: 24 };
 const DIM_CUM_GRANDE = { L: 900, A: 420, MS: 62, MD: 22, MA: 22, MB: 54 };
 
-function nodoSvg(tag, attributi = {}) {
+export function nodoSvg(tag, attributi = {}) {
   const nodo = document.createElementNS(SVG_NS, tag);
   for (const [chiave, valore] of Object.entries(attributi)) nodo.setAttribute(chiave, valore);
   return nodo;
 }
-function testoSvg(x, y, testo, attributi = {}) {
+export function testoSvg(x, y, testo, attributi = {}) {
   const nodo = nodoSvg('text', { x, y, ...attributi });
   nodo.textContent = testo;
   return nodo;
 }
 // Titolo di un asse, solo nel popup grande: orizzontale in basso, verticale a sinistra o a destra
-function titoloAsse(svg, testo, x, y, ruota = false) {
+export function titoloAsse(svg, testo, x, y, ruota = false) {
   const nodo = ruota
     ? nodoSvg('text', { transform: `translate(${x} ${y}) rotate(-90)`, 'text-anchor': 'middle', class: 'et asse-titolo' })
     : testoSvg(x, y, testo, { 'text-anchor': 'middle', class: 'et asse-titolo' });
@@ -428,7 +428,7 @@ function mostraTooltip(testo, x, y, nodo) {
   posizionaTooltip(x, y);
 }
 
-function collegaTooltip(blocco) {
+export function collegaTooltip(blocco) {
   if (!tooltipCollegato) {
     tooltipCollegato = true;
     window.addEventListener('scroll', nascondiTooltip, { passive: true, capture: true });

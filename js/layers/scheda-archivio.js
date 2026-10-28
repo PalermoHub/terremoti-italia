@@ -266,7 +266,7 @@ const COLORE_PIU_A = '#0ea5e9';
 const COLORE_PIU_B = '#f97316';
 
 // Cella esagonale che contiene il punto: coordinate cube arrotondate alla cella più vicina
-function cellaEsagonale(lon, lat, raggio) {
+export function cellaEsagonale(lon, lat, raggio) {
   const q = (RADICE3 / 3 * lon - lat / 3) / raggio;
   const r = (2 / 3 * lat) / raggio;
   const x = q, z = r, y = -x - z;

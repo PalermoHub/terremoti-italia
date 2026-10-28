@@ -13,6 +13,7 @@ import { t as tr, tl } from './i18n.js';
 import { mostraCerchio, nascondiCerchio } from './cerchio-raggio.js';
 import { raggioVicini, raggioAttivo, cerchioVisibile, EVENTO_RAGGIO, eventiVicini, voceEventiVicini } from './raggio-vicini.js';
 import { inModoEmergenza, moduliAlClic } from './modo-emergenza.js';
+import { clicCatturato } from './cattura-clic.js';
 
 const R = 4; // tolleranza in pixel attorno al clic
 
@@ -426,6 +427,7 @@ export function collegaScheda(map, moduli, contenitore, opzioni = {}) {
     }, 120);
   });
   map.on('click', async e => {
+    if (clicCatturato(e)) return; // un modulo aspetta questo clic (es. i punti della sezione verticale)
     const fuori = false; // la mappa copre tutta l'Italia: nessun confine comunale oltre il quale la scheda non si apre
     const emergenza = inModoEmergenza(); // telefono con il Piano di emergenza: la scheda è solo quella dell'area
     const moduliBase = moduliAlClic(conScheda, emergenza);
