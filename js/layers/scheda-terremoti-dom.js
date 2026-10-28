@@ -952,7 +952,7 @@ function disegnaSpazioTempo(g, apri, grande = false, origine = g, interazione = 
 // Vista «Sequenza»: un punto per evento, nel tempo e per magnitudo; colore e grandezza seguono la classe di magnitudo.
 // Ha la stessa forma di `puntiMagnitudo` ({ da, a, base, cima, punti con x e y, mainshock }), così nel popup si zooma con `finestraTempo`.
 function sequenzaDaSerie(serie, eventi) {
-  const da = serie.barre[0].da, a = serie.barre[serie.barre.length - 1].a;
+  const da = serie.da ?? serie.barre[0].da, a = serie.a ?? serie.barre[serie.barre.length - 1].a; // l'intervallo vero, non la fine dell'ultima barra
   const minimo = eventi.reduce((m, p) => Math.min(m, p.mag), Infinity), massimo = eventi.reduce((m, p) => Math.max(m, p.mag), -Infinity);
   const base = Math.floor(minimo), cima = Math.max(base + 2, Math.ceil(massimo));
   const durata = Math.max(1, a - da);
@@ -993,6 +993,7 @@ function disegnaSequenzaPunti(g, grande, apri, sync, interazione) {
 
 // Vista scelta nel grafico a barre («conteggio» o «sequenza»): resta la stessa quando il grafico si ridisegna
 let vistaSerie = 'conteggio';
+const UNITA_ORDINE = ['giorno', 'mese', 'anno'];
 
 // Selettore Conteggio / Sequenza sopra il grafico a barre
 function selettoreVista(suCambio) {
@@ -1097,8 +1098,9 @@ function disegnaSerie(serie, grande = false, interazione = null, apri = null, fi
 
 // Contenuto della sezione: menu giorno/mese/anno (o periodo personalizzato) e barre; si ridisegna al cambio di unità,
 // di periodo e di magnitudo minima. `area` = riquadro per il servizio INGV.
-// Per lo storico: `sorgente()` dà gli eventi già in mappa e `adesso()` la fine del periodo mostrato, a cui ancorare le finestre dei grafici.
-export function graficoSerie(area, apri, { sorgente = null, adesso = null, evidenzia = null, nascondi = null } = {}) {
+// Per lo storico: `sorgente()` dà gli eventi già in mappa e `adesso()` la fine del periodo mostrato, a cui ancorare le finestre dei grafici;
+// `periodo()` dà { da, a } del periodo mostrato: i grafici coprono quello, non una finestra fissa che resterebbe in parte vuota.
+export function graficoSerie(area, apri, { sorgente = null, adesso = null, periodo = null, evidenzia = null, nascondi = null } = {}) {
   const radice = el('div', 'terremoti-elenco');
   const corpo = el('div');
   const interazione = creaInterazione({ evidenzia, nascondi });
@@ -1109,7 +1111,17 @@ export function graficoSerie(area, apri, { sorgente = null, adesso = null, evide
   let baseInCorso = false;
   let periodoInCorso = null;
   let propria = sorgente ? 'mese' : null; // lo storico ha la sua unità: un periodo passato non si legge a giorni
-  const unitaCorrente = () => (periodoCustom ? unitaCustom : propria ?? unita);
+  // periodo mostrato molto lungo (confronto tra anni lontani): l'unità non scende sotto quella che lo fa stare in una sessantina di barre
+  const unitaCorrente = () => {
+    if (periodoCustom) return unitaCustom;
+    const base = periodoBase();
+    const scelta = propria ?? unita;
+    return base ? UNITA_ORDINE[Math.max(UNITA_ORDINE.indexOf(scelta), UNITA_ORDINE.indexOf(unitaDaPeriodo(base)))] : scelta;
+  };
+  const periodoBase = () => {
+    const p = periodo?.();
+    return p ? { da: p.da, a: Math.min(p.a, Date.now()) } : null;
+  };
   const fineCorrente = () => (periodoCustom ? periodoCustom.a : adesso ? Math.min(adesso(), Date.now()) : Date.now());
   // Un intervallo lungo si legge per mese o per anno: il grafico resta leggibile senza chiedere una seconda scelta.
   const unitaDaPeriodo = p => {
@@ -1148,9 +1160,10 @@ export function graficoSerie(area, apri, { sorgente = null, adesso = null, evide
     interazione?.ferma(); // il grafico cambia: l'evidenza del punto precedente non vale più
     const u = unitaCorrente();
     const fine = fineCorrente();
-    const g = puntiMagnitudo(dati, u, filtro.magMin, fine, periodoCustom);
+    const tratto = periodoCustom ?? periodoBase();
+    const g = puntiMagnitudo(dati, u, filtro.magMin, fine, tratto);
     const archivio = !sorgente && !periodoCustom && u === 'anno' ? riepilogoArchivio(Math.max(filtro.magMin, MAG_STORICO), disegna) : null;
-    const serie = archivio ? serieAnnuale(archivio.perMese) : serieEventi(dati, u, filtro.magMin, fine, periodoCustom);
+    const serie = archivio ? serieAnnuale(archivio.perMese) : serieEventi(dati, u, filtro.magMin, fine, tratto);
     if (archivio) collegaEventiBarre(serie, dati);
     corpo.replaceChildren(
       disegnaSerie(serie, false, interazione, apri),

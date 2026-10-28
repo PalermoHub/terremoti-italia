@@ -569,7 +569,7 @@ export function serieEventi(eventi, unita, magMin = MAG_STORICO, adesso = Date.n
     if (b.magMax == null || e.mag > b.magMax) b.magMax = e.mag;
   }
   const { sequenze, soglia } = marcaSciami(barre);
-  return { unita, barre, sequenze, soglia, totale: barre.reduce((s, b) => s + b.n, 0) };
+  return { unita, barre, sequenze, soglia, totale: barre.reduce((s, b) => s + b.n, 0), da: primo, a: ultimo };
 }
 
 // Grafico magnitudo-tempo: ogni evento è uno stelo alto quanto la magnitudo, sulla stessa finestra della serie a barre.

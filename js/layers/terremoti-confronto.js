@@ -241,7 +241,7 @@ export default {
     voci(trovati) {
       const primo = evento(trovati.filter(f => f.layer.id === HIT));
       if (!primo) return [];
-      const grafici = graficoSerie(AREA, p => { const trovato = eventi.find(v => v.id === String(p.id)); if (trovato) vaiAEvento(trovato); }, { sorgente: () => eventi, adesso: () => periodoMostrato?.a ?? Date.now(), ...creaEvidenzaMappa(mappa) });
+      const grafici = graficoSerie(AREA, p => { const trovato = eventi.find(v => v.id === String(p.id)); if (trovato) vaiAEvento(trovato); }, { sorgente: () => eventi, adesso: () => periodoMostrato?.a ?? Date.now(), periodo: () => periodoMostrato, ...creaEvidenzaMappa(mappa) });
       return [
         { ...voceTerremoto(proprieta(primo), Date.now(), () => barraEventi(primo.properties.id, () => eventi, vaiAEvento)), chiave: `terremoto-confronto-${primo.properties.id}` }, // nella scheda principale, con le altre sezioni del luogo: non nel pannello Storico
         { ...voceSerie(() => grafici), chiave: 'terremoto-confronto-serie' },
