@@ -11,6 +11,7 @@ export { classeMagnitudo, raggioMagnitudo }; // API pubblica del modulo: grafici
 export const FONTE = 'INGV, Istituto Nazionale di Geofisica e Vulcanologia: terremoti in tempo reale (CC BY 4.0)';
 export const SITO = 'https://terremoti.ingv.it/';
 export const LINK = 'https://terremoti.ingv.it/event/';
+export const LINK_SHAKEMAP = 'https://shakemap.ingv.it/#event/';
 const PESO_LUOGO = 8;
 const ORA_MS = 3600 * 1000;
 
@@ -214,6 +215,10 @@ export function modelloPopupTerremoto(p, adesso = Date.now()) {
   return { titolo: titoloTerremoto(p), sottotitolo: p.fascia, ...(p.anno ? { badge: { testo: String(p.anno), colore: p.colore } } : {}), righe: righeTerremoto(p, adesso).filter(r => r.etichetta !== 'Zona') };
 }
 
+// L'INGV pubblica la ShakeMap (scuotimento del suolo) solo per i terremoti di magnitudo ≥ 3 nell'area del dataset (lon 6–21, lat 35–48);
+// il sito non risponde con CORS, quindi non si può verificare se la mappa esiste: si applica la regola del dataset
+export const haShakeMap = p => p.mag >= 3 && p.lat >= 35 && p.lat <= 48 && p.lon >= 6 && p.lon <= 21;
+
 // Data e ora come le scrive l'INGV («2026-03-02 23:53:10»), nel fuso chiesto: UTC per l'ora ufficiale dell'evento, Roma per la stessa ora italiana
 const PARTI_ORARIO = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' };
 function dataOra(ts, timeZone) {
@@ -250,7 +255,10 @@ export function voceTerremoto(p, adesso = Date.now(), dinamico = null, storico =
   return {
     chiave: `terremoto-${storico ? 'storico-' : ''}${p.id}`, tipo: 'terremoto', peso: PESO_LUOGO, strato: 'terremoti', titolo: titoloTerremoto(p), icona: 'terremoto', sempre: true,
     gruppi: [], evento: modelloEvento(p), miniatura: miniatura(p),
-    link: { testo: 'Scheda dell\'evento su INGV', url: LINK + p.id, icona: 'esterno', suggerimento: 'Pagina dell\'evento sul sito terremoti.ingv.it' },
+    link: [
+      { testo: 'Scheda dell\'evento su INGV', url: LINK + p.id, icona: 'esterno', suggerimento: 'Pagina dell\'evento sul sito terremoti.ingv.it' },
+      ...(haShakeMap(p) ? [{ testo: 'ShakeMap dell\'evento su INGV', url: LINK_SHAKEMAP + p.id, icona: 'esterno', suggerimento: 'Mappa dello scuotimento del suolo sul sito shakemap.ingv.it' }] : []),
+    ],
     fonte: t('layer.fonte', { fonte: tl(FONTE) }),
     ...(dinamico ? { dinamico } : {}),
   };
@@ -320,7 +328,7 @@ export function accordionTerremoti(elenco, adesso = Date.now()) {
     elementi: mostrati.map(p => ({
       evento: p, titolo: titoloTerremoto(p), anteprima: quantoTempoFa(p.ts, adesso),
       miniatura: miniatura(p),
-      righe: [...righeTerremoto(p, adesso), { etichetta: 'Scheda INGV', valore: 'terremoti.ingv.it', urlValore: LINK + p.id }],
+      righe: [...righeTerremoto(p, adesso), { etichetta: 'Scheda INGV', valore: 'terremoti.ingv.it', urlValore: LINK + p.id }, ...(haShakeMap(p) ? [{ etichetta: 'ShakeMap INGV', valore: 'shakemap.ingv.it', urlValore: LINK_SHAKEMAP + p.id }] : [])],
     })),
   };
 }
