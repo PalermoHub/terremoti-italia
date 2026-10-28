@@ -32,3 +32,21 @@ export const espressioneColoreMagnitudo = (campo = 'classeMag') => [
 export const espressioneClassiMagnitudo = (classi, campo = 'classeMag') => (classi && classi.size < CLASSI_MAGNITUDO.length
   ? ['in', ['get', campo], ['literal', [...classi]]]
   : null);
+
+// Slider della magnitudo delle legende (layers/slider-magnitudo.js): scala 0–10 a passi di 0,1. L'estremo alto è
+// aperto: con la maniglia in fondo scala il filtro non ha un massimo, così anche un evento più forte di 10 resta in mappa.
+export const SLIDER_MAGNITUDO = Object.freeze({ min: 0, max: 10, passo: 0.1 });
+const DECIMI = Math.round(1 / SLIDER_MAGNITUDO.passo); // 0,1 → 10: arrotonda i valori dello slider a un decimo
+const dentroScala = v => Math.min(SLIDER_MAGNITUDO.max, Math.max(SLIDER_MAGNITUDO.min, Math.round((Number.isFinite(v) ? v : SLIDER_MAGNITUDO.min) * DECIMI) / DECIMI));
+
+// Filtro (magMin, magMax) → posizione delle due maniglie; magMax null (nessun massimo) va a fondo scala.
+export const maniglieMagnitudo = (magMin = SLIDER_MAGNITUDO.min, magMax = null) => {
+  const da = dentroScala(magMin);
+  return { da, a: magMax == null ? SLIDER_MAGNITUDO.max : Math.max(da, dentroScala(magMax)) };
+};
+
+// Maniglie → filtro: la maniglia alta a fondo scala vuol dire «nessun massimo» (null), non «magnitudo 8 esatta».
+export const filtroMagnitudo = (da, a) => {
+  const m = maniglieMagnitudo(da, a);
+  return { magMin: m.da, magMax: m.a >= SLIDER_MAGNITUDO.max ? null : m.a };
+};

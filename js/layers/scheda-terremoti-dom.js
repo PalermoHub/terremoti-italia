@@ -25,11 +25,23 @@ function menu(etichetta, scelte, valore, testoScelta, suCambio) {
     o.value = String(v);
     sel.append(o);
   }
-  sel.value = String(valore());
   sel.addEventListener('change', () => suCambio(typeof scelte[0] === 'number' ? Number(sel.value) : sel.value));
-  // altri menu uguali (legenda e scheda) seguono la scelta
-  const segui = () => (lab.isConnected ? sel.value = String(valore()) : document.removeEventListener(EVENTO_FILTRO, segui));
+  // altri menu uguali (legenda e scheda) seguono la scelta; lo slider della magnitudo può scegliere un valore fuori
+  // elenco (per esempio 2,5): il menu mostra quel valore con una voce in più, aggiornata invece che accumulata
+  const allinea = () => {
+    const v = String(valore());
+    let fuori = sel.querySelector('option[data-fuori-elenco]');
+    if ([...sel.options].some(o => o !== fuori && o.value === v)) { fuori?.remove(); fuori = null; }
+    else {
+      if (!fuori) { fuori = el('option'); fuori.dataset.fuoriElenco = '1'; sel.append(fuori); }
+      fuori.value = v;
+      fuori.textContent = testoScelta(valore());
+    }
+    sel.value = v;
+  };
+  const segui = () => (lab.isConnected ? allinea() : document.removeEventListener(EVENTO_FILTRO, segui));
   document.addEventListener(EVENTO_FILTRO, segui);
+  allinea();
   lab.append(el('span', null, etichetta), sel);
   return lab;
 }
@@ -42,8 +54,11 @@ const cambia = campo => v => {
 
 export const testoGiorni = g => (g === 1 ? t('terremoti.ultime24') : t('terremoti.ultimiGiorni', { n: g }));
 
+// Magnitudo minima scritta nei menu come la legge lo slider: «≥ 2,5», con la virgola decimale italiana
+const magnitudoMinima = m => `≥ ${m.toLocaleString(localeIntl(), { maximumFractionDigits: 1 })}`;
+
 // Solo la magnitudo minima (ricerca): stesso filtro dei menu della legenda, che seguono la scelta
-export const menuMagnitudo = () => menu(t('terremoti.magMin'), SCELTE_MAGNITUDO, () => filtro.magMin, m => `≥ ${m}`, cambia('magMin'));
+export const menuMagnitudo = () => menu(t('terremoti.magMin'), SCELTE_MAGNITUDO, () => filtro.magMin, magnitudoMinima, cambia('magMin'));
 
 // Profondità: un solo menu per la ricerca e per la legenda, come la magnitudo; scrive profMin/profMax nel filtro condiviso
 export function menuProfondita() {
@@ -67,14 +82,13 @@ export function menuProfondita() {
   return lab;
 }
 
-// Periodo, magnitudo minima e profondità: valgono per la mappa e per l'elenco
-export function menuFiltro() {
+// Periodo, magnitudo minima e profondità: valgono per la mappa e per l'elenco. Nella legenda dei terremoti la magnitudo
+// ha lo slider a due maniglie (minima e massima), quindi il menu si può lasciar fuori (`magnitudo: false`); la scheda lo tiene.
+export function menuFiltro({ magnitudo = true } = {}) {
   const riga = el('div', 'terremoti-filtri');
-  riga.append(
-    menu(t('terremoti.periodo'), SCELTE_GIORNI, () => filtro.giorni, testoGiorni, cambia('giorni')),
-    menu(t('terremoti.magMin'), SCELTE_MAGNITUDO, () => filtro.magMin, m => `≥ ${m}`, cambia('magMin')),
-    menuProfondita(),
-  );
+  riga.append(menu(t('terremoti.periodo'), SCELTE_GIORNI, () => filtro.giorni, testoGiorni, cambia('giorni')));
+  if (magnitudo) riga.append(menu(t('terremoti.magMin'), SCELTE_MAGNITUDO, () => filtro.magMin, magnitudoMinima, cambia('magMin')));
+  riga.append(menuProfondita());
   return riga;
 }
 

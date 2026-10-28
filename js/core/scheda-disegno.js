@@ -193,7 +193,6 @@ function disegnaEvento(e) {
   }
   box.append(griglia);
   box.append(disegnaLegendeEvento(e.legende));
-  if (e.autore) box.append(tx('p', 'scheda-nota', e.autore));
   return box;
 }
 

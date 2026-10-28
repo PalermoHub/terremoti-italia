@@ -836,6 +836,33 @@ dialog li { margin: 4px 0; }
 .legenda-magnitudo-cerchio { display: block; box-sizing: border-box; border: 1.5px solid currentColor; border-radius: 50%; background: color-mix(in srgb, currentColor 55%, transparent); }
 .legenda-magnitudo-nota { margin: 2px 0 0; color: var(--text-muted); font-size: var(--fs-3xs); line-height: 1.35; }
 
+/* Slider della magnitudo (js/layers/slider-magnitudo.js): due maniglie sullo stesso binario, i numeri a fianco e le
+   tacche con i cerchi delle classi. Uno per legenda, ma il filtro è lo stesso per tutti gli strati dei terremoti. */
+.legenda .slider-mag { display: flex; flex-direction: column; align-items: stretch; gap: 2px; margin: 6px 0 4px; }
+.legenda .slider-mag-testa { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.slider-mag-titolo { font-size: var(--fs-3xs); font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
+.slider-mag-numeri { display: flex; align-items: center; gap: 3px; }
+.slider-mag-numero { box-sizing: border-box; width: 40px; padding: 1px 2px; border: 1px solid var(--border-ui); border-radius: var(--r-xs); background: var(--surface); color: var(--text); font: inherit; font-size: var(--fs-xs); text-align: center; font-variant-numeric: tabular-nums; }
+.slider-mag-numero:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; border-color: var(--accent); }
+.slider-mag-trattino { color: var(--text-muted); }
+.legenda .slider-mag-pista { position: relative; display: block; height: 24px; }
+.legenda .slider-mag-pista input { position: absolute; left: 0; top: 0; width: 100%; height: 24px; margin: 0; padding: 0; border: 0; background: none; pointer-events: none; -webkit-appearance: none; appearance: none; }
+.legenda .slider-mag-pista input::-webkit-slider-runnable-track { height: 3px; background: var(--border); border-radius: 2px; }
+.legenda .slider-mag-pista input::-moz-range-track { height: 3px; background: var(--border); border-radius: 2px; }
+.legenda .slider-mag-pista input::-webkit-slider-thumb { -webkit-appearance: none; pointer-events: auto; box-sizing: border-box; width: 16px; height: 16px; margin-top: -6.5px; border-radius: 50%; border: 2px solid var(--accent-strong, var(--accent)); background: var(--surface); cursor: ew-resize; }
+.legenda .slider-mag-pista input::-moz-range-thumb { pointer-events: auto; box-sizing: border-box; width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--accent-strong, var(--accent)); background: var(--surface); cursor: ew-resize; }
+.legenda .slider-mag-pista input:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
+.legenda .slider-mag-pista input:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
+.slider-mag-tratta { position: absolute; top: 10.5px; height: 3px; border-radius: 2px; background: var(--accent-strong, var(--accent)); pointer-events: none; }
+/* le tacche occupano tutta la riga e crescono dal basso: i cerchi appoggiati sulla stessa linea e i numeri allineati sotto */
+.legenda .slider-mag-tacche { position: relative; display: block; height: 34px; }
+.legenda .slider-mag-tacca { position: absolute; top: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 2px; transform: translateX(-50%); }
+.slider-mag-cerchio { display: block; flex: none; box-sizing: border-box; border: 1.5px solid var(--text-muted); border-radius: 50%; background: color-mix(in srgb, var(--text-muted) 18%, transparent); }
+.slider-mag-valore { font-size: var(--fs-3xs); line-height: 1; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.slider-mag-nota { margin: 6px 0 2px; color: var(--text-muted); font-size: var(--fs-3xs); line-height: 1.35; }
+.slider-mag[data-attivo="true"] .slider-mag-titolo { color: var(--text); }
+.slider-mag[data-attivo="true"] .slider-mag-tratta { box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent); }
+
 /* Legenda sotto lo strato, nel pannello Layer (js/core/legenda-pannello.js) */
 .legenda-sostituita, .legenda-vuota { display: none; }
 .legenda-in-pannello { margin: 0 0 8px 38px; padding: 4px 8px 6px; border-left: 2px solid var(--border-ui); font-size: var(--fs-xs); }
@@ -2701,6 +2728,7 @@ details.scheda-sez-evento .scheda-sez-testo { display: contents; }
 #cerca-pannello label { display: block; font-size: var(--fs-xs); color: var(--text-muted); }
 #cerca-pannello select { width: 100%; margin: 2px 0 8px; padding: 6px; }
 
-/* Legenda terremoti: `.legenda div` impone il flex, il filtro resta a tre colonne uguali e l'etichetta non sborda in quella accanto */
-.legenda .terremoti-filtri { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); align-items: start; gap: 8px; }
+/* Legenda terremoti: `.legenda div` impone il flex, il filtro si adatta alle colonne (due nella legenda, dove la
+   magnitudo ha lo slider a due maniglie, tre nella scheda) e l'etichetta non sborda in quella accanto */
+.legenda .terremoti-filtri { display: grid; grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); align-items: start; gap: 8px; }
 .legenda .terremoti-filtro > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

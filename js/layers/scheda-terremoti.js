@@ -35,8 +35,11 @@ export const PROFONDITA = [
   { chiave: 'da30a70', min: 30, max: 70 },
   { chiave: 'oltre70', min: 70, max: null },
 ];
-// Oltre a questi, il pannello con slider e istogramma imposta `finestra` ([da, a] in giorni interi dall'inizio dei GIORNI_MAX, null = tutto) e `classi` (indici di CLASSI_MAG accesi, null = tutte).
-export const FILTRO_INIZIALE = Object.freeze({ giorni: 7, magMin: 1, profMin: null, profMax: null, finestra: null, classi: null });
+// Oltre a questi, il pannello con slider e istogramma imposta `finestra` ([da, a] in giorni interi dall'inizio dei
+// GIORNI_MAX, null = tutto) e `classi` (indici di CLASSI_MAG accesi, null = tutte); lo slider delle legende imposta
+// `magMax` (null = nessun massimo, con la maniglia a fondo scala). Magnitudo minima e massima valgono per tutti gli
+// strati dei terremoti: mappa, elenco, tabella e schede.
+export const FILTRO_INIZIALE = Object.freeze({ giorni: 7, magMin: 1, magMax: null, profMin: null, profMax: null, finestra: null, classi: null });
 export const filtro = { ...FILTRO_INIZIALE };
 const GIORNO_MS = 24 * ORA_MS;
 
@@ -56,16 +59,24 @@ export function intervallo({ giorni, finestra } = filtro, adesso = Date.now()) {
   return [adesso - (GIORNI_MAX - da) * GIORNO_MS, a >= GIORNI_MAX ? Infinity : adesso - (GIORNI_MAX - a) * GIORNO_MS];
 }
 
+// Magnitudo dentro l'intervallo dello slider a due maniglie: vale per mappa, elenco, tabella e scheda. Le classi accese
+// del tema magnitudo si sommano a questo intervallo, non lo sostituiscono.
+export const passaMagnitudo = (p, f = filtro) => p.mag >= f.magMin && (f.magMax == null || p.mag <= f.magMax);
+
+// Lo stesso intervallo come espressione MapLibre, per gli strati dell'archivio (anno e confronto) che filtrano in mappa
+// senza ripassare dal server quando si muove lo slider.
+export const espressioneMagnitudo = (f = filtro) => ['all', ['>=', ['get', 'mag'], f.magMin], ...(f.magMax == null ? [] : [['<=', ['get', 'mag'], f.magMax]])];
+
 export const passaFiltro = (p, f = filtro, adesso = Date.now()) => {
   const [da, a] = intervallo(f, adesso);
-  return p.mag >= f.magMin && p.ts >= da && p.ts <= a
+  return passaMagnitudo(p, f) && p.ts >= da && p.ts <= a
     && (f.profMin == null || p.prof >= f.profMin) && (f.profMax == null || p.prof <= f.profMax)
     && (!f.classi || f.classi.has(classeMagnitudo(p.mag)));
 };
 // Stesso filtro come espressione MapLibre (per cerchi e strato di interrogazione)
 export function espressioneFiltro(f = filtro, adesso = Date.now()) {
   const [da, a] = intervallo(f, adesso);
-  return ['all', ['>=', ['get', 'mag'], f.magMin], ['>=', ['get', 'ts'], da], ...(a === Infinity ? [] : [['<=', ['get', 'ts'], a]]),
+  return ['all', ['>=', ['get', 'mag'], f.magMin], ...(f.magMax == null ? [] : [['<=', ['get', 'mag'], f.magMax]]), ['>=', ['get', 'ts'], da], ...(a === Infinity ? [] : [['<=', ['get', 'ts'], a]]),
     ...(f.profMin == null ? [] : [['>=', ['get', 'prof'], f.profMin]]),
     ...(f.profMax == null ? [] : [['<=', ['get', 'prof'], f.profMax]]),
     ...(f.classi ? [['any', ...[...f.classi].map(i => ['all', ['>=', ['get', 'mag'], CLASSI_MAG[i].da], ...(CLASSI_MAG[i].a === Infinity ? [] : [['<', ['get', 'mag'], CLASSI_MAG[i].a]])])]] : [])];
@@ -76,7 +87,7 @@ export function eventiPerGiorno(eventi, f = filtro, adesso = Date.now()) {
   const n = Array(GIORNI_MAX).fill(0);
   for (const p of eventi) {
     const i = GIORNI_MAX - 1 - Math.floor((adesso - p.ts) / GIORNO_MS);
-    if (p.mag >= f.magMin && (f.profMin == null || p.prof >= f.profMin) && (f.profMax == null || p.prof <= f.profMax) && i >= 0 && i < GIORNI_MAX && (!f.classi || f.classi.has(classeMagnitudo(p.mag)))) n[i]++;
+    if (passaMagnitudo(p, f) && (f.profMin == null || p.prof >= f.profMin) && (f.profMax == null || p.prof <= f.profMax) && i >= 0 && i < GIORNI_MAX && (!f.classi || f.classi.has(classeMagnitudo(p.mag)))) n[i]++;
   }
   return n;
 }
@@ -190,25 +201,35 @@ export function modelloPopupTerremoto(p, adesso = Date.now()) {
   return { titolo: titoloTerremoto(p), sottotitolo: p.fascia, ...(p.anno ? { badge: { testo: String(p.anno), colore: p.colore } } : {}), righe: righeTerremoto(p, adesso).filter(r => r.etichetta !== 'Zona') };
 }
 
-const dataRoma = ts => new Date(ts).toLocaleDateString(localeIntl(), { timeZone: 'Europe/Rome', day: '2-digit', month: '2-digit', year: 'numeric' });
-const oraRoma = ts => new Date(ts).toLocaleTimeString(localeIntl(), { timeZone: 'Europe/Rome', hour: '2-digit', minute: '2-digit' });
+// Data e ora come le scrive l'INGV («2026-03-02 23:53:10»), nel fuso chiesto: UTC per l'ora ufficiale dell'evento, Roma per la stessa ora italiana
+const PARTI_ORARIO = { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' };
+function dataOra(ts, timeZone) {
+  const p = Object.fromEntries(new Intl.DateTimeFormat('en-CA', { ...PARTI_ORARIO, timeZone }).formatToParts(new Date(ts)).map(x => [x.type, x.value]));
+  return `${p.year}-${p.month}-${p.day} ${p.hour}:${p.minute}:${p.second}`;
+}
+// «38,7938° N · 14,1717° E»: latitudine e longitudine con il lato del mondo
+const lato = (v, pos, neg) => `${Math.abs(v).toLocaleString(localeIntl(), { minimumFractionDigits: 4, maximumFractionDigits: 4 })}° ${v >= 0 ? pos : neg}`;
+const coordinateEvento = p => (Number.isFinite(p.lat) && Number.isFinite(p.lon) ? `${lato(p.lat, 'N', 'S')} · ${lato(p.lon, 'E', 'O')}` : '');
 
-// Scheda dell'evento sul modello di quella dell'INGV: titolo e zona, data e ora, magnitudo e profondità, poi le due legende con la voce dell'evento in evidenza
+// Scheda dell'evento sul modello di quella dell'INGV: magnitudo e profondità, ora UTC e ora italiana, posizione, id dell'evento
+// e chi l'ha localizzato, poi le due legende con la voce dell'evento in evidenza
 export function modelloEvento(p) {
   const classe = classeMagnitudo(p.mag);
   return {
     titolo: t('terremoti.ev.titolo'), luogo: p.luogo || t('terremoti.zonaSconosciuta'), ...(p.anno ? { badge: { testo: String(p.anno), colore: p.colore } } : {}),
     campi: [
-      { chiave: t('terremoti.ev.data'), valore: dataRoma(p.ts) },
-      { chiave: t('terremoti.ev.ora'), valore: oraRoma(p.ts), nota: t('terremoti.ev.oraItaliana') },
       { chiave: t('terremoti.ev.magnitudo'), valore: `${num(p.mag)}${p.tipoMag ? ` ${p.tipoMag}` : ''}` },
       { chiave: t('terremoti.ev.profondita'), valore: p.prof == null ? '' : `${num(p.prof, 0)} km` },
+      { chiave: t('terremoti.ev.oraUtc'), valore: dataOra(p.ts, 'UTC') },
+      { chiave: t('terremoti.ev.oraItaliana'), valore: dataOra(p.ts, 'Europe/Rome') },
+      { chiave: t('terremoti.ev.posizione'), valore: coordinateEvento(p) },
+      { chiave: t('terremoti.ev.id'), valore: p.id == null ? '' : String(p.id) },
+      { chiave: t('terremoti.ev.localizzatoDa'), valore: p.autore ?? '' },
     ].filter(c => c.valore),
     legende: [
       { titolo: t('terremoti.ev.legendaMagnitudo'), voci: CLASSI_MAGNITUDO.map((c, i) => ({ testo: t(`terremoti.ev.mag.${c.chiave}`), raggio: c.raggio, attiva: i === classe, badge: `M ${num(p.mag)}` })) },
       { titolo: t('terremoti.ev.legendaTempo'), voci: FASCE.map(f => ({ testo: tl(f.nome), colore: f.colore, attiva: f.nome === p.fascia, badge: tl(f.nome) })) },
     ],
-    autore: p.autore ? `${t('terremoti.ev.localizzazione')}: ${p.autore}` : '',
   };
 }
 

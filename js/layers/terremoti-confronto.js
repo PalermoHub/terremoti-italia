@@ -1,6 +1,6 @@
 import { tl, t } from '../core/i18n.js';
 import { AREA_EVENTI } from '../core/config.js';
-import { scaricaEventiTutti, eventoDaIngv, modelloPopupTerremoto, voceTerremoto, voceSerie, voceAltri, filtro, colonneTabellaTerremoti } from './scheda-terremoti.js';
+import { scaricaEventiTutti, eventoDaIngv, modelloPopupTerremoto, voceTerremoto, voceSerie, voceAltri, filtro, colonneTabellaTerremoti, espressioneMagnitudo, passaMagnitudo } from './scheda-terremoti.js';
 import { EVENTO_FILTRO, barraEventi, graficoSerie, elencoAltri } from './scheda-terremoti-dom.js';
 import { pannelloConfronto } from './terremoti-archivio.js';
 import { creaPopupTerremoti, simboliRighe } from './terremoti-popup.js';
@@ -10,6 +10,7 @@ import { clicSu } from '../core/scheda-navigazione.js';
 import { creaFiltroTerritorio } from '../core/filtro-territorio.js';
 import { espressioneClassiMagnitudo, espressioneColoreMagnitudo } from '../core/magnitudo.js';
 import { aggiornaLegendaInMappa, creaClassiFiltro, EVENTO_TEMA_MAGNITUDO, temaMagnitudoAttivo } from '../core/tema-magnitudo.js';
+import { creaSliderMagnitudo } from './slider-magnitudo.js';
 
 // Confronto tra due anni: gli eventi dei due anni insieme in mappa, a parte dai terremoti storici. Spento all'avvio; si accende dal pannello Strati.
 // Anno A azzurro, anno B arancio: il colore dice a quale anno appartiene il cerchio, la grandezza la magnitudo. Non si aggiorna da solo.
@@ -40,6 +41,7 @@ let richiesta = 0; // una risposta in ritardo di una richiesta precedente si sca
 const popup = creaPopupTerremoti();
 let titolo = null; // intestazione della legenda: cambia col tema magnitudo
 let classiFiltro = null; // classi di magnitudo della legenda, quando il tema è acceso
+let sliderMag = null; // intervallo di magnitudo della legenda (slider a due maniglie)
 let notaAnno = null; // con il tema il colore è la magnitudo: l'anno resta il bordo
 let grigliaDati = null; // celle della differenza di densità, mostrate solo a strato acceso
 
@@ -136,9 +138,11 @@ function creaChiave() {
   };
 }
 
-// Le classi di magnitudo (tema magnitudo) filtrano cerchi ed etichette dei due anni senza ripassare dal server.
-function applicaFiltroClassi() {
-  const espr = espressioneClassiMagnitudo(filtro.classi);
+// Magnitudo minima e massima dello slider (più le classi del tema magnitudo) filtrano cerchi ed etichette dei due anni
+// senza ripassare dal server: cambia quello che si vede, non gli eventi già scaricati.
+function applicaFiltroMappa() {
+  const classi = espressioneClassiMagnitudo(filtro.classi);
+  const espr = classi ? ['all', espressioneMagnitudo(), classi] : espressioneMagnitudo();
   for (const id of [PUNTI, ANNI, HIT]) if (mappa?.getLayer(id)) mappa.setFilter(id, espr);
   document.dispatchEvent(new Event(EVENTO_TABELLA));
 }
@@ -152,7 +156,7 @@ function applicaTema() {
     mappa.setPaintProperty(PUNTI, 'circle-stroke-color', ['get', 'colore']);
     mappa.setPaintProperty(PUNTI, 'circle-stroke-width', tema ? 2.5 : 1.5);
   }
-  applicaFiltroClassi();
+  applicaFiltroMappa();
   if (legenda) {
     titolo.textContent = tema ? t('tema.magnitudo.titoloStrato', { nome: t('terremoti.arc.titoloConfronto') }) : t('terremoti.arc.titoloConfronto');
     classiFiltro.nodo.hidden = !tema;
@@ -169,6 +173,7 @@ function creaLegenda() {
   legenda.hidden = !acceso;
   titolo = document.createElement('strong');
   titolo.textContent = t('terremoti.arc.titoloConfronto');
+  sliderMag = creaSliderMagnitudo();
   classiFiltro = creaClassiFiltro({ accese: () => filtro.classi, suCambio: insieme => { filtro.classi = insieme; document.dispatchEvent(new Event(EVENTO_FILTRO)); } });
   const nota = document.createElement('p');
   nota.className = 'legenda-magnitudo-nota';
@@ -183,7 +188,7 @@ function creaLegenda() {
   credito.className = 'uffici-nota';
   const link = Object.assign(document.createElement('a'), { textContent: 'INGV', href: 'https://terremoti.ingv.it/', target: '_blank', rel: 'noopener' });
   credito.append(`${t('terremoti.dati')} `, link);
-  legenda.append(titolo, classiFiltro.nodo, chiave.nodo, notaAnno, credito);
+  legenda.append(titolo, sliderMag.nodo, classiFiltro.nodo, chiave.nodo, notaAnno, credito);
   document.getElementById('legende').append(legenda);
   applicaTema();
 }
@@ -234,7 +239,7 @@ export default {
     }]);
     map.on('mouseenter', PUNTI, () => { map.getCanvas().style.cursor = 'pointer'; });
     map.on('mouseleave', PUNTI, () => { map.getCanvas().style.cursor = ''; });
-    document.addEventListener(EVENTO_FILTRO, applicaFiltroClassi);
+    document.addEventListener(EVENTO_FILTRO, applicaFiltroMappa);
     document.addEventListener(EVENTO_TEMA_MAGNITUDO, applicaTema);
     applicaTema(); // il tema può essere già acceso da una sessione precedente
   },
@@ -274,7 +279,7 @@ export default {
     fonte: t('tabella.fonte.ingvLocale'),
     licenza: 'CC BY 4.0',
     colonne: () => colonneTabellaTerremoti({ anno: true }),
-    righe: () => eventi.filter(p => !filtro.classi || filtro.classi.has(p.classeMag)),
+    righe: () => eventi.filter(p => passaMagnitudo(p) && (!filtro.classi || filtro.classi.has(p.classeMag))),
     attivo: () => acceso,
     apri: p => vaiAEvento(p),
   },

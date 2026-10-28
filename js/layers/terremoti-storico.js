@@ -1,6 +1,6 @@
 import { tl, t } from '../core/i18n.js';
 import { AREA_EVENTI } from '../core/config.js';
-import { scaricaEventi, scaricaEventiTutti, eventoDaIngv, modelloPopupTerremoto, voceTerremoto, voceSerie, voceAltri, filtro, profonditaDaFiltro, colonneTabellaTerremoti } from './scheda-terremoti.js';
+import { scaricaEventi, scaricaEventiTutti, eventoDaIngv, modelloPopupTerremoto, voceTerremoto, voceSerie, voceAltri, filtro, profonditaDaFiltro, colonneTabellaTerremoti, espressioneMagnitudo, passaMagnitudo } from './scheda-terremoti.js';
 import { EVENTO_FILTRO, barraEventi, graficoSerie, elencoAltri } from './scheda-terremoti-dom.js';
 import { ANNO_INIZIO, periodoAnno } from './scheda-archivio.js';
 import { pannelloArchivio } from './terremoti-archivio.js';
@@ -10,6 +10,7 @@ import { registraTooltipStrati } from '../core/tooltip.js';
 import { clicSu } from '../core/scheda-navigazione.js';
 import { espressioneClassiMagnitudo, espressioneColoreMagnitudo } from '../core/magnitudo.js';
 import { aggiornaLegendaInMappa, creaClassiFiltro, EVENTO_TEMA_MAGNITUDO, temaMagnitudoAttivo } from '../core/tema-magnitudo.js';
+import { creaSliderMagnitudo } from './slider-magnitudo.js';
 
 // Terremoti storici: gli eventi di un anno qualsiasi dell'archivio (dal 1985), a parte dal tempo reale. Spento all'avvio; si accende dal pannello Strati.
 // Cerchio = un evento, grande quanto la magnitudo; un solo colore (viola), perché l'età non dice niente su un anno intero. Non si aggiorna da solo.
@@ -21,6 +22,7 @@ const COLORE = '#8b5cf6';
 const AREA = AREA_EVENTI;
 const VUOTO = { type: 'FeatureCollection', features: [] };
 const FINESTRA_SCELTA_MS = 1500;
+const ATTESA_FILTRO_MS = 250; // lo slider si muove a passi di 0,1: si torna al server quando si ferma
 
 let mappa = null;
 let legenda = null;
@@ -40,6 +42,7 @@ let richiesta = 0; // una risposta in ritardo di una richiesta precedente si sca
 const popup = creaPopupTerremoti();
 let titolo = null; // intestazione della legenda: cambia col tema magnitudo
 let classiFiltro = null; // classi di magnitudo della legenda, quando il tema è acceso
+let sliderMag = null; // intervallo di magnitudo della legenda (slider a due maniglie)
 
 const annoRoma = ts => Number(new Date(ts).toLocaleDateString('en-CA', { timeZone: 'Europe/Rome', year: 'numeric' }));
 const proprieta = f => ({ ...f.properties, lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] });
@@ -79,9 +82,11 @@ async function carica(periodo, magMin, profondita = null) {
   return { n: eventi.length, troncato: scarico.troncato };
 }
 
-// Le classi di magnitudo (tema magnitudo) filtrano cerchi ed etichette dell'anno senza ripassare dal server.
-function applicaFiltroClassi() {
-  const espr = espressioneClassiMagnitudo(filtro.classi);
+// Magnitudo minima e massima dello slider (più le classi del tema magnitudo) filtrano cerchi ed etichette dell'anno
+// senza ripassare dal server: cambia quello che si vede, non l'anno già scaricato.
+function applicaFiltroMappa() {
+  const classi = espressioneClassiMagnitudo(filtro.classi);
+  const espr = classi ? ['all', espressioneMagnitudo(), classi] : espressioneMagnitudo();
   for (const id of [PUNTI, ANNI, HIT]) if (mappa?.getLayer(id)) mappa.setFilter(id, espr);
   document.dispatchEvent(new Event(EVENTO_TABELLA));
 }
@@ -95,7 +100,7 @@ function applicaTema() {
     mappa.setPaintProperty(PUNTI, 'circle-color', colore);
     mappa.setPaintProperty(PUNTI, 'circle-stroke-color', colore);
   }
-  applicaFiltroClassi();
+  applicaFiltroMappa();
   if (legenda) {
     titolo.textContent = tema ? t('tema.magnitudo.titoloStrato', { nome: t('terremoti.arc.titoloStrato') }) : t('terremoti.arc.titoloStrato');
     classiFiltro.nodo.hidden = !tema;
@@ -110,6 +115,7 @@ function creaLegenda() {
   legenda.hidden = !acceso;
   titolo = document.createElement('strong');
   titolo.textContent = t('terremoti.arc.titoloStrato');
+  sliderMag = creaSliderMagnitudo();
   classiFiltro = creaClassiFiltro({ accese: () => filtro.classi, suCambio: insieme => { filtro.classi = insieme; document.dispatchEvent(new Event(EVENTO_FILTRO)); } });
   const nota = document.createElement('p');
   nota.className = 'legenda-magnitudo-nota';
@@ -120,7 +126,7 @@ function creaLegenda() {
   credito.className = 'uffici-nota';
   const link = Object.assign(document.createElement('a'), { textContent: 'INGV', href: 'https://terremoti.ingv.it/', target: '_blank', rel: 'noopener' });
   credito.append(`${t('terremoti.dati')} `, link);
-  legenda.append(titolo, classiFiltro.nodo, pannello.nodo, credito);
+  legenda.append(titolo, sliderMag.nodo, classiFiltro.nodo, pannello.nodo, credito);
   document.getElementById('legende').append(legenda);
   applicaTema();
 }
@@ -137,15 +143,20 @@ export default {
   },
   aggiungiLayer(map) {
     mappa = map;
-    // Il filtro condiviso cambia anche per le classi di magnitudo, che si applicano in mappa senza ricaricare: si torna
-    // al server solo se cambiano la magnitudo minima o la profondità.
+    // Il filtro condiviso cambia anche per lo slider della magnitudo, che si muove a passi di 0,1: si torna al server
+    // (dopo una breve attesa) solo se il filtro chiede un insieme diverso di eventi o un'altra profondità.
+    let attesa = null;
     document.addEventListener(EVENTO_FILTRO, () => {
       if (annoRicerca == null || !acceso) return;
       const mag = Math.max(filtro.magMin, 2), prof = profonditaDaFiltro();
       if (mag === magMostrata && JSON.stringify(prof) === JSON.stringify(profMostrata)) return;
-      carica(periodoAnno(annoRicerca), mag, prof);
+      clearTimeout(attesa);
+      attesa = setTimeout(() => {
+        attesa = null;
+        if (acceso && annoRicerca != null) carica(periodoAnno(annoRicerca), Math.max(filtro.magMin, 2), profonditaDaFiltro());
+      }, ATTESA_FILTRO_MS);
     });
-    document.addEventListener(EVENTO_FILTRO, applicaFiltroClassi);
+    document.addEventListener(EVENTO_FILTRO, applicaFiltroMappa);
     document.addEventListener(EVENTO_TEMA_MAGNITUDO, applicaTema);
     // i più forti sopra gli altri; spento all'avvio (visibilità esplicita: i moduli del nucleo la leggono)
     map.addLayer({
@@ -237,7 +248,7 @@ export default {
     fonte: t('tabella.fonte.ingvLocale'),
     licenza: 'CC BY 4.0',
     colonne: () => colonneTabellaTerremoti({ anno: true }),
-    righe: () => eventi.filter(p => !filtro.classi || filtro.classi.has(p.classeMag)),
+    righe: () => eventi.filter(p => passaMagnitudo(p) && (!filtro.classi || filtro.classi.has(p.classeMag))),
     attivo: () => acceso,
     apri: p => vaiAEvento(p),
   },

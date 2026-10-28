@@ -10,6 +10,7 @@ import { registraTooltipStrati } from '../core/tooltip.js';
 import { clicSu } from '../core/scheda-navigazione.js';
 import { coloreMagnitudo, espressioneColoreMagnitudo } from '../core/magnitudo.js';
 import { aggiornaLegendaInMappa, creaClassiFiltro, EVENTO_TEMA_MAGNITUDO, temaMagnitudoAttivo } from '../core/tema-magnitudo.js';
+import { creaSliderMagnitudo } from './slider-magnitudo.js';
 import { creaPopupTerremoti, simboliRighe } from './terremoti-popup.js';
 import { EVENTO_TABELLA } from '../core/tabella-dati.js';
 
@@ -26,6 +27,7 @@ const VUOTO = { type: 'FeatureCollection', features: [] };
 let mappa = null;
 let legenda = null;
 let nota = null;
+let sliderMag = null; // intervallo di magnitudo della legenda (slider a due maniglie), uno solo per tutti gli strati dei terremoti
 let timer = null;
 let ultimo = 0;
 let troncato = false; // l'archivio ha più eventi di quanti ne arrivino in mappa
@@ -135,10 +137,11 @@ function creaLegenda() {
     }));
   }
   // tema magnitudo: al posto delle fasce d'età le classi di magnitudo, che filtrano la mappa come l'istogramma
+  sliderMag = creaSliderMagnitudo();
   classiFiltro = creaClassiFiltro({ accese: () => filtro.classi, suCambio: insieme => { filtro.classi = insieme; emetti(); } });
   classiFiltro.nodo.append(el('p', 'legenda-magnitudo-nota', t('tema.magnitudo.filtro')));
   pannelloPf = pannelloFiltro(() => eventi);
-  legenda.append(titolo, bloccoFasce, classiFiltro.nodo, pannelloPf.nodo, menuFiltro(), el('p', 'uffici-nota', t('terremoti.clicca')));
+  legenda.append(titolo, bloccoFasce, sliderMag.nodo, classiFiltro.nodo, pannelloPf.nodo, menuFiltro({ magnitudo: false }), el('p', 'uffici-nota', t('terremoti.clicca')));
   nota = el('p', 'uffici-nota');
   const credito = el('p', 'uffici-nota');
   const link = el('a', null, 'INGV');
