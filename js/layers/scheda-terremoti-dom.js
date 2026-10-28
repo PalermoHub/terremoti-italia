@@ -55,7 +55,7 @@ const cambia = campo => v => {
   emetti();
 };
 
-export const testoGiorni = g => (g === 1 ? t('terremoti.ultime24') : t('terremoti.ultimiGiorni', { n: g }));
+export const testoGiorni = g => (g < 1 ? t('terremoti.ultimaOra') : g === 1 ? t('terremoti.ultime24') : t('terremoti.ultimiGiorni', { n: g }));
 
 // ---------- periodo: giorni predefiniti oppure un giorno o un intervallo scelto dal calendario ----------
 const dataPeriodo = ts => new Date(ts).toLocaleDateString(localeIntl(), { day: 'numeric', month: 'short', year: 'numeric' });

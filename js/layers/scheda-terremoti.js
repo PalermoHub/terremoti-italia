@@ -14,8 +14,9 @@ export const LINK = 'https://terremoti.ingv.it/event/';
 const PESO_LUOGO = 8;
 const ORA_MS = 3600 * 1000;
 
-// Fasce di età, come sulle mappe dell'INGV: arancione le ultime 24 ore, giallo le ultime 72, azzurro i più vecchi
+// Fasce di età, come sulle mappe dell'INGV: rosso l'ultima ora, arancione le ultime 24, giallo le ultime 72, azzurro i più vecchi
 export const FASCE = [
+  { nome: 'Ultima ora', colore: '#e03131', finoA: ORA_MS },
   { nome: 'Ultime 24 ore', colore: '#f08c00', finoA: 24 * ORA_MS },
   { nome: 'Ultime 72 ore', colore: '#f2c500', finoA: 72 * ORA_MS },
   { nome: 'Oltre 72 ore', colore: '#1e9be0', finoA: Infinity },
@@ -26,7 +27,8 @@ export const fasciaEta = (ts, adesso = Date.now()) => FASCE.find(f => adesso - t
 // interroga per GIORNI_MAX giorni, la vista parte da GIORNI_INIZIALI; con un periodo personalizzato si interroga
 // l'archivio per l'intervallo scelto, anche prima degli ultimi 30 giorni.
 export const GIORNI_MAX = 30;
-export const SCELTE_GIORNI = [1, 7, 30];
+// La prima scelta è l'ultima ora, come frazione di giorno: `intervallo()` e `passaFiltro()` valgono per mappa, elenco e schede
+export const SCELTE_GIORNI = [1 / 24, 1, 7, 30];
 export const SCELTE_MAGNITUDO = [1, 2, 3, 4];
 // Classi di profondità dell'ipocentro (km): la prima non filtra; gli intervalli sono estremi inclusi.
 // Sono le stesse dei pannelli Archivio e Confronto; il menu della ricerca scrive `profMin`/`profMax` nel filtro condiviso.

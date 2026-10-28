@@ -4,6 +4,7 @@ import { creaServer } from './server/static.js';
 import { apriArchivio } from './server/archivio.js';
 import { scaricaIntervallo } from './server/ingv.js';
 import { gestisciAllerte } from './server/allerte-core.js';
+import { creaAggiornamento } from './server/aggiorna.js';
 import { AREA, leggiParametri, rispondiTerremoti, rispondiTesto, rispondiRiepilogo } from './server/terremoti.js';
 
 const radice = fileURLToPath(new URL('.', import.meta.url));
@@ -16,14 +17,17 @@ mkdirSync(`${radice}dati`, { recursive: true });
 const archivio = apriArchivio(process.env.ARCHIVIO ?? `${radice}dati/terremoti.sqlite`);
 
 // Gli ultimi giorni si rileggono sempre: l'INGV rivede magnitudo e coordinate degli eventi recenti
-async function aggiorna() {
-  try {
-    const adesso = Date.now();
-    const eventi = await scaricaIntervallo({ da: adesso - GIORNI_AGGIORNAMENTO * 86400000, a: adesso, magMin: MAGNITUDO_AGGIORNAMENTO, area: AREA });
-    const cambiati = archivio.salva(eventi);
-    if (cambiati) console.log(`archivio: ${cambiati} eventi nuovi o aggiornati`);
-  } catch (e) { console.error(`aggiornamento INGV non riuscito: ${e.message}`); }
+async function leggiIngv() {
+  const adesso = Date.now();
+  const eventi = await scaricaIntervallo({ da: adesso - GIORNI_AGGIORNAMENTO * 86400000, a: adesso, magMin: MAGNITUDO_AGGIORNAMENTO, area: AREA });
+  const cambiati = archivio.salva(eventi);
+  if (cambiati) console.log(`archivio: ${cambiati} eventi nuovi o aggiornati`);
+  return { cambiati, aggiornato: archivio.ultimoTs() };
 }
+
+// Il timer dei 2 minuti e il pulsante «Aggiorna ora» del browser condividono la stessa lettura (server/aggiorna.js)
+const aggiorna = creaAggiornamento({ leggi: leggiIngv });
+const aggiornaInSilenzio = () => { aggiorna().catch(() => {}); }; // l'errore è già registrato: al timer non serve altro
 
 const json = (res, stato, corpo) => { res.writeHead(stato, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' }); res.end(JSON.stringify(corpo)); };
 
@@ -31,6 +35,11 @@ const cacheAllerte = {};
 
 const gestisciExtra = async (req, res) => {
   const url = new URL(req.url, 'http://localhost');
+  // Rilettura immediata dall'INGV: la chiede il pulsante «Aggiorna ora» della legenda (nessun corpo, GET o POST)
+  if (url.pathname === '/aggiorna' && (req.method === 'GET' || req.method === 'POST')) {
+    try { json(res, 200, await aggiorna()); } catch (e) { json(res, 502, { errore: e.message }); }
+    return true;
+  }
   if (url.pathname === '/allerte' && req.method === 'GET') {
     const r = await gestisciAllerte(fetch, cacheAllerte);
     res.writeHead(r.stato, r.intestazioni);
@@ -52,6 +61,6 @@ const gestisciExtra = async (req, res) => {
 
 creaServer({ radice, gestisciExtra }).listen(porta, '127.0.0.1', () => {
   console.log(`Terremoti Italia su http://127.0.0.1:${porta}/`);
-  aggiorna();
-  setInterval(aggiorna, INTERVALLO_MS).unref();
+  aggiornaInSilenzio();
+  setInterval(aggiornaInSilenzio, INTERVALLO_MS).unref();
 });

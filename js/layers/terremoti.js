@@ -36,6 +36,9 @@ const popup = creaPopupTerremoti();
 const fasceAccese = new Set(FASCE.map(f => f.colore)); // fasce d'età della legenda ancora in mappa
 let eventi = []; // proprietà degli eventi in mappa
 let pannelloPf = null;
+let bottoneAggiorna = null; // «Aggiorna ora»: rilegge subito i terremoti, senza aspettare il giro dei 2 minuti
+let aggiornamento = false; // una sola rilettura manuale alla volta
+const ATTESA_INGV_MS = 20000; // il clic aspetta il server che rilegge l'INGV, poi ricarica comunque gli eventi
 let titolo = null; // intestazione della legenda: cambia col tema magnitudo
 let bloccoFasce = null; // filtri per età (colore del cerchio): con il tema magnitudo non descrivono più la mappa
 let inAreaScelta = null; // (proprietà) => bool, dalla ricerca per area; null = nessuna area che restringa
@@ -95,6 +98,33 @@ async function aggiorna() {
   }
 }
 
+// Il pulsante «Aggiorna ora», in legenda sotto la nota con l'ora: su un periodo chiuso non c'è niente da forzare
+// (sparisce) e, mentre la richiesta è in volo, si spegne, così un secondo clic non ne avvia un'altra.
+function aggiornaBottone() {
+  if (!bottoneAggiorna) return;
+  bottoneAggiorna.hidden = periodoNelPassato();
+  bottoneAggiorna.disabled = aggiornamento;
+  bottoneAggiorna.setAttribute('aria-busy', String(aggiornamento));
+  bottoneAggiorna.textContent = aggiornamento ? t('terremoti.aggiornaInCorso') : t('terremoti.aggiorna');
+  bottoneAggiorna.title = t('terremoti.aggiornaTitolo');
+}
+
+// Rilettura immediata: il server fa subito il giro dall'INGV (rotta /aggiorna), poi si ricaricano gli eventi. Senza
+// server (GitHub Pages) la rotta non c'è: resta la rilettura dello snapshot, il massimo che il sito statico offre.
+async function forza() {
+  if (aggiornamento || periodoNelPassato()) return;
+  aggiornamento = true;
+  aggiornaBottone();
+  try {
+    await fetch('/aggiorna', { method: 'POST', signal: AbortSignal.timeout(ATTESA_INGV_MS) }).catch(() => null);
+    await aggiorna();
+  } finally {
+    aggiornamento = false;
+    aggiornaBottone();
+    pianifica(); // il prossimo giro automatico conta da questo aggiornamento
+  }
+}
+
 // Il menu «Periodo» ha scelto un altro intervallo: si richiede l'archivio solo se non è già quello in memoria.
 function sincronizzaPeriodo() {
   if (acceso && chiavePeriodo(filtro.periodo) !== caricato) aggiorna();
@@ -116,6 +146,7 @@ function applicaFiltro() {
   for (const id of [PUNTI, HIT]) mappa?.getLayer(id) && mappa.setFilter(id, espr);
   scriviNota(true);
   document.dispatchEvent(new Event(EVENTO_TABELLA));
+  aggiornaBottone();
 }
 
 // Tema magnitudo (overlay informativo): cerchi colorati per classe di magnitudo invece che per età; le classi (blocco
@@ -161,14 +192,18 @@ function creaLegenda() {
   pannelloPf = pannelloFiltro(() => eventi);
   legenda.append(titolo, bloccoFasce, pannelloPf.nodo, menuFiltro({ magnitudo: false }), el('p', 'uffici-nota', t('terremoti.clicca')));
   nota = el('p', 'uffici-nota');
+  bottoneAggiorna = el('button', 'legenda-aggiorna');
+  bottoneAggiorna.type = 'button';
+  bottoneAggiorna.addEventListener('click', forza);
   const credito = el('p', 'uffici-nota');
   const link = el('a', null, 'INGV');
   link.href = 'https://terremoti.ingv.it/';
   link.target = '_blank';
   link.rel = 'noopener';
   credito.append(`${t('terremoti.dati')} `, link);
-  legenda.append(nota, credito);
+  legenda.append(nota, bottoneAggiorna, credito);
   document.getElementById('legende').append(legenda);
+  aggiornaBottone(); // un periodo già nel passato (dall'indirizzo) nasconde il pulsante
   applicaTema();
 }
 

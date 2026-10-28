@@ -22,7 +22,7 @@ Il server locale risponde 200 vuoto agli intervalli di glifi mancanti (`/fonts/g
 
 ## Archivio dei terremoti
 
-I terremoti stanno in `dati/terremoti.sqlite` (fuori da git). Il server lo aggiorna ogni 2 minuti con gli ultimi 30 giorni (magnitudo ≥ 1); la mappa legge `GET /terremoti?da=<ms>&a=<ms>&magmin=<n>&limite=<n>`.
+I terremoti stanno in `dati/terremoti.sqlite` (fuori da git). Il server lo aggiorna ogni 2 minuti con gli ultimi 30 giorni (magnitudo ≥ 1); la mappa legge `GET /terremoti?da=<ms>&a=<ms>&magmin=<n>&limite=<n>`. Il pulsante «Aggiorna ora» in legenda chiama `GET /aggiorna` (o `POST`): il server rilegge subito l'INGV e risponde `{ cambiati, aggiornato }`, poi la mappa ricarica i terremoti.
 
 `GET /terremoti/riepilogo?da=<ms>&a=<ms>&magmin=<n>` restituisce solo conteggi: `totale`, `perMagnitudo` (classi da 0,1) e `perMese` (mesi UTC, con la magnitudo massima). Lo usano la serie «per anno» (dal 1985) e il confronto tra anni.
 
