@@ -428,7 +428,7 @@ function graficoAnni(serie, annoA, annoB, magMin, grande = false, dominio = null
   });
   if (punti.length > 1) svg.append(nodoSvg('polyline', { points: punti.map(p => `${p[0]},${p[1]}`).join(' '), class: 'linea-mag' }));
   for (const [cx, cy, anno, mag] of punti) {
-    svg.append(nodoSvg('circle', { cx, cy, r: 1.7, class: 'punto-mag' }));
+    svg.append(nodoSvg('circle', { cx, cy, r: grande ? 2.8 : 2.4, class: 'punto-mag' }));
     svg.append(nodoSvg('circle', { cx, cy, r: grande ? 7 : 6, class: 'punto-hit', 'data-tip': `${anno}: ${t('terremoti.arc.magMax')} ${numero(mag, 1)}` }));
   }
 
@@ -544,7 +544,7 @@ function graficoCumulata(c, annoA, annoB, adesso, grande = false, dominio = null
     if (grande) {
       for (const p of serie) {
         if (p.mese < da || p.mese > a) continue;
-        svg.append(nodoSvg('circle', { cx: x(p.mese), cy: y(p.cumulati), r: 2.4, fill: colore }));
+        svg.append(nodoSvg('circle', { cx: x(p.mese), cy: y(p.cumulati), r: 3.2, fill: colore }));
       }
     }
     for (const p of serie) {
@@ -552,7 +552,7 @@ function graficoCumulata(c, annoA, annoB, adesso, grande = false, dominio = null
       svg.append(nodoSvg('circle', { cx: x(p.mese), cy: y(p.cumulati), r: 7, class: 'punto-hit', 'data-tip': `${meseCorto(p.mese)} ${anno}: ${numero(p.cumulati)} ${eventi}` }));
     }
     const fine = punti.at(-1);
-    svg.append(nodoSvg('circle', { cx: x(fine.mese), cy: y(fine.v), r: grande ? 3.2 : 2.2, fill: colore }));
+    svg.append(nodoSvg('circle', { cx: x(fine.mese), cy: y(fine.v), r: grande ? 4 : 2.8, fill: colore }));
     svg.append(nodoSvg('circle', { cx: x(fine.mese), cy: y(fine.v), r: 7, class: 'punto-hit', 'data-tip': `${anno}: ${numero(fine.v)} ${eventi}` }));
   };
   linea(serieA, 'linea-a', COLORE_A, annoA);
