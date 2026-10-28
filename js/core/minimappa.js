@@ -1,7 +1,7 @@
 // Minimappa di orientamento in basso a destra, sopra il logo con le coordinate: l'Italia intera, il riquadro della
 // vista attuale e il trascinamento per spostare la mappa principale. È una mappa MapLibre separata e non interattiva:
 // i gesti li gestiamo qui, così i clic sul riquadro non arrivano alla mappa grande. Non si chiude: si riduce a una
-// barra «Minimappa» e si riapre da lì o dal pulsante «Minimappa» della barra strumenti.
+// barra «Minimappa» e si riapre da lì.
 import { t } from './i18n.js';
 import { svgIcona } from './icone.js';
 
@@ -86,19 +86,6 @@ export function collegaMinimappa(map) {
   box.append(tela, crediti, barra, riduci);
   document.getElementById('corpo')?.append(box);
 
-  // Pulsante nella barra strumenti: riduce o riapre la stessa minimappa (non la nasconde).
-  const strumenti = document.getElementById('barra-strumenti');
-  let bottone = null;
-  if (strumenti) {
-    bottone = document.createElement('button');
-    bottone.type = 'button';
-    bottone.id = 'btn-minimappa';
-    bottone.setAttribute('aria-controls', ID);
-    bottone.innerHTML = svgIcona('mappa', 18);
-    bottone.addEventListener('click', () => impostaRidotta(!ridotta));
-    strumenti.insertBefore(bottone, document.getElementById('btn-tema') ?? null);
-  }
-
   const mini = new maplibregl.Map({
     container: tela,
     style: STILE_OSM,
@@ -136,20 +123,12 @@ export function collegaMinimappa(map) {
     return aggiunto;
   }
 
-  const aggiornaBottone = espanso => {
-    if (!bottone) return;
-    bottone.setAttribute('aria-pressed', String(espanso));
-    const testo = t(espanso ? 'minimappa.riduci' : 'minimappa.espandi');
-    bottone.title = bottone.ariaLabel = testo;
-  };
   function impostaRidotta(v) {
     ridotta = Boolean(v);
     box.classList.toggle('ridotta', ridotta);
     box.title = ridotta ? t('minimappa.espandi') : t('minimappa.suggerimento');
-    aggiornaBottone(!ridotta);
     if (!ridotta) requestAnimationFrame(() => { mini.resize(); disegna(); });
   }
-  aggiornaBottone(true);
   riduci.addEventListener('click', () => impostaRidotta(true));
   espandi.addEventListener('click', () => impostaRidotta(false));
   barra.addEventListener('click', e => { if (!e.target.closest?.('button')) impostaRidotta(false); }); // anche la barra intera riapre

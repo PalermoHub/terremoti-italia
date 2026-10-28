@@ -8,13 +8,11 @@ import { liveZoomAttivo } from './live-zoom.js';
 import { sceltePerLayer, soloCliccato, evidenzia, cancellaEvidenza, evidenzaVicine } from './evidenza.js';
 import { featureVicine } from './scheda-util.js';
 import { el, icona, sincronizzaStrato, acceseDaScheda, spegniStratiDaScheda, creaInterruttoreStrato, disegnaSezione } from './scheda-disegno.js';
-import { ICONA_INGRANAGGIO, ICONA_X, creaPannelloPreferenze } from './scheda-pannello-preferenze.js';
+import { ICONA_X } from './scheda-pannello-preferenze.js';
 import { t as tr, tl } from './i18n.js';
 import { mostraCerchio, nascondiCerchio } from './cerchio-raggio.js';
 import { raggioVicini, raggioAttivo, cerchioVisibile, EVENTO_RAGGIO, eventiVicini, voceEventiVicini } from './raggio-vicini.js';
 import { inModoEmergenza, moduliAlClic } from './modo-emergenza.js';
-import { ICONE_RAIL } from './rail.js';
-import { paroleScheda } from './scheda-parole.js';
 
 const R = 4; // tolleranza in pixel attorno al clic
 
@@ -30,20 +28,7 @@ function aggiornaUrl(lngLat, tab) {
   } catch { /* contesti senza history: nessun link condivisibile */ }
 }
 
-const ICONA_COPIA = svgIcona('copia', 18);
-const ICONA_OK = svgIcona('seggio', 18);
 const ICONA_STAMPA = svgIcona('stampa', 18);
-
-function copiaTesto(testo) {
-  if (navigator.clipboard?.writeText) return navigator.clipboard.writeText(testo);
-  const t = document.createElement('textarea');
-  t.value = testo;
-  document.body.append(t);
-  t.select();
-  document.execCommand('copy');
-  t.remove();
-  return Promise.resolve();
-}
 
 // Le frecce avanti/indietro di una scheda stanno sotto al dito: la scheda nuova si scorre in modo che la sua barra resti alla stessa altezza di prima
 const altezzaBarra = contenitore => {
@@ -234,17 +219,6 @@ function mostra(contenitore, lngLat, dati, chiusura, adattaVista, pref, tabInizi
     // il Chat bot riassume la scheda: gli arriva il modello con le sezioni visibili
     document.dispatchEvent(new CustomEvent('scheda:sunto', { detail: { sezioni: visibili.sezioni } }));
   };
-  const pannelloPref = creaPannelloPreferenze(pref, aggiorna);
-  const personalizza = el('button', 'scheda-personalizza');
-  personalizza.type = 'button';
-  personalizza.title = tr('scheda.personalizza');
-  personalizza.setAttribute('aria-label', tr('scheda.personalizza.aria'));
-  personalizza.setAttribute('aria-expanded', 'false');
-  personalizza.innerHTML = ICONA_INGRANAGGIO;
-  personalizza.addEventListener('click', () => {
-    pannelloPref.hidden = !pannelloPref.hidden;
-    personalizza.setAttribute('aria-expanded', String(!pannelloPref.hidden));
-  });
   const annuncio = el('p', 'solo-lettori', tr('scheda.aperta', { titolo: titoloTesto }));
   annuncio.setAttribute('role', 'status');
   const azioni = el('div', 'scheda-azioni');
@@ -257,28 +231,15 @@ function mostra(contenitore, lngLat, dati, chiusura, adattaVista, pref, tabInizi
     b.addEventListener('click', () => fn(b));
     return b;
   };
-  const copia = azione('scheda-copia', tr('scheda.copia'), ICONA_COPIA, async b => {
-    const part = sezioni.find(sz => sz.chiave === 'particella')?.gruppi.flatMap(g => g.righe) ?? [];
-    const v = nome => part.find(r => r.etichetta === nome)?.valore;
-    const righe = [titoloTesto, `${lngLat.lat.toFixed(5)}, ${lngLat.lng.toFixed(5)}`];
-    if (v('Foglio') && v('Particella')) righe.push(tr('scheda.copia.catasto', { foglio: v('Foglio'), particella: v('Particella') }));
-    await copiaTesto(righe.join('\n'));
-    b.innerHTML = ICONA_OK;
-    b.title = tr('scheda.copiato');
-    annuncio.textContent = tr('scheda.copiato.annuncio');
-    setTimeout(() => { b.innerHTML = ICONA_COPIA; b.title = tr('scheda.copia'); annuncio.textContent = ''; }, 1600);
-  });
   const stampa = azione('scheda-stampa', tr('scheda.stampa'), ICONA_STAMPA, () => document.dispatchEvent(new CustomEvent('scheda:stampa')));
-  // Talia racconta il luogo in frasi semplici: il pannello di Talia si apre da app.js
-  const talia = azione('scheda-talia', tr('parole.apri'), ICONE_RAIL.chatbot, () => document.dispatchEvent(new CustomEvent('talia:racconta', { detail: { luogo: titoloTesto, blocchi: paroleScheda(corrente.sezioni) } })));
-  azioni.append(talia, copia, stampa, personalizza, x);
+  azioni.append(stampa, x);
   const testata = el('header', 'scheda-intestazione');
   const riga = el('div', 'scheda-testata');
   riga.append(titolo, azioni);
   testata.append(riga, el('p', 'scheda-coordinate', `${lngLat.lat.toFixed(5)}° N, ${lngLat.lng.toFixed(5)}° E`), fissa);
   const testo = testoContesto(contesto);
   if (testo) testata.append(el('p', 'scheda-contesto', testo));
-  testata.append(pannelloPref, tabs);
+  testata.append(tabs);
 
   aggiorna();
   // annuncio breve per i lettori di schermo: la scheda intera non è una regione live

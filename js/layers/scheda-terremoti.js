@@ -118,9 +118,15 @@ const num = (n, d = 1) => n.toLocaleString(localeIntl(), { minimumFractionDigits
 // Colonne della Tabella dei dati (js/core/tabella-dati.js): le stesse proprietà della scheda, in forma tabellare.
 // `valore` serve per ordinare e per il JSON, `testo` per la tabella e il CSV, `json` per il tipo di dato esportato.
 const annoTabella = ts => Number(new Date(ts).toLocaleDateString('en-CA', { timeZone: 'Europe/Rome', year: 'numeric' }));
-const dataOraTabella = ts => {
-  const d = new Date(ts);
-  return `${d.toLocaleDateString(localeIntl(), { timeZone: 'Europe/Rome', day: '2-digit', month: '2-digit', year: 'numeric' })} ${d.toLocaleTimeString(localeIntl(), { timeZone: 'Europe/Rome', hour: '2-digit', minute: '2-digit' })}`;
+// Data e ora sono due colonne distinte: la tabella le mostra separate e le ordina ognuna per conto suo.
+// Il CSV usa i testi locali (es. «15/07/2026» e «12:05»); il JSON usa ISO (YYYY-MM-DD e HH:mm:ss), sempre nel fuso di Roma.
+const dataTabella = ts => new Date(ts).toLocaleDateString(localeIntl(), { timeZone: 'Europe/Rome', day: '2-digit', month: '2-digit', year: 'numeric' });
+const oraTabella = ts => new Date(ts).toLocaleTimeString(localeIntl(), { timeZone: 'Europe/Rome', hour: '2-digit', minute: '2-digit' });
+const dataIsoTabella = ts => new Date(ts).toLocaleDateString('en-CA', { timeZone: 'Europe/Rome', day: '2-digit', month: '2-digit', year: 'numeric' });
+const oraIsoTabella = ts => new Date(ts).toLocaleTimeString('en-GB', { timeZone: 'Europe/Rome', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+const minutiTabella = ts => {
+  const [ore, minuti] = oraIsoTabella(ts).split(':').map(Number);
+  return ore * 60 + minuti;
 };
 const misuraTabella = n => (n == null || !Number.isFinite(n) ? '—' : num(n, 1));
 const coordinataTabella = n => (Number.isFinite(n) ? n.toLocaleString(localeIntl(), { minimumFractionDigits: 4, maximumFractionDigits: 4 }) : '—');
@@ -138,7 +144,8 @@ const colonnaTerritorio = (id, chiave) => ({
 
 export function colonneTabellaTerremoti({ anno = false } = {}) {
   return [
-    { id: 'ora', etichetta: t('tabella.col.ora'), valore: p => p.ts, testo: p => dataOraTabella(p.ts), json: p => new Date(p.ts).toISOString(), visibile: true, numerica: true },
+    { id: 'data', etichetta: t('tabella.col.data'), valore: p => Number(dataIsoTabella(p.ts).replaceAll('-', '')), testo: p => dataTabella(p.ts), json: p => dataIsoTabella(p.ts), visibile: true, numerica: true },
+    { id: 'ora', etichetta: t('tabella.col.ora'), valore: p => minutiTabella(p.ts), testo: p => oraTabella(p.ts), json: p => oraIsoTabella(p.ts), visibile: true, numerica: true },
     { id: 'mag', etichetta: t('tabella.col.mag'), valore: p => p.mag, testo: p => misuraTabella(p.mag), visibile: true, numerica: true },
     { id: 'prof', etichetta: t('tabella.col.prof'), valore: p => p.prof ?? null, testo: p => misuraTabella(p.prof), visibile: true, numerica: true },
     { id: 'luogo', etichetta: t('tabella.col.luogo'), valore: p => p.luogo ?? '', testo: p => p.luogo || '—', visibile: true },

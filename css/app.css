@@ -2312,12 +2312,11 @@ a.scheda-badge-tinta:hover, a.scheda-badge-tinta:focus-visible { background: col
 .cb-aiuto .cb-azioni { display: flex; flex-wrap: wrap; gap: 6px; }
 .cb-aiuto[hidden] { display: none; }
 
-/* Talia racconta il luogo (messaggio dalla scheda) */
+/* Talia racconta il luogo (messaggio al pannello del chat bot) */
 .cb-parole-tab { margin: 10px 0 4px; font-size: var(--fs-sm, 12px); text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); }
 .cb-parole { margin: 0 0 6px; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
 .cb-parole-regola { font: inherit; font-size: var(--fs-sm, 12px); color: var(--accent-strong); background: none; border: 0; padding: 0; cursor: pointer; text-decoration: underline; }
 .cb-parole-spiega { display: block; margin-top: 2px; color: var(--text-muted); font-family: var(--mono, ui-monospace, monospace); }
-.scheda-talia { color: var(--accent-strong); }
 .terremoti-filtri { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 6px 0; }
 .terremoti-filtro { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 0; font-size: var(--fs-xs); color: var(--text-muted); }
 .terremoti-filtro select { margin: 0; padding: 5px; }
