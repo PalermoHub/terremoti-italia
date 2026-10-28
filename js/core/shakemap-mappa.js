@@ -1,7 +1,7 @@
 // Contorni della ShakeMap INGV di un evento, disegnati sopra la mappa quando l'utente li sceglie dalla scheda dell'evento.
 // La scheda manda `scheda:shakemap` con detail { id, prodotto } (prodotto null = toglili); i file stanno nel ramo `shakemap`
 // (copiati da scripts/shakemap.mjs, perché shakemap.ingv.it non ha CORS). Linee e valori hanno i colori dell'INGV.
-import { t } from './i18n.js';
+import { t, lingua } from './i18n.js';
 
 export const URL_CONTORNI = 'https://raw.githubusercontent.com/PalermoHub/terremoti-italia/shakemap/';
 export const EVENTO_SHAKEMAP = 'scheda:shakemap';
@@ -35,8 +35,42 @@ function inquadra(map, geojson) {
 let attivo = null; // { id, prodotto } dei contorni in mappa: la scheda ridisegnata dopo un clic lo rilegge per rimettere la scelta
 export const contorniAttivi = () => attivo;
 
-// Chip tra quelli degli strati accesi: i contorni restano in mappa anche a scheda chiusa (un clic su un punto vuoto la chiude),
-// e la × è l'unico comando per spegnerli quando la scheda non c'è
+// Legenda dei contorni, nella colonna delle legende: titolo e spiegazione del prodotto, poi un campione di colore per ogni linea
+// (valori e colori sono quelli del file INGV, che cambiano da evento a evento) e il rimando alla ShakeMap dell'evento
+const UNITA = { mmi: '', pctg: '% g', cms: 'cm/s' };
+let legenda = null;
+function scriviLegenda(dati) {
+  if (!legenda) {
+    legenda = Object.assign(document.createElement('div'), { className: 'legenda legenda-monumenti lg-shakemap', hidden: true });
+    document.getElementById('legende')?.prepend(legenda); // in cima: è la legenda di ciò che l'utente ha appena acceso
+  }
+  if (!attivo || !dati) { legenda.hidden = true; return; }
+  const el = (tag, classe, testo) => Object.assign(document.createElement(tag), { className: classe ?? '', textContent: testo ?? '' });
+  const numero = new Intl.NumberFormat(lingua(), { maximumFractionDigits: 3 });
+  const linee = new Map();
+  for (const f of dati.features) linee.set(f.properties.value, { colore: f.properties.color, unita: f.properties.units });
+  legenda.replaceChildren(
+    el('strong', null, `ShakeMap · ${t(`terremoti.ev.cont.${attivo.prodotto}`)}`),
+    el('p', 'uffici-nota', t(`terremoti.ev.contLeg.${attivo.prodotto}`)),
+    el('p', 'uffici-nota', t('terremoti.ev.contLegLinee', { id: attivo.id })),
+  );
+  // dalla linea più forte alla più debole, come in una scala
+  const righe = el('div', 'shakemap-righe');
+  for (const [valore, { colore, unita }] of [...linee].sort((a, b) => b[0] - a[0])) {
+    const riga = el('p', 'allerta-riga');
+    const campione = el('i', 'incendi-campione');
+    campione.style.background = colore;
+    riga.append(campione, ` ${numero.format(valore)}${UNITA[unita] ? ` ${UNITA[unita]}` : ''}`);
+    righe.append(riga);
+  }
+  legenda.append(righe);
+  const credito = el('p', 'uffici-nota', `${t('terremoti.ev.contLegDati')} `);
+  credito.append(Object.assign(el('a', null, 'ShakeMap INGV'), { href: `https://shakemap.ingv.it/#event/${attivo.id}`, target: '_blank', rel: 'noopener' }));
+  legenda.append(credito);
+  legenda.hidden = false;
+}
+
+// Chip tra quelli degli strati accesi: dice che i contorni sono in mappa e di quale prodotto, e la × li spegne senza chiudere la scheda
 function scriviChip() {
   const barra = document.getElementById('strati-chip');
   if (!barra) return;
@@ -53,12 +87,14 @@ function scriviChip() {
 
 export function collegaShakeMap(map) {
   let richiesta = 0;
+  // i contorni valgono finché la scheda è aperta (anche passando a un altro evento): chiusa la scheda, legenda e linee vanno via
+  document.addEventListener('scheda:chiusa', () => document.dispatchEvent(new CustomEvent(EVENTO_SHAKEMAP, { detail: { prodotto: null } })));
   document.addEventListener(EVENTO_SHAKEMAP, async e => {
     const { id, prodotto } = e.detail ?? {};
     const mia = ++richiesta;
     attivo = prodotto ? { id, prodotto } : null;
     scriviChip();
-    if (!prodotto) { map.getSource(SRC)?.setData(VUOTO); return; }
+    if (!prodotto) { scriviLegenda(null); map.getSource(SRC)?.setData(VUOTO); return; }
     try {
       const r = await fetch(`${URL_CONTORNI}${id}/${prodotto}.json`);
       if (!r.ok) throw new Error(String(r.status));
@@ -66,7 +102,8 @@ export function collegaShakeMap(map) {
       if (mia !== richiesta) return; // nel frattempo è stato scelto un altro prodotto
       assicuraStrati(map);
       map.getSource(SRC).setData(dati);
+      scriviLegenda(dati);
       inquadra(map, dati);
-    } catch { if (mia === richiesta) map.getSource(SRC)?.setData(VUOTO); }
+    } catch { if (mia === richiesta) { map.getSource(SRC)?.setData(VUOTO); scriviLegenda(null); } }
   });
 }

@@ -1057,6 +1057,8 @@ label.sotto-voce:has(input:checked) .occhio { box-shadow: none; }
 .strato-chip { pointer-events: auto; flex: none; max-width: 180px; height: 32px; padding: 0 8px 0 12px; display: inline-flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--border-ui); border-radius: var(--r-pill); box-shadow: var(--ombra); color: var(--text); font-size: var(--fs-sm); font-weight: 600; white-space: nowrap; }
 .strato-chip span { overflow: hidden; text-overflow: ellipsis; }
 .shakemap-chip { max-width: 340px; }
+.lg-shakemap .shakemap-righe { display: grid; grid-template-columns: 1fr 1fr; column-gap: 12px; }
+.lg-shakemap .shakemap-righe .allerta-riga { margin: 1px 0; }
 .strato-chip i { font-style: normal; width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: var(--fs-md); line-height: 1; }
 button.strato-chip:hover { background: var(--surface-hover); }
 button.strato-chip:hover i { color: var(--text); }
