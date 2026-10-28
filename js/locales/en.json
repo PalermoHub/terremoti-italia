@@ -3378,7 +3378,7 @@
   "filtri.tutti.provincia": "All provinces",
   "filtri.tutti.comune": "All municipalities",
   "filtri.soloEventi": "Show only earthquakes in this area",
-  "filtri.anno": "Year",
+  "filtri.anno": "Year or period",
   "filtri.annoRealTime": "Real time (last 30 days)",
   "terremoti.arc.territorio": "Same area for both periods",
   "terremoti.arc.territorioErrore": "Municipality list unavailable: comparing all of Italy.",

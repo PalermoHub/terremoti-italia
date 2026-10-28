@@ -3378,7 +3378,7 @@
   "filtri.tutti.provincia": "Tutte le province",
   "filtri.tutti.comune": "Tutti i comuni",
   "filtri.soloEventi": "Mostra solo i terremoti in quest'area",
-  "filtri.anno": "Anno",
+  "filtri.anno": "Anno o periodo",
   "filtri.annoRealTime": "Tempo reale (ultimi 30 giorni)",
   "terremoti.arc.territorio": "Stesso territorio per i due periodi",
   "terremoti.arc.territorioErrore": "Elenco dei comuni non disponibile: confronto su tutta Italia.",
