@@ -1,4 +1,5 @@
 // Disegno della scheda del luogo: righe, gruppi, accordion, link e intestazione di sezione (con l'interruttore «Mappa»).
+import { contorniAttivi } from './shakemap-mappa.js';
 import { separaMancanti, dividiDettaglio, valoreLungo, MANCANTE } from './scheda-modello.js';
 import { svgIcona } from './icone.js';
 import { collegamento } from './url-sicuro.js';
@@ -180,11 +181,18 @@ export function disegnaLegendeEvento(legende) {
 }
 
 // Elenco a discesa dei contorni ShakeMap dell'evento: la scelta li disegna in mappa (modulo shakemap-mappa.js), «nessuno» li toglie
-function disegnaSceltaContorni({ id, voci, vuota }) {
+function disegnaSceltaContorni({ id, voci, vuota, altro }) {
   const s = el('select', 'scheda-evento-scelta');
   s.append(Object.assign(el('option'), { value: '', textContent: vuota }), ...voci.map(v => Object.assign(el('option'), { value: v.prodotto, textContent: v.testo })));
   s.addEventListener('change', () => document.dispatchEvent(new CustomEvent('scheda:shakemap', { detail: { id, prodotto: s.value || null } })));
-  document.dispatchEvent(new CustomEvent('scheda:shakemap', { detail: { id, prodotto: null } })); // scheda nuova: via i contorni dell'evento di prima
+  // scheda ridisegnata (clic in mappa, cambio lingua): i contorni in mappa restano. Se sono di questo evento la scelta si rimette;
+  // se sono di un altro, una voce lo dice e «Nessuno» li toglie
+  const attivi = contorniAttivi();
+  if (attivi?.id === id) s.value = attivi.prodotto;
+  else if (attivi) {
+    const o = Object.assign(el('option'), { value: '__altro', textContent: altro.replace('{id}', attivi.id), selected: true, hidden: true });
+    s.prepend(o);
+  }
   return s;
 }
 

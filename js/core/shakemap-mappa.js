@@ -30,11 +30,16 @@ function inquadra(map, geojson) {
   if (x1 >= x0) map.fitBounds([[x0, y0], [x1, y1]], { padding: 60, maxZoom: 9, duration: 600 });
 }
 
+let attivo = null; // { id, prodotto } dei contorni in mappa: la scheda ridisegnata dopo un clic lo rilegge per rimettere la scelta
+export const contorniAttivi = () => attivo;
+
 export function collegaShakeMap(map) {
   let richiesta = 0;
+  document.addEventListener('scheda:chiusa', () => document.dispatchEvent(new CustomEvent(EVENTO_SHAKEMAP, { detail: { prodotto: null } }))); // chiusa la scheda non c'è più il comando per spegnerli
   document.addEventListener(EVENTO_SHAKEMAP, async e => {
     const { id, prodotto } = e.detail ?? {};
     const mia = ++richiesta;
+    attivo = prodotto ? { id, prodotto } : null;
     if (!prodotto) { map.getSource(SRC)?.setData(VUOTO); return; }
     try {
       const r = await fetch(`${URL_CONTORNI}${id}/${prodotto}.json`);

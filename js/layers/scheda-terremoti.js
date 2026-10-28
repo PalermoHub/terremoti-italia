@@ -252,7 +252,7 @@ export function modelloEvento(p) {
       { chiave: t('terremoti.ev.localizzatoDa'), valore: p.autore ?? '' },
       ...(haShakeMap(p) ? [
         { chiave: 'ShakeMap', valore: 'shakemap.ingv.it', url: LINK_SHAKEMAP + p.id },
-        { chiave: t('terremoti.ev.contorni'), scelta: { id: String(p.id), voci: PRODOTTI_SHAKEMAP.map(([prodotto, chiave]) => ({ prodotto, testo: t(chiave) })), vuota: t('terremoti.ev.contorniNessuno') } },
+        { chiave: t('terremoti.ev.contorni'), scelta: { id: String(p.id), voci: PRODOTTI_SHAKEMAP.map(([prodotto, chiave]) => ({ prodotto, testo: t(chiave) })), vuota: t('terremoti.ev.contorniNessuno'), altro: t('terremoti.ev.contorniAltro') } },
       ] : []),
     ].filter(c => c.valore || c.scelta),
     legende: [

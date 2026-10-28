@@ -156,7 +156,7 @@ button { cursor: pointer; }
 label { display: block; padding: 2px 0; }
 select { width: 100%; margin: 2px 0 6px; }
 /* campo di testo e select: un solo aspetto per tutta l'interfaccia (le singole regole aggiungono solo le dimensioni) */
-.sotto-pannello select, #pannello-filtri select, #cerca-particella input, .strato-cerca, .strato-tema select, .gi-campo select, .agg-campo input, #stampa-menu select, .terremoti-filtro select {
+.sotto-pannello select, .scheda-evento-scelta, #pannello-filtri select, #cerca-particella input, .strato-cerca, .strato-tema select, .gi-campo select, .agg-campo input, #stampa-menu select, .terremoti-filtro select {
   border: 1px solid var(--border-ui); border-radius: var(--r-sm); background: var(--surface); color: var(--text); font: inherit;
 }
 
@@ -2615,7 +2615,7 @@ a.scheda-tel { min-height: 40px; }
 .scheda-evento-campo { display: flex; flex-direction: column; min-width: 0; }
 .scheda-evento-chiave { font-size: var(--fs-xs); font-weight: 800; text-transform: uppercase; color: #e8590c; }
 .scheda-evento-chiave small { font-weight: 400; text-transform: none; color: var(--text-soft, var(--text)); }
-.scheda-evento-scelta { font: inherit; font-size: var(--fs-sm); max-width: 100%; }
+.scheda-evento-scelta { margin: 4px 0 0; padding: 5px; font-size: var(--fs-sm); cursor: pointer; }
 a.scheda-evento-valore { color: inherit; text-decoration: underline; }
 .scheda-evento-valore { font-size: var(--fs-base); font-weight: 600; }
 .scheda-evento-legende { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; margin: 10px 0; }
