@@ -1,4 +1,4 @@
-import { t } from '../core/i18n.js';
+import { t, localeIntl } from '../core/i18n.js';
 import { urlDati } from '../core/config.js';
 import { registraTooltipStrati } from '../core/tooltip.js';
 
@@ -18,6 +18,16 @@ const coloreDi = tipo => TIPI.find(x => x.chiave === tipo)?.colore ?? '#6b7280';
 // codici di placca di Bird presenti nell'area; il separatore («-», «/», «\») indica da che parte immerge la placca, qui non serve
 const PLACCHE = { AF: 'Africa', EU: 'Eurasia', AS: 'Egeo', AT: 'Anatolia' };
 const coppia = c => String(c ?? '').split(/[-/\\]/).map(x => PLACCHE[x] ?? x).join(' – ');
+
+// velocità in mm/anno con un decimale, nella lingua dell'interfaccia; sotto 0,5 mm/anno la componente non si mostra
+const SOGLIA = 0.5;
+const mm = v => new Intl.NumberFormat(localeIntl(), { maximumFractionDigits: 1 }).format(Math.abs(v));
+function righeVelocita(p) {
+  const righe = [{ testo: t('placche.velocita', { v: mm(p.vel) }) }];
+  if (Math.abs(p.div) >= SOGLIA) righe.push({ testo: t(p.div < 0 ? 'placche.avvicinamento' : 'placche.allontanamento', { v: mm(p.div) }) });
+  if (Math.abs(p.lat) >= SOGLIA) righe.push({ testo: t(p.lat > 0 ? 'placche.lateraleDestro' : 'placche.lateraleSinistro', { v: mm(p.lat) }) });
+  return righe;
+}
 
 let mappa = null;
 let legenda = null;
@@ -93,7 +103,7 @@ export default {
     map.addLayer({ id: HIT, type: 'line', source: SRC, layout: { visibility: 'none' }, paint: { 'line-width': 14, 'line-opacity': 0 } });
     registraTooltipStrati(map, [{
       layers: [LINEE], icona: 'terremoto', sezione: 'Margini di placca', colore: p => coloreDi(p.tipo),
-      modello: p => ({ titolo: t(`placche.tipo.${p.tipo}`), sottotitolo: coppia(p.placche), elenco: [] }),
+      modello: p => ({ titolo: t(`placche.tipo.${p.tipo}`), sottotitolo: coppia(p.placche), elenco: righeVelocita(p) }),
     }]);
     map.on('mouseenter', LINEE, () => { map.getCanvas().style.cursor = 'pointer'; });
     map.on('mouseleave', LINEE, () => { map.getCanvas().style.cursor = ''; });

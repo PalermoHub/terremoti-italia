@@ -40,6 +40,7 @@ import faglie from './layers/faglie.js';
 import faglieEgdi from './layers/faglie-egdi.js';
 import diss from './layers/diss.js';
 import placcheMargini from './layers/placche-margini.js';
+import placcheStrutture from './layers/placche-strutture.js';
 import pericolosita from './layers/pericolosita.js';
 import classificazione from './layers/classificazione.js';
 import { collegaConfronto, apriConfronto } from './core/scheda-confronto.js';
@@ -62,7 +63,7 @@ riduciLegenda.addEventListener('click', () => {
 
 // ordine = ordine di sovrapposizione dei layer (il primo sta sotto). I quattro gruppi precedono i moduli che mettono lì i
 // loro strati: Protezione Civile (allerte), Terremoti (tempo reale, archivio, confronto), Faglie (ITHACA, EGDI, DISS), Territorio (confini)
-const MODULI = [base, protezioneCivile, terremotiGruppo, faglieGruppo, placcheGruppo, territorio, pericolosita, classificazione, comuni, allerte, terremoti, terremotiStorico, terremotiConfronto, terremotiSezione, terremotiProfondita, terremotiDensita, terremotiCoropletica, faglie, faglieEgdi, diss, placcheMargini];
+const MODULI = [base, protezioneCivile, terremotiGruppo, faglieGruppo, placcheGruppo, territorio, pericolosita, classificazione, comuni, allerte, terremoti, terremotiStorico, terremotiConfronto, terremotiSezione, terremotiProfondita, terremotiDensita, terremotiCoropletica, faglie, faglieEgdi, diss, placcheMargini, placcheStrutture];
 traduciModuli(MODULI);
 
 const map = creaMappa('mappa', () => segnala(t('app.basemap.errore')));
