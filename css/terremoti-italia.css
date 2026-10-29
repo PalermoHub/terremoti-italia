@@ -98,6 +98,14 @@
 @media (min-width: 1100px) {
   #legende-box { --legende-bottom: calc(40px + env(safe-area-inset-bottom, 0px)); bottom: var(--legende-bottom); }
 }
+/* Con un pannello a destra la parte di mappa visibile si stringe e la barra di ricerca (centrata lì) finirebbe
+   sopra la legenda: finché non c'è spazio per entrambe affiancate, la legenda sta sopra la barra. */
+@media (min-width: 1100px) and (max-width: 1520px) {
+  body:has(#scheda:not([hidden]):not(.collassato), #rndt-pannello:not([hidden]):not(.collassato), #geoimage-pannello:not([hidden]):not(.collassato), #tema-ui-pannello:not([hidden]):not(.collassato), #chatbot-pannello:not([hidden]):not(.collassato), #storico-pannello:not([hidden]):not(.collassato), #confronto-pannello:not([hidden]):not(.collassato), #mappe-pannello:not([hidden]):not(.collassato)) #legende-box { --legende-bottom: 100px; bottom: 100px; }
+}
+@media (min-width: 1100px) and (max-width: 1800px) {
+  body:has(#pannello .sotto-pannello:not([hidden])):has(#scheda:not([hidden]):not(.collassato), #rndt-pannello:not([hidden]):not(.collassato), #geoimage-pannello:not([hidden]):not(.collassato), #tema-ui-pannello:not([hidden]):not(.collassato), #chatbot-pannello:not([hidden]):not(.collassato), #storico-pannello:not([hidden]):not(.collassato), #confronto-pannello:not([hidden]):not(.collassato), #mappe-pannello:not([hidden]):not(.collassato)) #legende-box { --legende-bottom: 100px; bottom: 100px; }
+}
 /* Il riquadro in fondo alla legenda ospita i comandi globali (Live Zoom e ricerca nel raggio): resta visibile
    anche quando nessuna legenda è rimasta sulla mappa, perché le altre stanno sotto gli strati nel pannello Layer. */
 #legende-box:not(:has(#legende > :not([hidden]):not(.legenda-vuota))):has(#legende-raggio > *) { display: flex; }
