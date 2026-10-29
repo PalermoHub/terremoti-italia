@@ -11,6 +11,7 @@ import { creaEvidenzaMappa } from '../core/evidenza-eventi.js';
 import { creditoIngv, elencoEventi, legendaProfondita, legendaMappa } from './terremoti-periodo.js';
 import { catturaClic } from '../core/cattura-clic.js';
 import { registraTooltipStrati } from '../core/tooltip.js';
+import { apriGuidaSezione, chiudiGuidaSezione } from './sezione-guida.js';
 
 // Sezione verticale: i terremoti dell'archivio dentro una fascia attorno a una linea A–B, disegnati come profondità contro
 // distanza lungo la linea. Mostra i piani di subduzione e le faglie (come nell'arco calabro). Spento all'avvio.
@@ -45,6 +46,7 @@ const el = (tag, classe, testo) => {
   if (testo != null) e.textContent = testo;
   return e;
 };
+const memoria = () => { try { return window.localStorage; } catch { return null; } };
 const numero = (n, d = 0) => n.toLocaleString(localeIntl(), { minimumFractionDigits: d, maximumFractionDigits: d });
 const raggio = mag => Math.max(1.2, 1.4 + (mag - 2) * 1.5);
 
@@ -207,8 +209,9 @@ export default {
       acceso = attivo;
       if (legenda) legenda.hidden = !attivo;
       document.dispatchEvent(new Event(EVENTO_TABELLA));
-      if (!attivo) controlli?.annulla();
-      else if (primaVolta && controlli) { primaVolta = false; controlli.predefinita(); } // la prima volta si vede subito la sezione dell'arco calabro
+      if (!attivo) { controlli?.annulla(); chiudiGuidaSezione(); }
+      else apriGuidaSezione({ storage: memoria() });
+      if (attivo && primaVolta && controlli) { primaVolta = false; controlli.predefinita(); } // la prima volta si vede subito la sezione dell'arco calabro
     },
   }],
   tabella: {
