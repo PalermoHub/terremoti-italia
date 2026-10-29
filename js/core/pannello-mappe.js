@@ -19,7 +19,7 @@ export function collegaMappe(pannello, voci) {
   x.setAttribute('aria-label', t('scheda.chiudi'));
   x.innerHTML = ICONA_X;
   const riga = el('div', 'scheda-testata');
-  riga.append(el('h2', null, t('rail.mappe')), x);
+  riga.append(el('h2', null, t('mappe.titolo')), x);
   const tab = el('div', 'mappe-tab');
   tab.setAttribute('role', 'tablist');
   const corpo = el('div', 'scheda-corpo');

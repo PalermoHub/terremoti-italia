@@ -128,7 +128,7 @@ function costruisciPannello() {
   aggiorna.addEventListener('click', ricarica); // il periodo si applica qui: quello personalizzato non scatta da solo
   for (const c of [mag, larghezza]) c.nodo.addEventListener('change', ricarica);
 
-  nodo.append(el('strong', null, t('terremoti.sez.titolo')), filtri, azioni, nota, messaggio, grafico, elenco.nodo, el('p', 'uffici-nota', t('terremoti.arc.utc')), creditoIngv());
+  nodo.append(el('strong', null, t('terremoti.sez.titolo')), el('p', 'uffici-nota', t('terremoti.sez.intro')), filtri, azioni, nota, messaggio, grafico, elenco.nodo, el('p', 'uffici-nota', t('terremoti.arc.utc')), creditoIngv());
   return { nodo, predefinita: () => preset.click(), annulla: finisciTracciamento };
 }
 
@@ -156,7 +156,7 @@ async function carica(periodo, magMin, semilarghezza, nota, grafico) {
   }
   grafico.replaceChildren(graficoSezione(disegnati, lunghezza, { interazione, semilarghezza }));
   nota.textContent = [
-    t('terremoti.sez.nota', { n: numero(dentro.length), km: numero(lunghezza), larghezza: numero(semilarghezza * 2), mag: numero(magMin, magMin % 1 ? 1 : 0) }),
+    t('terremoti.sez.nota', { n: numero(dentro.length), km: numero(lunghezza), semi: numero(semilarghezza), mag: numero(magMin, magMin % 1 ? 1 : 0) }),
     dentro.length > disegnati.length ? t('terremoti.sez.troncato', { n: numero(disegnati.length) }) : '',
     scarico.troncato ? t('terremoti.sez.scaricoTroncato') : '',
   ].filter(Boolean).join(' ');
