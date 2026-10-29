@@ -13,8 +13,8 @@ function el(tag, classe, testo) {
 
 const gradi = (v, pos, neg) => `${Math.abs(v).toFixed(5)}° ${v >= 0 ? pos : neg}`;
 
-// opzioni: { sezione, icona, colore, modello: { titolo, sottotitolo, righe? }, corpo?: nodi in più (foto, descrizione, elenchi), coordinate: [lon, lat], chiudi }
-export function contenutoPopupTraffico({ sezione, icona, colore, modello, corpo = [], coordinate, chiudi }) {
+// opzioni: { sezione, icona, colore, modello: { titolo, sottotitolo, righe? }, corpo?: nodi in più (foto, descrizione, elenchi), azione?: badge cliccabile a destra del sottotitolo, sottotitoloBadge?: il sottotitolo come badge del colore della sezione, coordinate: [lon, lat], chiudi }
+export function contenutoPopupTraffico({ sezione, icona, colore, modello, corpo = [], azione, sottotitoloBadge, coordinate, chiudi }) {
   const radice = el('div', 'traffico-popup');
   radice.style.setProperty('--traffico-colore', colore);
 
@@ -33,7 +33,16 @@ export function contenutoPopupTraffico({ sezione, icona, colore, modello, corpo 
     badge.style.setProperty('--colore', modello.badge.colore);
     radice.append(badge);
   }
-  if (modello.sottotitolo) radice.append(el('p', 'traffico-stato', tl(modello.sottotitolo)));
+  if (modello.sottotitolo || azione) {
+    const riga = el('div', 'traffico-riga-stato');
+    if (sottotitoloBadge && modello.sottotitolo) {
+      const badge = el('span', 'tooltip-badge', tl(modello.sottotitolo));
+      badge.style.setProperty('--colore', colore);
+      riga.append(badge);
+    } else riga.append(el('p', 'traffico-stato', modello.sottotitolo ? tl(modello.sottotitolo) : ''));
+    if (azione) riga.append(azione);
+    radice.append(riga);
+  }
 
   if (corpo.length) {
     const blocco = el('div', 'traffico-corpo');

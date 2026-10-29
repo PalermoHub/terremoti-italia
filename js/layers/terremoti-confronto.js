@@ -40,7 +40,7 @@ let primaVolta = true;
 let pannello = null;
 let scelto = null; // evento scelto con le frecce della scheda
 let richiesta = 0; // una risposta in ritardo di una richiesta precedente si scarta
-const popup = creaPopupTerremoti();
+const popup = creaPopupTerremoti({ apriScheda: p => vaiAEvento(p) });
 let titolo = null; // intestazione della legenda: cambia col tema magnitudo
 let notaAnno = null; // con il tema il colore è la magnitudo: l'anno resta il bordo
 let grigliaDati = null; // celle della differenza di densità, mostrate solo a strato acceso

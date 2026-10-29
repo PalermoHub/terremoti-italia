@@ -36,7 +36,7 @@ let ultimo = 0;
 let troncato = false; // l'archivio ha più eventi di quanti ne arrivino in mappa
 let fallito = false; // l'ultimo aggiornamento non è riuscito: restano gli eventi di prima
 let acceso = true; // lo strato parte acceso: il pannello lo spunta, ma non chiama suCambio al primo disegno
-const popup = creaPopupTerremoti();
+const popup = creaPopupTerremoti({ apriScheda: p => vaiAEvento(p) });
 const fasceAccese = new Set(FASCE.map(f => f.colore)); // fasce d'età della legenda ancora in mappa
 let eventi = []; // proprietà degli eventi in mappa
 let pannelloPf = null;
@@ -193,7 +193,17 @@ function creaLegenda() {
       applicaFiltro();
     }));
   }
-  pannelloPf = pannelloFiltro(() => eventi, () => mappa);
+  pannelloPf = pannelloFiltro(() => eventi, () => mappa, {
+    // evento forte durante la riproduzione: la mappa lo porta in vista (se serve) e ne apre il popup
+    mostraEvento(p) {
+      if (!mappa) return;
+      const apriPopup = () => popup.apri(mappa, p, mappa.project([p.lon, p.lat]));
+      if (mappa.getBounds().contains([p.lon, p.lat])) { apriPopup(); return; }
+      mappa.once('moveend', apriPopup);
+      mappa.easeTo({ center: [p.lon, p.lat], duration: 400 });
+    },
+    nascondiEvento: () => popup.chiudi(),
+  });
   legenda.append(titolo, bloccoFasce, pannelloPf.nodo, menuFiltro({ magnitudo: false }), el('p', 'uffici-nota', t('terremoti.clicca')));
   nota = el('p', 'uffici-nota');
   bottoneAggiorna = el('button', 'legenda-aggiorna');
@@ -232,7 +242,7 @@ function apriDaGrafico(e) {
   const inMappa = acceso && visibili().find(v => v.id === p.id);
   if (inMappa) { vaiAEvento(inMappa); return; }
   popup.chiudi();
-  mappa.once('moveend', () => popup.apri(mappa, p, mappa.project([p.lon, p.lat])));
+  mappa.once('moveend', () => popup.apri(mappa, p, mappa.project([p.lon, p.lat]), false));
   mappa.flyTo({ center: [p.lon, p.lat], zoom: Math.max(mappa.getZoom(), 9), duration: 700 });
 }
 

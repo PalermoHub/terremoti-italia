@@ -41,7 +41,7 @@ let profMostrata = null; // classe di profondità dell'ultimo caricamento: come 
 let periodoRicerca = null; // anno o periodo scelto dalla ricerca: segue la magnitudo minima del filtro
 let scelto = null; // evento scelto con le frecce della scheda
 let richiesta = 0; // una risposta in ritardo di una richiesta precedente si scarta
-const popup = creaPopupTerremoti();
+const popup = creaPopupTerremoti({ apriScheda: p => vaiAEvento(p) });
 let titolo = null; // intestazione della legenda: cambia col tema magnitudo
 
 const annoRoma = ts => Number(new Date(ts).toLocaleDateString('en-CA', { timeZone: 'Europe/Rome', year: 'numeric' }));

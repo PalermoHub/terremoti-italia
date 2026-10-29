@@ -447,6 +447,11 @@ body:has(#scheda:not([hidden])) .traffico-popup-box.geologia-popup { z-index: 1;
 .traffico-chiudi { width: 24px; height: 24px; border: 1px solid var(--border); border-radius: 50%; background: transparent; color: inherit; font-size: 16px; line-height: 1; cursor: pointer; }
 .traffico-chiudi:hover { background: var(--surface-hover); }
 .traffico-titolo { margin: 0 0 2px; font-size: var(--fs-lg, 1.15rem); font-weight: 700; color: var(--text); }
+.traffico-riga-stato { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 6px; }
+.traffico-riga-stato .traffico-stato { margin: 0; }
+.traffico-riga-stato .tooltip-badge { margin-top: 0; }
+.traffico-azione { flex: none; margin-top: 0; text-decoration: none; cursor: pointer; white-space: nowrap; }
+.traffico-azione:hover { background: color-mix(in srgb, var(--colore) 26%, transparent); }
 .traffico-stato { margin: 0 0 6px; font-size: var(--fs-xs); font-weight: 700; color: color-mix(in srgb, var(--traffico-colore) 75%, var(--text)); }
 .traffico-righe { display: grid; grid-template-columns: auto 1fr; margin: 0; }
 .traffico-righe dt, .traffico-righe dd { margin: 0; padding: 5px 0; border-top: 1px solid var(--border); }

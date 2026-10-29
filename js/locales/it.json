@@ -409,6 +409,8 @@
   "geologia.tipo": "Tipo di materiale",
   "geologia.nd": "Non indicata",
   "geologia.altre": "Altre unità sovrapposte: {elenco}",
+  "terremoti.apriScheda": "Apri la scheda dell'evento",
+  "terremoti.scheda": "Scheda",
   "geologia.apriScheda": "Apri la scheda del luogo",
   "geologia.lettura": "Lettura della carta geologica…",
   "geologia.nessuna": "Nessuna unità geologica in questo punto.",

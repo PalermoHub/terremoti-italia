@@ -10,6 +10,8 @@ const PASSO_RIPRODUZIONE_MS = 100; // un fotogramma ogni 100 ms: la finestra sco
 const GIORNI_AL_SECONDO = 0.5; // a velocità ×1 la finestra avanza di 12 ore ogni secondo
 const VELOCITA = [1, 2, 4, 8, 16];
 const GIORNO_MS = 86400000;
+const MAG_PAUSA = 5; // un evento di questa magnitudo (o più) che entra in finestra ferma la riproduzione...
+const PAUSA_EVENTO_MS = 2000; // ...per questo tempo, mostrando l'evento
 
 function el(tag, classe, testo) {
   const e = document.createElement(tag);
@@ -55,8 +57,9 @@ function barraTempo() {
   };
 }
 
-// `eventi()` = eventi scaricati (tutti i 30 giorni). Restituisce { nodo, aggiorna, ferma }.
-export function pannelloFiltro(eventi, mappa = () => null) {
+// `eventi()` = eventi scaricati (tutti i 30 giorni). `mostraEvento(p)` / `nascondiEvento()` aprono e chiudono l'evento forte durante la pausa.
+// Restituisce { nodo, aggiorna, ferma }.
+export function pannelloFiltro(eventi, mappa = () => null, { mostraEvento = () => {}, nascondiEvento = () => {} } = {}) {
   const nodo = el('div', 'terremoti-pannello');
   const barraT = barraTempo();
 
@@ -158,9 +161,22 @@ export function pannelloFiltro(eventi, mappa = () => null) {
     riproduci.setAttribute('aria-pressed', 'true');
     apri(true);
     barraT.mostra(true);
-    const passo = () => { filtro.finestra = avanzaFinestra(filtro.finestra, VELOCITA[velocita] * GIORNI_AL_SECONDO * PASSO_RIPRODUZIONE_MS / 1000); emetti(); };
+    const riprendi = () => { nascondiEvento(); timer = setInterval(passo, PASSO_RIPRODUZIONE_MS); };
+    const passo = () => {
+      const adesso = Date.now();
+      const prima = Math.min(intervallo(filtro, adesso)[1], adesso);
+      filtro.finestra = avanzaFinestra(filtro.finestra, VELOCITA[velocita] * GIORNI_AL_SECONDO * PASSO_RIPRODUZIONE_MS / 1000);
+      const dopo = Math.min(intervallo(filtro, adesso)[1], adesso);
+      emetti();
+      // eventi forti entrati in questo passo (se la finestra riparte da capo `dopo` < `prima`: nessuno): si ferma e si mostra il più forte
+      const forte = eventi().filter(e => e.mag >= MAG_PAUSA && e.ts > prima && e.ts <= dopo && passaFiltro(e, filtro, adesso)).sort((a, b) => b.mag - a.mag)[0];
+      if (!forte || !timer) return;
+      clearInterval(timer);
+      timer = setTimeout(riprendi, PAUSA_EVENTO_MS); // `timer` resta valorizzato: la riproduzione è in pausa breve, non ferma
+      mostraEvento(forte);
+    };
     passo();
-    timer = setInterval(passo, PASSO_RIPRODUZIONE_MS);
+    if (!timer) timer = setInterval(passo, PASSO_RIPRODUZIONE_MS);
     aggiorna(); // il primo passo è già partito: la barra in alto lo scrive ora che la riproduzione è attiva
   });
   azzera.addEventListener('click', () => {

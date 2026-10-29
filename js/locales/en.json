@@ -409,6 +409,8 @@
   "geologia.tipo": "Material type",
   "geologia.nd": "Not given",
   "geologia.altre": "Other overlapping units: {elenco}",
+  "terremoti.apriScheda": "Open the event profile",
+  "terremoti.scheda": "Profile",
   "geologia.apriScheda": "Open the place profile",
   "geologia.lettura": "Reading the geological map…",
   "geologia.nessuna": "No geological unit at this point.",
