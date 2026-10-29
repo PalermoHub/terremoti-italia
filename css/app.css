@@ -2786,7 +2786,8 @@ details.scheda-sez-evento .scheda-sez-testo { display: contents; }
 .terremoti-serie.con-mappa > .terremoti-testa { grid-column: 1 / -1; grid-row: 1; }
 
 /* Sezione verticale: azioni, grafico profondità/distanza e legenda delle profondità */
-.legenda .terremoti-sezione-azioni { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.legenda .terremoti-sezione-azioni { display: flex; flex-wrap: nowrap; gap: 4px; margin: 6px 0; }
+.legenda .terremoti-sezione-azioni .terremoti-archivio-btn { flex: 1 1 auto; min-width: 0; padding: 7px 6px; font-size: .85em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* i cerchi del grafico: bordo del colore dello sfondo, così restano distinti dove si sovrappongono */
 .terremoti-confronto-grafico .punto-sezione { fill-opacity: .72; stroke: var(--surface); stroke-width: .5; }
 
@@ -2802,7 +2803,8 @@ details.scheda-sez-evento .scheda-sez-testo { display: contents; }
 #mappe-pannello .terremoti-filtri { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
 #mappe-pannello .terremoti-archivio-btn { padding: 7px 12px; border: 1px solid var(--accent); border-radius: var(--r-sm); background: var(--accent); color: #1f1300; font: inherit; font-weight: 700; text-align: center; cursor: pointer; }
 #mappe-pannello .terremoti-archivio-btn.secondario { background: none; color: var(--text); border-color: var(--border-ui); }
-#mappe-pannello .terremoti-sezione-azioni { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+#mappe-pannello .terremoti-sezione-azioni { display: flex; flex-wrap: nowrap; gap: 4px; margin: 6px 0; }
+#mappe-pannello .terremoti-sezione-azioni .terremoti-archivio-btn { flex: 1 1 auto; min-width: 0; padding: 7px 6px; font-size: .85em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #mappe-pannello .terremoti-pannello[hidden] { display: none; }
 .terremoti-sezione-prof, .legenda .terremoti-sezione-prof { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; margin: 6px 0 0; font-size: .85em; }
 .terremoti-sezione-prof > div, .legenda .terremoti-sezione-prof > div { display: flex; align-items: center; justify-content: flex-start; gap: 6px; }

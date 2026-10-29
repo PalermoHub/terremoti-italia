@@ -83,8 +83,12 @@ function costruisciPannello() {
   const aggiorna = el('button', 'terremoti-archivio-btn', t('terremoti.sez.aggiorna'));
   const cancella = el('button', 'terremoti-archivio-btn secondario', t('terremoti.sez.cancella'));
   for (const b of [traccia, preset, aggiorna, cancella]) b.type = 'button';
+  traccia.title = t('terremoti.sez.traccia.tip');
+  aggiorna.title = t('terremoti.sez.aggiorna.tip');
+  cancella.title = t('terremoti.sez.cancella.tip');
+  preset.title = t('terremoti.sez.predefinita.arco.tip');
   const azioni = el('div', 'terremoti-sezione-azioni');
-  azioni.append(traccia, preset, aggiorna, cancella);
+  azioni.append(traccia, aggiorna, cancella, preset); // la demo in fondo
   const nota = el('p', 'uffici-nota');
   const grafico = el('div', 'terremoti-sezione-grafico-box');
   elenco = elencoEventi(() => eventiTabella, () => mappa);
@@ -101,12 +105,14 @@ function costruisciPannello() {
     punti = [];
     catturaClic(null);
     traccia.textContent = t('terremoti.sez.traccia');
+    traccia.title = t('terremoti.sez.traccia.tip');
   };
   const inizia = () => {
     if (tracciando) { finisciTracciamento(); disegnaLinea(sezione?.a, sezione?.b, larghezza.valore()); return; }
     tracciando = true;
     punti = [];
     traccia.textContent = t('terremoti.sez.annulla');
+    traccia.title = t('terremoti.sez.annulla.tip');
     nota.textContent = t('terremoti.sez.clicA');
     catturaClic(e => {
       punti.push([Number(e.lngLat.lng.toFixed(4)), Number(e.lngLat.lat.toFixed(4))]);
