@@ -47,7 +47,9 @@ export function contenutoPopupTraffico({ sezione, icona, colore, modello, corpo 
       const dt = el('dt');
       if (r.nodo) dt.append(r.nodo); // simbolo davanti all'etichetta (es. il cerchio della magnitudo)
       dt.append(tl(r.etichetta));
-      lista.append(dt, el('dd', null, tl(String(r.valore))));
+      const dd = el('dd', null, r.valoreNodo ? '' : tl(String(r.valore)));
+      if (r.valoreNodo) dd.append(r.valoreNodo);
+      lista.append(dt, dd);
     }
     radice.append(lista);
   }

@@ -4,8 +4,10 @@
 import { t, tl, localeIntl } from '../core/i18n.js';
 import { puntoInGeometrie } from '../core/aree.js';
 import { iconaAttesa, righe } from '../core/scheda-util.js';
+import { badgeMagnitudo } from '../core/badge-magnitudo.js';
+import { disegnaAccordion } from '../core/scheda-disegno.js';
 import { ANNO_INIZIO } from './scheda-archivio.js';
-import { FONTE, LINK, LINK_SHAKEMAP, haShakeMap, eventiDaTesto, oraEvento, rispostaDaArchivio, scaricaEventi } from './scheda-terremoti.js';
+import { FONTE, LINK, LINK_SHAKEMAP, accordionTerremoti, haShakeMap, eventiDaTesto, oraEvento, rispostaDaArchivio, scaricaEventi } from './scheda-terremoti.js';
 
 export const PESO_COMUNE = 9; // dopo la scheda dell'evento (peso 8), nello stesso tab «Luogo»
 export const MAG_RECENTE = 1; // ultimi 30 giorni: la stessa soglia dello strato in tempo reale
@@ -125,7 +127,9 @@ export async function contaComune({ geometrie, riquadro }, { fetchFn = fetch, ad
 // Riga «etichetta · valore» della card
 function riga(etichetta, valore) {
   const p = el('p', 'comune-sismico-riga');
-  p.append(el('span', 'comune-sismico-etichetta', etichetta), el('strong', null, valore));
+  const v = el('strong');
+  v.append(...[].concat(valore));
+  p.append(el('span', 'comune-sismico-etichetta', etichetta), v);
   return p;
 }
 
@@ -152,31 +156,24 @@ const linkShakeMap = id => Object.assign(el('a', 'comune-sismico-link', t('comun
 
 // Elenco degli eventi dal più recente: una riga per evento (data, magnitudo, luogo, link INGV), a blocchi con «Mostra altri»
 function elencoEventi(eventi) {
-  const titolo = el('p', 'comune-sismico-titolo', t('comune.sismico.elenco', { n: numero(eventi.length) }));
-  const lista = el('ul', 'comune-sismico-elenco');
   const altri = el('button', 'comune-sismico-altri');
   altri.type = 'button';
-  let mostrati = 0;
-  const aggiungi = () => {
-    for (const ev of eventi.slice(mostrati, mostrati + PASSO_ELENCO)) {
-      const voce = el('li');
-      const link = el('a', 'comune-sismico-link', `M ${magnitudo(ev.mag)}`);
-      link.href = LINK + ev.id;
-      link.target = '_blank';
-      link.rel = 'noopener';
-      const links = el('span', 'comune-sismico-links');
-      links.append(link);
-      if (haShakeMap(ev)) links.append(' · ', linkShakeMap(ev.id));
-      voce.append(el('span', 'comune-sismico-data', dataBreve(ev.ts)), links, el('span', 'comune-sismico-luogo', ev.luogo));
-      lista.append(voce);
-    }
-    mostrati = Math.min(eventi.length, mostrati + PASSO_ELENCO);
+  const titolo = () => t('comune.sismico.elenco', { n: numero(eventi.length) });
+  // tutti gli eventi stanno in un accordion, come negli altri elenchi dell'app (disegnaAccordion): ogni evento è una card espandibile
+  const blocco = disegnaAccordion({ ...accordionTerremoti({ n: eventi.length, mostrati: eventi.slice(0, PASSO_ELENCO) }), aperto: true, riassunto: titolo() });
+  let mostrati = Math.min(eventi.length, PASSO_ELENCO);
+  const aggiorna = () => {
     altri.hidden = mostrati >= eventi.length;
     altri.textContent = t('comune.sismico.altri', { n: numero(eventi.length - mostrati) });
   };
-  altri.addEventListener('click', aggiungi);
-  aggiungi();
-  return [titolo, lista, altri];
+  altri.addEventListener('click', () => {
+    const prossimi = disegnaAccordion(accordionTerremoti({ n: eventi.length, mostrati: eventi.slice(mostrati, mostrati + PASSO_ELENCO) }));
+    blocco.append(...prossimi.querySelectorAll(':scope > .scheda-tipo'));
+    mostrati = Math.min(eventi.length, mostrati + PASSO_ELENCO);
+    aggiorna();
+  });
+  aggiorna();
+  return [blocco, altri];
 }
 
 // Contenuto della card: numeri, serie per anno, evento più forte e nota sulla fonte
@@ -189,7 +186,7 @@ export function quadroComune(d) {
   ];
   if (d.annoTop?.n) nodi.push(riga(t('comune.sismico.annoTop'), `${d.annoTop.anno} · ${numero(d.annoTop.n)}`));
   if (d.forte) {
-    nodi.push(riga(t('comune.sismico.forte'), `M ${magnitudo(d.forte.mag)} · ${dataBreve(d.forte.ts)}`));
+    nodi.push(riga(t('comune.sismico.forte'), [badgeMagnitudo(d.forte.mag, `M ${magnitudo(d.forte.mag)}`), ` · ${dataBreve(d.forte.ts)}`]));
     const dove = el('p', 'uffici-nota comune-sismico-dove');
     if (d.forte.luogo) dove.append(`${d.forte.luogo} · `);
     const link = el('a', 'comune-sismico-link', t('comune.sismico.schedaIngv'));

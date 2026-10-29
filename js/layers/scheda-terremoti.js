@@ -243,7 +243,7 @@ export function modelloEvento(p) {
   return {
     titolo: t('terremoti.ev.titolo'), luogo: p.luogo || t('terremoti.zonaSconosciuta'), ...(p.anno ? { badge: { testo: String(p.anno), colore: p.colore } } : {}),
     campi: [
-      { chiave: t('terremoti.ev.magnitudo'), valore: `${num(p.mag)}${p.tipoMag ? ` ${p.tipoMag}` : ''}` },
+      { chiave: t('terremoti.ev.magnitudo'), valore: `${num(p.mag)}${p.tipoMag ? ` ${p.tipoMag}` : ''}`, magnitudo: p.mag },
       { chiave: t('terremoti.ev.profondita'), valore: p.prof == null ? '' : `${num(p.prof, 0)} km` },
       { chiave: t('terremoti.ev.oraUtc'), valore: dataOra(p.ts, 'UTC') },
       { chiave: t('terremoti.ev.oraItaliana'), valore: dataOra(p.ts, 'Europe/Rome') },
@@ -337,7 +337,7 @@ export function accordionTerremoti(elenco, adesso = Date.now()) {
     icona: 'terremoto', aperto: n > 0 && n <= 10,
     riassunto: n > mostrati.length ? t('terremoti.altriParziale', { mostrati: mostrati.length, n }) : tn('terremoti.altri', n),
     elementi: mostrati.map(p => ({
-      evento: p, titolo: titoloTerremoto(p), anteprima: quantoTempoFa(p.ts, adesso),
+      evento: p, titolo: titoloTerremoto(p), magnitudo: { mag: p.mag, testo: `M ${num(p.mag)}` }, nome: p.luogo || t('terremoti.zonaSconosciuta'), anteprima: quantoTempoFa(p.ts, adesso),
       miniatura: miniatura(p),
       righe: [...righeTerremoto(p, adesso), { etichetta: 'Scheda INGV', valore: 'terremoti.ingv.it', urlValore: LINK + p.id }, ...(haShakeMap(p) ? [{ etichetta: 'ShakeMap INGV', valore: 'shakemap.ingv.it', urlValore: LINK_SHAKEMAP + p.id }] : [])],
     })),

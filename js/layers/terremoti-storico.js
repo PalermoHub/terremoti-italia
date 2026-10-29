@@ -4,7 +4,7 @@ import { scaricaEventi, scaricaEventiTutti, eventoDaIngv, quantoTempoFa, distanz
 import { EVENTO_FILTRO, apriDialogoPeriodo, barraEventi, graficoSerie, elencoAltri } from './scheda-terremoti-dom.js';
 import { ANNO_INIZIO, periodoAnno } from './scheda-archivio.js';
 import { pannelloArchivio } from './terremoti-archivio.js';
-import { creaPopupTerremoti, simboliRighe } from './terremoti-popup.js';
+import { creaPopupTerremoti, righeTooltip } from './terremoti-popup.js';
 import { EVENTO_TABELLA } from '../core/tabella-dati.js';
 import { raggioAttivo, EVENTO_RAGGIO } from '../core/raggio-vicini.js';
 import { creaEvidenzaMappa } from '../core/evidenza-eventi.js';
@@ -190,8 +190,7 @@ export default {
       layers: [PUNTI], icona: 'terremoto', sezione: 'Terremoti storici', colore: p => p.colore,
       modello: p => {
         const m = modelloPopupTerremoto(p);
-        const simbolo = simboliRighe(p);
-        return { titolo: m.titolo, sottotitolo: tl(m.sottotitolo), badge: m.badge, elenco: m.righe.map(r => ({ testo: `${tl(r.etichetta)}: ${r.valore}`, ...simbolo[r.etichetta]?.() })) };
+        return { titolo: m.titolo, sottotitolo: tl(m.sottotitolo), badge: m.badge, elenco: righeTooltip(m, p) };
       },
     }]);
     map.on('mouseenter', PUNTI, () => { map.getCanvas().style.cursor = 'pointer'; });

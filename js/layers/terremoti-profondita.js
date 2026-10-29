@@ -3,7 +3,7 @@ import { EVENTO_TABELLA } from '../core/tabella-dati.js';
 import { registraTooltipStrati } from '../core/tooltip.js';
 import { colonneTabellaTerremoti, modelloPopupTerremoto } from './scheda-terremoti.js';
 import { CLASSI_PROFONDITA, coloreProfondita } from './scheda-sezione.js';
-import { creaPopupTerremoti, simboliRighe } from './terremoti-popup.js';
+import { creaPopupTerremoti, righeTooltip } from './terremoti-popup.js';
 import { eventiPeriodo, pannelloPeriodo, elencoEventi, legendaProfondita, legendaMappa } from './terremoti-periodo.js';
 
 // Terremoti per profondità: gli eventi di un anno o di un periodo dell'archivio, in tutta Italia, con il colore che dice la
@@ -73,8 +73,7 @@ export default {
       layers: [PUNTI], icona: 'terremoto', sezione: 'Terremoti per profondità', colore: p => p.colore,
       modello: p => {
         const m = modelloPopupTerremoto(p);
-        const simbolo = simboliRighe(p);
-        return { titolo: m.titolo, sottotitolo: tl(m.sottotitolo), badge: m.badge, elenco: m.righe.map(r => ({ testo: `${tl(r.etichetta)}: ${r.valore}`, ...simbolo[r.etichetta]?.() })) };
+        return { titolo: m.titolo, sottotitolo: tl(m.sottotitolo), badge: m.badge, elenco: righeTooltip(m, p) };
       },
     }]);
     map.on('mouseenter', PUNTI, () => { map.getCanvas().style.cursor = 'pointer'; });

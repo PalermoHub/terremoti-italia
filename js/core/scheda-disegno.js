@@ -4,6 +4,7 @@ import { separaMancanti, dividiDettaglio, valoreLungo, MANCANTE } from './scheda
 import { svgIcona } from './icone.js';
 import { collegamento } from './url-sicuro.js';
 import { t as tr, tl } from './i18n.js';
+import { badgeMagnitudo } from './badge-magnitudo.js';
 
 export function el(tag, classe, testo) {
   const e = document.createElement(tag);
@@ -85,7 +86,7 @@ function disegnaRiga(r) {
 // (evento `scheda:evidenzia-gruppo`, detail = `evidenzia` o null). Il tocco lo tiene fisso, un secondo tocco lo toglie.
 let gruppoFisso = null;
 const evidenziaGruppo = detail => document.dispatchEvent(new CustomEvent('scheda:evidenzia-gruppo', { detail }));
-document.addEventListener('scheda:chiusa', () => { gruppoFisso = null; });
+globalThis.document?.addEventListener('scheda:chiusa', () => { gruppoFisso = null; });
 
 function rendiEvidenziabile(box, g) {
   box.classList.add('scheda-gruppo--evidenziabile');
@@ -206,7 +207,7 @@ function disegnaEvento(e) {
     const chiave = tx('span', 'scheda-evento-chiave', c.chiave);
     if (c.nota) chiave.append(' ', tx('small', null, c.nota));
     if (c.scelta) { cella.append(chiave, disegnaSceltaContorni(c.scelta)); griglia.append(cella); continue; }
-    const valore = c.url ? Object.assign(tx('a', 'scheda-evento-valore', c.valore), { href: c.url, target: '_blank', rel: 'noopener' }) : tx('span', 'scheda-evento-valore', c.valore);
+    const valore = c.magnitudo != null ? badgeMagnitudo(c.magnitudo, c.valore) : c.url ? Object.assign(tx('a', 'scheda-evento-valore', c.valore), { href: c.url, target: '_blank', rel: 'noopener' }) : tx('span', 'scheda-evento-valore', c.valore);
     cella.append(chiave, valore);
     griglia.append(cella);
   }
@@ -227,7 +228,8 @@ export function disegnaAccordion(a, suRiga = null) {
   for (const e of a.elementi) {
     const tipo = el('details', 'scheda-tipo');
     const sommario = el('summary');
-    sommario.append(el('span', 'scheda-tipo-nome', tl(e.titolo)));
+    if (e.magnitudo) sommario.append(badgeMagnitudo(e.magnitudo.mag, e.magnitudo.testo));
+    sommario.append(el('span', 'scheda-tipo-nome', tl(e.nome ?? e.titolo)));
     if (e.stato) sommario.append(el('em', 'scheda-tipo-stato', e.stato));
     if (e.anteprima) sommario.append(el('span', 'scheda-tipo-anteprima', e.anteprima));
     tipo.append(sommario);

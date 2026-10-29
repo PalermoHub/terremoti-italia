@@ -163,7 +163,8 @@ export function disegnaVoceTooltip(m) {
         r.append(pallino);
       }
       if (riga.nodo) r.append(riga.nodo); // un simbolo già pronto davanti al testo (es. il cerchio della magnitudo)
-      r.append(typeof riga === 'string' ? riga : riga.testo);
+      if (riga.valoreNodo) r.append(riga.testo, riga.valoreNodo); // testo e poi un nodo già pronto (es. il badge della magnitudo)
+      else r.append(typeof riga === 'string' ? riga : riga.testo);
       elenco.append(r);
     }
     voce.append(elenco);

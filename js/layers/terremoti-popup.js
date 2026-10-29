@@ -1,4 +1,6 @@
 import { raggioMagnitudo, modelloPopupTerremoto } from './scheda-terremoti.js';
+import { tl } from '../core/i18n.js';
+import { badgeMagnitudo } from '../core/badge-magnitudo.js';
 import { contenutoPopupTraffico, ancoraPopupTraffico, rifinisciPopupTraffico, centraPopupTraffico } from './popup-traffico.js';
 
 // Parti comuni dei due strati di terremoti (tempo reale e archivio storico): simboli delle righe e popup al clic.
@@ -28,7 +30,14 @@ function cerchioMagnitudo(p) {
 // Simboli delle righe «Magnitudo» e «Ora locale» (tooltip e popup): il cerchio della sua classe e il punto del colore della sua fascia d'età
 export const simboliRighe = p => ({ Magnitudo: () => ({ nodo: cerchioMagnitudo(p) }), 'Ora locale': () => ({ nodo: puntoTempo(p) }) });
 
-export const conSimboli = (m, p) => ({ ...m, righe: m.righe.map(r => ({ ...r, nodo: simboliRighe(p)[r.etichetta]?.().nodo })) });
+// Righe del tooltip di un terremoto: «Etichetta: valore» con il simbolo della riga; la magnitudo è un badge
+export const righeTooltip = (m, p) => m.righe.map(r => ({
+  testo: r.etichetta === 'Magnitudo' ? `${tl(r.etichetta)}: ` : `${tl(r.etichetta)}: ${r.valore}`,
+  ...simboliRighe(p)[r.etichetta]?.(),
+  ...(r.etichetta === 'Magnitudo' ? { valoreNodo: badgeMagnitudo(p.mag, r.valore) } : {}),
+}));
+
+export const conSimboli = (m, p) => ({ ...m, righe: m.righe.map(r => ({ ...r, nodo: simboliRighe(p)[r.etichetta]?.().nodo, ...(r.etichetta === 'Magnitudo' ? { valoreNodo: badgeMagnitudo(p.mag, r.valore) } : {}) })) });
 
 // Un popup per strato: `apri(mappa, p, punto)` lo mostra sul terremoto `p` (proprietà della feature + lon/lat), `chiudi()` lo toglie
 export function creaPopupTerremoti() {

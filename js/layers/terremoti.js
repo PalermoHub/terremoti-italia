@@ -13,7 +13,7 @@ import { clicSu } from '../core/scheda-navigazione.js';
 import { coloreMagnitudo, espressioneColoreMagnitudo } from '../core/magnitudo.js';
 import { aggiornaLegendaInMappa, EVENTO_TEMA_MAGNITUDO, temaMagnitudoAttivo } from '../core/tema-magnitudo.js';
 import { legendaMagnitudo } from './legenda-magnitudo.js';
-import { creaPopupTerremoti, simboliRighe } from './terremoti-popup.js';
+import { creaPopupTerremoti, righeTooltip } from './terremoti-popup.js';
 import { EVENTO_TABELLA } from '../core/tabella-dati.js';
 import { raggioAttivo, EVENTO_RAGGIO } from '../core/raggio-vicini.js';
 import { creaEvidenzaMappa } from '../core/evidenza-eventi.js';
@@ -290,8 +290,7 @@ export default {
       layers: [PUNTI], icona: 'terremoto', sezione: 'Terremoti', colore: p => (temaMagnitudoAttivo() ? coloreMagnitudo(p.mag) : p.colore),
       modello: p => {
         const m = modelloPopupTerremoto(p);
-        const simbolo = simboliRighe(p);
-        return { titolo: m.titolo, sottotitolo: tl(m.sottotitolo), elenco: m.righe.map(r => ({ testo: `${tl(r.etichetta)}: ${r.valore}`, ...simbolo[r.etichetta]?.() })) };
+        return { titolo: m.titolo, sottotitolo: tl(m.sottotitolo), elenco: righeTooltip(m, p) };
       },
     }]);
     map.on('mouseenter', PUNTI, () => { map.getCanvas().style.cursor = 'pointer'; });

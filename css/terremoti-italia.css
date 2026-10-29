@@ -80,15 +80,15 @@
 
 /* Righe degli eventi nel raggio, nella scheda: magnitudo, distanza, luogo e tempo; tutta la riga apre l'evento. */
 .raggio-elenco { margin: 4px 0 2px; }
-.raggio-lista { display: flex; flex-direction: column; gap: 3px; margin: 0; padding: 0; list-style: none; }
-.raggio-evento { display: grid; grid-template-columns: 10px auto auto minmax(0, 1fr) auto; align-items: center; gap: 7px; box-sizing: border-box; width: 100%; padding: 6px 8px; border: 1px solid var(--border-ui); border-radius: var(--r-sm); background: var(--surface); color: var(--text); font: inherit; font-size: var(--fs-xs); text-align: left; cursor: pointer; transition: background var(--t-rapida), border-color var(--t-rapida); }
-.raggio-evento:hover { border-color: var(--accent); background: var(--accent-soft); }
+.raggio-lista { display: flex; flex-direction: column; margin: 0; padding: 0; list-style: none; }
+.raggio-evento { display: grid; grid-template-columns: 10px auto auto minmax(0, 1fr) auto; align-items: center; gap: 7px; box-sizing: border-box; width: 100%; padding: 6px 0 6px 8px; border: 0; border-bottom: 1px solid var(--border); border-radius: var(--r-sm); background: none; color: var(--text); font: inherit; font-size: var(--fs-sm); text-align: left; cursor: pointer; transition: background var(--t-rapida), border-color var(--t-rapida); }
+.raggio-evento:hover { background: var(--accent-soft); }
 .raggio-evento:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 .raggio-punto { width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 0 1px var(--surface); }
 .raggio-mag { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .raggio-distanza { color: var(--text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
-.raggio-luogo { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.raggio-quando { color: var(--text-muted); font-size: var(--fs-3xs); white-space: nowrap; }
+.raggio-luogo { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.raggio-quando { color: var(--accent-strong); font-weight: 700; font-size: var(--fs-xs); white-space: nowrap; }
 .raggio-nota { margin: 6px 0 0; }
 /* Il riquadro con Live Zoom e ricerca nel raggio sta sopra la barra di ricerca: altrimenti la coprirebbe (e la
    barra coprirebbe cursore e interruttore del cerchio). */

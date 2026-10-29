@@ -2,6 +2,7 @@
 // il cerchio e apre la scheda con i terremoti entro quel raggio (in tempo reale e archivio, secondo gli strati accesi).
 // Il raggio è uno solo per tutta l'app; stato e valore stanno in localStorage.
 import { t, localeIntl } from './i18n.js';
+import { badgeMagnitudo } from './badge-magnitudo.js';
 
 export const CHIAVE_RAGGIO = 'dt-raggio-vicini';
 export const CHIAVE_CERCHIO = 'dt-raggio-cerchio';
@@ -188,9 +189,8 @@ function elencoVicini(eventi, totale, raggioM) {
     const punto = document.createElement('i');
     punto.className = 'raggio-punto';
     punto.style.background = e.colore ?? 'currentColor';
-    const magnitudo = document.createElement('span');
-    magnitudo.className = 'raggio-mag';
-    magnitudo.textContent = t('raggio.mag', { m: numero(e.mag) });
+    const magnitudo = badgeMagnitudo(e.mag, t('raggio.mag', { m: numero(e.mag) }));
+    magnitudo.className += ' raggio-mag';
     const distanza = document.createElement('span');
     distanza.className = 'raggio-distanza';
     distanza.textContent = formattaDistanza(e.distanzaM);

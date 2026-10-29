@@ -8,6 +8,7 @@ import { ANNO_INIZIO, periodoAnno, serieAnnuale, scaricaRiepilogo } from './sche
 import { iconaAttesa } from '../core/scheda-util.js';
 import { SCELTE_GIORNI, SCELTE_MAGNITUDO, PROFONDITA, UNITA, MAG_STORICO, ANNI_STORICO, filtro, chiaveProfondita, altriTerremoti, accordionTerremoti, posizioneEvento, urlStorico, rispostaDaArchivio, scaricaEventiTutti, eventiDaTesto, eventiDaFeatures, serieEventi, puntiMagnitudo, curvaCumulativa, omori, rilascioCumulativo, tempiTraEventi, spazioTempo, finestraTempo, proprietaStorico, voceTerremoto, inquadra, proiettaMiniatura, miniatura, etichettaBarra, periodoSequenza, statisticheEvento, sintesiSerie, quoteClassi, SOGLIA_BASSA } from './scheda-terremoti.js';
 import { coloreMagnitudo, raggioMagnitudo } from '../core/magnitudo.js';
+import { badgeMagnitudo } from '../core/badge-magnitudo.js';
 
 export const EVENTO_FILTRO = 'terremoti:filtro';
 
@@ -510,7 +511,8 @@ function disegnaSequenza(s, sync, profEvento) {
   if (s.vicini.length) {
     blocco.append(el('p', 'seq-sottotitolo', t('terremoti.seq.vicini')));
     for (const { e, km } of s.vicini) {
-      const b = el('button', 'seq-vicino', `M ${mag1(e.mag)} · ${num(Math.round(km))} km · ${dataEvento(e.ts)}`);
+      const b = el('button', 'seq-vicino');
+      b.append(badgeMagnitudo(e.mag, `M ${mag1(e.mag)}`), ` · ${num(Math.round(km))} km · ${dataEvento(e.ts)}`);
       b.type = 'button';
       b.addEventListener('click', () => sync.seleziona(e));
       blocco.append(b);

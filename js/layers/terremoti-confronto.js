@@ -4,7 +4,7 @@ import { scaricaEventiTutti, eventoDaIngv, modelloPopupTerremoto, voceTerremoto,
 import { EVENTO_FILTRO, barraEventi, graficoSerie, elencoAltri } from './scheda-terremoti-dom.js';
 import { pannelloConfronto } from './terremoti-archivio.js';
 import { etichettaPeriodo } from './scheda-archivio.js';
-import { creaPopupTerremoti, simboliRighe } from './terremoti-popup.js';
+import { creaPopupTerremoti, righeTooltip } from './terremoti-popup.js';
 import { EVENTO_TABELLA } from '../core/tabella-dati.js';
 import { creaEvidenzaMappa } from '../core/evidenza-eventi.js';
 import { registraTooltipStrati } from '../core/tooltip.js';
@@ -227,8 +227,7 @@ export default {
       layers: [PUNTI], icona: 'terremoto', sezione: 'Confronto terremoti', colore: p => p.colore,
       modello: p => {
         const m = modelloPopupTerremoto(p);
-        const simbolo = simboliRighe(p);
-        return { titolo: m.titolo, sottotitolo: tl(m.sottotitolo), badge: m.badge, elenco: m.righe.map(r => ({ testo: `${tl(r.etichetta)}: ${r.valore}`, ...simbolo[r.etichetta]?.() })) };
+        return { titolo: m.titolo, sottotitolo: tl(m.sottotitolo), badge: m.badge, elenco: righeTooltip(m, p) };
       },
     }]);
     map.on('mouseenter', PUNTI, () => { map.getCanvas().style.cursor = 'pointer'; });
