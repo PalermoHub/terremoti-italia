@@ -193,7 +193,7 @@ function creaLegenda() {
       applicaFiltro();
     }));
   }
-  pannelloPf = pannelloFiltro(() => eventi);
+  pannelloPf = pannelloFiltro(() => eventi, () => mappa);
   legenda.append(titolo, bloccoFasce, pannelloPf.nodo, menuFiltro({ magnitudo: false }), el('p', 'uffici-nota', t('terremoti.clicca')));
   nota = el('p', 'uffici-nota');
   bottoneAggiorna = el('button', 'legenda-aggiorna');

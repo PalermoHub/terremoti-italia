@@ -304,6 +304,15 @@ dialog li { margin: 4px 0; }
 #cerca-ripristina:hover { background: color-mix(in srgb, var(--accent) 28%, transparent); }
 #cerca-filtri:hover { filter: brightness(1.1); }
 #cerca-filtri[aria-expanded="true"] { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
+/* durante la riproduzione della timeline la barra di ricerca cede il posto ad anno e date della finestra */
+body.timeline-in-corso #cerca, body.timeline-in-corso #cerca-pannello { display: none; }
+.cerca-tempo { display: flex; flex-direction: column; gap: 8px; padding: 10px 18px 12px; background: var(--surface); border: 1px solid var(--border-ui); border-radius: var(--r-lg, 20px); box-shadow: var(--ombra); }
+.cerca-tempo[hidden] { display: none; }
+.cerca-tempo-testo { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.cerca-tempo-anno { font-size: 28px; line-height: 1; font-weight: 700; color: var(--accent-strong); font-variant-numeric: tabular-nums; }
+.cerca-tempo-date { font-size: var(--fs-sm); color: var(--text-muted); text-align: right; }
+.cerca-tempo-traccia { position: relative; height: 6px; border-radius: 3px; background: var(--border); overflow: hidden; }
+.cerca-tempo-traccia i { position: absolute; top: 0; bottom: 0; border-radius: 3px; background: var(--accent); transition: left .1s linear, width .1s linear; }
 #cerca-risultati {
   position: absolute; bottom: calc(100% + 10px); left: 0; right: 0; list-style: none; margin: 0; padding: 4px 0;
   max-height: 300px; overflow-y: auto; background: var(--surface); border: 1px solid var(--border-ui); border-radius: var(--r-md); box-shadow: var(--ombra);
@@ -2437,6 +2446,7 @@ a.scheda-badge-tinta:hover, a.scheda-badge-tinta:focus-visible { background: col
 .legenda .terremoti-pf-icona { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 28px; padding: 0; border: 1px solid var(--border); border-radius: var(--r-xs, 4px); background: var(--surface, #fff); color: var(--accent-strong, var(--accent)); cursor: pointer; }
 .legenda .terremoti-pf-icona:hover, .legenda .terremoti-pf-icona:focus-visible { background: color-mix(in srgb, var(--accent) 12%, transparent); }
 .legenda .terremoti-pf-icona svg { display: block; }
+.legenda .terremoti-pf-velocita { width: auto; min-width: 34px; padding: 0 6px; font: inherit; font-size: var(--fs-xs); font-weight: 600; font-variant-numeric: tabular-nums; }
 
 /* punto «La mia posizione» */
 .mia-posizione { width: 16px; height: 16px; border-radius: 50%; background: #1a73e8; border: 3px solid #fff; box-shadow: 0 0 0 2px rgba(26,115,232,.35), 0 1px 4px rgba(0,0,0,.4); }

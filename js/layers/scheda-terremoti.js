@@ -113,6 +113,15 @@ export function prossimaFinestra(finestra, larghezza = 3) {
   return a >= GIORNI_MAX ? [0, l] : [da + 1, a + 1];
 }
 
+// Riproduzione continua: sposta la finestra di `passo` giorni (anche frazioni, così conta l'ora dell'evento); arrivata in
+// fondo riparte dall'inizio. Con tutto il periodo parte da una finestra di `larghezza` giorni.
+export function avanzaFinestra(finestra, passo, larghezza = 3) {
+  const [da, a] = finestra ?? [0, GIORNI_MAX];
+  const l = a - da >= GIORNI_MAX ? larghezza : Math.max(passo, a - da);
+  if (a >= GIORNI_MAX || a + passo > GIORNI_MAX) return a >= GIORNI_MAX ? [0, l] : [GIORNI_MAX - l, GIORNI_MAX];
+  return [da + passo, a + passo];
+}
+
 
 const num = (n, d = 1) => n.toLocaleString(localeIntl(), { minimumFractionDigits: d, maximumFractionDigits: d });
 

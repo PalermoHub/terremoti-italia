@@ -1,11 +1,16 @@
 // Pannello «Filtro sulla mappa» nella legenda dei terremoti: serie temporale (eventi per giorno) con slider a due maniglie e istogramma di magnitudo a classi cliccabili.
 // Scrive nel filtro condiviso (`finestra`, `classi`) e avvisa con EVENTO_FILTRO: mappa, menu ed elenco si aggiornano da soli.
 import { t, tn, localeIntl } from '../core/i18n.js';
-import { GIORNI_MAX, CLASSI_MAG, filtro, intervallo, eventiPerGiorno, eventiPerClasse, prossimaFinestra, sintesiClassi, SOGLIA_BASSA, SOGLIA_ALTA } from './scheda-terremoti.js';
+import { GIORNI_MAX, CLASSI_MAG, filtro, intervallo, passaFiltro, eventiPerGiorno, eventiPerClasse, avanzaFinestra, sintesiClassi, SOGLIA_BASSA, SOGLIA_ALTA } from './scheda-terremoti.js';
+import { evidenziaEventi, nascondiEvidenzaEventi } from '../core/evidenza-eventi.js';
 import { titoloConInfo } from '../core/info-grafico.js';
-import { EVENTO_FILTRO } from './scheda-terremoti-dom.js';
+import { EVENTO_FILTRO, apriDialogoPeriodo, testoPeriodoBreve } from './scheda-terremoti-dom.js';
+import { ANNO_INIZIO, periodoAnno, periodoAnnoIntero, annoDi } from './scheda-archivio.js';
 
-const PASSO_RIPRODUZIONE_MS = 700;
+const PASSO_RIPRODUZIONE_MS = 100; // un fotogramma ogni 100 ms: la finestra scorre di frazioni di giorno, così conta anche l'ora
+const GIORNI_AL_SECONDO = 0.5; // a velocità ×1 la finestra avanza di 12 ore ogni secondo
+const VELOCITA = [1, 2, 4, 8, 16];
+const BARRE_MAX = 60; // un periodo lungo si divide in al più tante barre di uguale durata
 const GIORNO_MS = 86400000;
 
 function el(tag, classe, testo) {
@@ -25,16 +30,47 @@ function comando(el, nome, etichetta) {
 }
 
 const nomeClasse = c => (c.a === Infinity ? `≥ ${c.da}` : `${c.da}–${c.a}`);
+const giornoOra = ts => new Date(ts).toLocaleString(localeIntl(), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 const giorno = ts => new Date(ts).toLocaleDateString(localeIntl(), { day: 'numeric', month: 'short' });
 const emetti = () => document.dispatchEvent(new CustomEvent(EVENTO_FILTRO));
 
+// Durante la riproduzione la barra di ricerca lascia il posto a questa: anno grande, giorni della finestra e posizione nei 30 giorni.
+function barraTempo() {
+  const nodo = el('div', 'cerca-tempo');
+  nodo.hidden = true;
+  nodo.setAttribute('role', 'status');
+  const anno = el('strong', 'cerca-tempo-anno'), date = el('span', 'cerca-tempo-date');
+  const traccia = el('div', 'cerca-tempo-traccia'), riempi = el('i');
+  traccia.append(riempi);
+  const testo = el('div', 'cerca-tempo-testo');
+  testo.append(anno, date);
+  nodo.append(testo, traccia);
+  document.getElementById('area-ricerca')?.append(nodo);
+  return {
+    mostra(vero) { nodo.hidden = !vero; document.body.classList.toggle('timeline-in-corso', vero); },
+    scrivi(dal, al, [da, a]) {
+      date.textContent = t('terremoti.pf.intervallo', { da: giornoOra(dal), a: giornoOra(al) });
+      anno.textContent = new Date(al).toLocaleDateString(localeIntl(), { year: 'numeric' });
+      riempi.style.left = `${da / GIORNI_MAX * 100}%`;
+      riempi.style.width = `${(a - da) / GIORNI_MAX * 100}%`;
+    },
+  };
+}
+
 // `eventi()` = eventi scaricati (tutti i 30 giorni). Restituisce { nodo, aggiorna, ferma }.
-export function pannelloFiltro(eventi) {
+export function pannelloFiltro(eventi, mappa = () => null) {
   const nodo = el('div', 'terremoti-pannello');
+  const barraT = barraTempo();
 
   // serie temporale + slider
   const barre = el('div', 'terremoti-pf-barre');
-  const colonne = Array.from({ length: GIORNI_MAX }, () => barre.appendChild(el('i')));
+  let colonne = [];
+  const preparaColonne = n => {
+    if (colonne.length === n) return;
+    colonne = Array.from({ length: n }, () => el('i'));
+    barre.replaceChildren(...colonne);
+  };
+  preparaColonne(GIORNI_MAX);
   const slider = el('div', 'terremoti-pf-slider');
   const campo = (etichetta, valore) => {
     const i = el('input');
@@ -44,18 +80,46 @@ export function pannelloFiltro(eventi) {
   };
   const inizio = campo('terremoti.pf.da', 0), fine = campo('terremoti.pf.a', GIORNI_MAX);
   slider.append(inizio, fine);
+  // menu «Periodo»: gli ultimi 30 giorni (con slider), un anno intero dall'archivio oppure un periodo scelto dal calendario
+  const menuPeriodo = el('select');
+  menuPeriodo.setAttribute('aria-label', t('terremoti.pf.periodo'));
+  const opzione = (valore, testo) => menuPeriodo.append(Object.assign(el('option', null, testo), { value: valore }));
+  opzione('recenti', t('terremoti.pf.recenti'));
+  for (let a = new Date().getUTCFullYear(); a >= ANNO_INIZIO; a--) opzione(String(a), String(a));
+  opzione('personalizzato', t('terremoti.periodoPersonalizzato'));
+  const notaScelta = el('small', 'terremoti-periodo-nota');
+  const scegli = p => { Object.assign(filtro, { periodo: p, finestra: null }); ferma(); emetti(); };
+  menuPeriodo.addEventListener('change', () => {
+    if (menuPeriodo.value === 'personalizzato') {
+      apriDialogoPeriodo({ da: filtro.periodo?.da ?? null, a: filtro.periodo?.a ?? null, alApplica: scegli, alChiudi: aggiorna });
+      return;
+    }
+    scegli(menuPeriodo.value === 'recenti' ? null : periodoAnno(Number(menuPeriodo.value)));
+  });
+  const scelta = el('label', 'terremoti-filtro terremoti-filtro-periodo');
+  scelta.append(el('span', null, t('terremoti.pf.periodo')), menuPeriodo, notaScelta);
   const testoIntervallo = el('p', 'terremoti-pf-intervallo');
   const riproduci = el('button', 'terremoti-pf-icona');
   riproduci.type = 'button';
   const azzera = el('button', 'terremoti-pf-icona');
   azzera.type = 'button';
   comando(azzera, 'azzera', t('terremoti.pf.azzera'));
+  let velocita = 0; // indice in VELOCITA
+  const veloce = el('button', 'terremoti-pf-icona terremoti-pf-velocita');
+  veloce.type = 'button';
+  const scriviVelocita = () => {
+    veloce.textContent = `×${VELOCITA[velocita]}`;
+    veloce.title = t('terremoti.pf.velocita', { v: VELOCITA[velocita] });
+    veloce.setAttribute('aria-label', veloce.title);
+  };
+  scriviVelocita();
+  veloce.addEventListener('click', () => { velocita = (velocita + 1) % VELOCITA.length; scriviVelocita(); });
   const grafici = el('button', 'terremoti-pf-icona');
   grafici.type = 'button';
   comando(grafici, 'grafici', t('terremoti.pf.grafici'));
   const testa = el('div', 'terremoti-pf-testa');
   const comandi = el('div', 'terremoti-pf-comandi');
-  comandi.append(riproduci, azzera, grafici);
+  comandi.append(riproduci, veloce, azzera, grafici);
   testa.append(el('strong', null, t('terremoti.pf.titolo')), comandi);
   // i grafici stanno in una parte che si apre e si chiude; parte chiusa, e si apre con la riproduzione
   const corpo = el('div', 'terremoti-pf-corpo');
@@ -93,10 +157,8 @@ export function pannelloFiltro(eventi) {
   const sintesi = el('p', 'terremoti-sintesi');
 
   const sezioneTempo = el('div', 'terremoti-pf-sezione-tempo');
-  sezioneTempo.append(titoloConInfo('p', 'terremoti-pf-et', t('terremoti.pf.tempo'), 'pf-tempo'), barre, slider);
-  const notaPeriodo = el('p', 'uffici-nota terremoti-pf-periodo');
-  notaPeriodo.hidden = true;
-  corpo.append(sezioneTempo, notaPeriodo, titoloConInfo('p', 'terremoti-pf-et', t('terremoti.pf.magnitudo'), 'pf-magnitudo'), istogramma, sintesi, scala, el('p', 'uffici-nota', t('terremoti.pf.nota')));
+  sezioneTempo.append(titoloConInfo('p', 'terremoti-pf-et', t('terremoti.pf.tempo'), 'pf-tempo'), scelta, barre, slider);
+  corpo.append(sezioneTempo, titoloConInfo('p', 'terremoti-pf-et', t('terremoti.pf.magnitudo'), 'pf-magnitudo'), istogramma, sintesi, scala, el('p', 'uffici-nota', t('terremoti.pf.nota')));
   nodo.append(testa, testoIntervallo, corpo);
   apri(false);
 
@@ -105,6 +167,8 @@ export function pannelloFiltro(eventi) {
   const ferma = () => {
     clearInterval(timer);
     timer = null;
+    barraT.mostra(false);
+    nascondiEvidenzaEventi(mappa());
     comando(riproduci, 'riproduci', t('terremoti.pf.riproduci'));
     riproduci.setAttribute('aria-pressed', 'false');
   };
@@ -113,9 +177,11 @@ export function pannelloFiltro(eventi) {
     comando(riproduci, 'pausa', t('terremoti.pf.pausa'));
     riproduci.setAttribute('aria-pressed', 'true');
     apri(true);
-    const passo = () => { filtro.finestra = prossimaFinestra(filtro.finestra); emetti(); };
+    barraT.mostra(true);
+    const passo = () => { filtro.finestra = avanzaFinestra(filtro.finestra, VELOCITA[velocita] * GIORNI_AL_SECONDO * PASSO_RIPRODUZIONE_MS / 1000); emetti(); };
     passo();
     timer = setInterval(passo, PASSO_RIPRODUZIONE_MS);
+    aggiorna(); // il primo passo è già partito: la barra in alto lo scrive ora che la riproduzione è attiva
   });
   azzera.addEventListener('click', () => {
     ferma();
@@ -141,14 +207,17 @@ export function pannelloFiltro(eventi) {
     const adesso = Date.now();
     const tutti = eventi();
     const personalizzato = Boolean(filtro.periodo);
-    // Con un periodo assoluto la serie «ultimi 30 giorni» e lo slider non descrivono più la mappa: restano
-    // l'istogramma di magnitudo e il comando «Azzera».
-    sezioneTempo.hidden = personalizzato;
-    notaPeriodo.hidden = !personalizzato;
-    notaPeriodo.textContent = personalizzato ? t('terremoti.pf.periodoNota') : '';
+    // Con un periodo scelto la serie lo copre per intero in barre di uguale durata; lo slider e la riproduzione
+    // restano degli ultimi 30 giorni. L'istogramma di magnitudo e «Azzera» valgono sempre.
+    menuPeriodo.value = !personalizzato ? 'recenti' : periodoAnnoIntero(filtro.periodo) ? String(annoDi(filtro.periodo)) : 'personalizzato';
+    notaScelta.hidden = !personalizzato || menuPeriodo.value !== 'personalizzato';
+    notaScelta.textContent = notaScelta.hidden ? '' : testoPeriodoBreve(filtro.periodo);
+    slider.hidden = personalizzato;
     riproduci.hidden = personalizzato;
+    veloce.hidden = personalizzato;
     if (personalizzato) ferma();
     if (!personalizzato) {
+      preparaColonne(GIORNI_MAX);
       const [da, a] = filtro.finestra ?? [0, GIORNI_MAX];
       inizio.value = String(da);
       fine.value = String(a);
@@ -159,8 +228,28 @@ export function pannelloFiltro(eventi) {
         c.classList.toggle('fuori', filtro.finestra != null && (i < da || i >= a));
         c.title = `${giorno(adesso - (GIORNI_MAX - i) * GIORNO_MS)}: ${perGiorno[i]}`;
       });
+    } else {
+      const da = filtro.periodo.da, a = Math.min(filtro.periodo.a, adesso);
+      const n = Math.max(1, Math.min(BARRE_MAX, Math.ceil((a - da) / GIORNO_MS)));
+      const larghezza = (a - da) / n;
+      preparaColonne(n);
+      const perBarra = Array(n).fill(0);
+      for (const p of tutti) if (passaFiltro(p, filtro, adesso)) perBarra[Math.min(n - 1, Math.max(0, Math.floor((p.ts - da) / larghezza)))]++;
+      const max = Math.max(1, ...perBarra);
+      colonne.forEach((c, i) => {
+        c.style.height = `${perBarra[i] ? Math.max(6, perBarra[i] / max * 100) : 0}%`;
+        c.classList.remove('fuori');
+        const inizioBarra = da + i * larghezza, fineBarra = da + (i + 1) * larghezza - 1;
+        c.title = `${larghezza > GIORNO_MS * 1.5 ? `${giorno(inizioBarra)} – ${giorno(fineBarra)}` : giorno(inizioBarra)}: ${perBarra[i]}`;
+      });
     }
     const [dal, al] = intervallo(filtro, adesso);
+    if (timer) {
+      const fino = Math.min(al, adesso);
+      barraT.scrivi(dal, fino, filtro.finestra ?? [0, GIORNI_MAX]);
+      // la finestra avanza di continuo: gli eventi appena entrati (più numerosi a velocità alta) sono i nuovi, e si accendono in mappa
+      evidenziaEventi(mappa(), tutti.filter(p => p.ts > fino - 6 * 3600000 * VELOCITA[velocita] && passaFiltro(p, filtro, adesso)), { inquadra: false });
+    }
     testoIntervallo.hidden = !filtro.finestra; // la riga dice l'intervallo scelto, anche a grafici chiusi
     testoIntervallo.textContent = filtro.finestra ? t('terremoti.pf.intervallo', { da: giorno(dal), a: al === Infinity ? t('terremoti.pf.finoAdesso') : giorno(al) }) : '';
     const perClasse = eventiPerClasse(tutti, filtro, adesso);
