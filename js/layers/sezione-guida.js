@@ -1,5 +1,6 @@
 import { t } from '../core/i18n.js';
 import { svgIcona } from '../core/icone.js';
+import { SEMILARGHEZZE_KM } from './scheda-sezione.js';
 
 // Popup che spiega come si traccia la sezione verticale: un disegno in tre passi (clic su A, clic su B, risultato).
 // Si apre quando si accende lo strato; si chiude con la X, con Esc o con un clic fuori, e «Non mostrare più» lo spegne per sempre.
@@ -103,15 +104,28 @@ export function apriGuidaSezione({ storage = null, radice = document.body } = {}
   const dove = document.createElement('p');
   dove.className = 'sezione-guida-dove';
   dove.textContent = t('terremoti.sez.guida.dove');
-  const comandi = document.createElement('ul');
-  comandi.className = 'sezione-guida-comandi';
-  for (const [chiave, par] of [['traccia', { traccia: t('terremoti.sez.traccia') }], ['arco', { arco: t('terremoti.sez.predefinita.arco') }], ['cancella', { cancella: t('terremoti.sez.cancella') }]]) {
-    const li = document.createElement('li');
-    li.textContent = t(`terremoti.sez.guida.cmd.${chiave}`, par);
-    comandi.append(li);
-  }
+  const elenco = (voci, chiavi) => {
+    const ul = document.createElement('ul');
+    ul.className = 'sezione-guida-comandi';
+    for (const [chiave, par] of voci) {
+      const li = document.createElement('li');
+      li.innerHTML = esc(t(`${chiavi}.${chiave}`, par)).replace(/([«“])(.+?)([»”])/g, '$1<strong>$2</strong>$3'); // i nomi dei comandi, tra virgolette, in grassetto
+      ul.append(li);
+    }
+    return ul;
+  };
+  const comandi = elenco([['traccia', { traccia: t('terremoti.sez.traccia') }], ['arco', { arco: t('terremoti.sez.predefinita.arco') }], ['cancella', { cancella: t('terremoti.sez.cancella') }]], 'terremoti.sez.guida.cmd');
+  const filtriTitolo = document.createElement('p');
+  filtriTitolo.className = 'sezione-guida-dove';
+  filtriTitolo.textContent = t('terremoti.sez.guida.filtriTitolo');
+  const filtri = elenco([
+    ['periodo', { periodo: t('terremoti.arc.anno') }],
+    ['mag', { mag: t('terremoti.arc.magMin') }],
+    ['larghezza', { larghezza: t('terremoti.sez.larghezza'), km: Math.max(...SEMILARGHEZZE_KM) }],
+    ['aggiorna', { aggiorna: t('terremoti.sez.aggiorna') }],
+  ], 'terremoti.sez.guida.filtro');
 
-  finestra.append(testata, testo, figura, dove, comandi, piede);
+  finestra.append(testata, testo, figura, dove, comandi, filtriTitolo, filtri, piede);
   velo.append(finestra);
 
   const chiudi = () => {
