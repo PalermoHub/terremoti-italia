@@ -225,7 +225,10 @@ function righeTerremoto(p, adesso) {
 
 // `p` = proprietà della feature in mappa + `lon`/`lat` (aggiunte da chi chiama)
 export function modelloPopupTerremoto(p, adesso = Date.now()) {
-  return { titolo: titoloTerremoto(p), sottotitolo: p.fascia, ...(p.anno ? { badge: { testo: String(p.anno), colore: p.colore } } : {}), righe: righeTerremoto(p, adesso).filter(r => r.etichetta !== 'Zona') };
+  // Un evento di un anno precedente porta nel badge l'anno, non «Oltre 72 ore»
+  const annoEvento = new Date(p.ts).getFullYear();
+  const sottotitolo = !p.anno && p.fascia === FASCE.at(-1).nome && annoEvento < new Date(adesso).getFullYear() ? String(annoEvento) : p.fascia;
+  return { titolo: titoloTerremoto(p), sottotitolo, ...(p.anno ? { badge: { testo: String(p.anno), colore: p.colore } } : {}), righe: righeTerremoto(p, adesso).filter(r => r.etichetta !== 'Zona') };
 }
 
 // Elenco degli eventi con una ShakeMap su shakemap.ingv.it (poche centinaia, quasi tutti recenti: non basta essere M ≥ 3).

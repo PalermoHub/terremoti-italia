@@ -300,7 +300,7 @@ export default {
       layers: [PUNTI], icona: 'terremoto', sezione: 'Terremoti', colore: p => (temaMagnitudoAttivo() ? coloreMagnitudo(p.mag) : p.colore),
       modello: p => {
         const m = modelloPopupTerremoto(p);
-        return { titolo: m.titolo, sottotitolo: tl(m.sottotitolo), elenco: righeTooltip(m, p) };
+        return { titolo: m.titolo, badge: { testo: tl(m.sottotitolo), colore: p.colore }, elenco: righeTooltip(m, p) };
       },
     }]);
     map.on('mouseenter', PUNTI, () => { map.getCanvas().style.cursor = 'pointer'; });
