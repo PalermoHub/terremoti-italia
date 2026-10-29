@@ -1,11 +1,13 @@
 import { t } from '../core/i18n.js';
 import { sopraLeBasi } from './base.js';
 import { registraTooltip, disegnaVoceTooltip } from '../core/tooltip.js';
+import { intercettaClic } from '../core/cattura-clic.js';
 import { contenutoPopupTraffico, ancoraPopupTraffico, rifinisciPopupTraffico, centraPopupTraffico } from './popup-traffico.js';
 
 // Carta geologica d'Italia (ISPRA, Servizio Geologico d'Italia) come immagini dal servizio ArcGIS: sotto lo zoom 10 la carta
 // 1:500.000, da lì in su le unità geologiche 1:100.000. Fermando il mouse sulla mappa il tooltip interroga lo stesso servizio
-// (identify) e mostra formazione, età e la voce di legenda dell'unità, con il suo colore; senza mouse lo stesso contenuto sta in un popup al clic. Spento all'avvio.
+// (identify) e mostra formazione, età e la voce di legenda dell'unità, con il suo colore. Senza mouse il clic apre un popup con un
+// collegamento alla scheda del luogo, che ha una sezione «Geologia» con le stesse informazioni. Spento all'avvio.
 // Il mosaico raster dei fogli (sgi2.isprambiente.it/…/geo_100k_italia) non si usa: risponde con due intestazioni
 // Access-Control-Allow-Origin e il browser rifiuta le tile.
 const REST = 'https://sinacloud.isprambiente.it/arcgisgeo/rest/services/geo/SGI_ISPRA_geologia100K/MapServer';
@@ -23,6 +25,8 @@ const SCADENZA_MS = 10000;
 const ATTESA_MS = 250; // il mouse deve restare fermo prima di interrogare il servizio
 const COLORE = '#b45309';
 const MAX_LEGENDA = 240;
+const PESO_SCHEDA = 10; // dopo la scheda del comune (peso 9), nello stesso tab «Luogo»
+const FONTE = 'ISPRA, Carta Geologica d\'Italia';
 
 const tile = (layer, dpi) => `${REST}/export?f=image&format=png32&transparent=true&bboxSR=3857&imageSR=3857&size=512,512&layers=show:${layer}${dpi ? `&dpi=${dpi}` : ''}&bbox={bbox-epsg-3857}`;
 const CREDITO = '<a href="https://www.isprambiente.gov.it/it/attivita/suolo-e-territorio/cartografia/carta-geologica-e-geotematica" target="_blank" rel="noopener">ISPRA, Carta Geologica d\'Italia</a>';
@@ -38,6 +42,7 @@ let popup = null;
 let ultimoEvento = null; // ultima posizione del mouse sulla mappa: se il servizio risponde dopo, il tooltip si ridisegna lì
 let ultimo = null; // { lngLat, zoom, risultati } dell'ultima interrogazione
 let simboli = null; // voce di legenda → immagine (data URL) del colore, per layer
+let promessaSimboli = null;
 
 function el(tag, classe, testo) {
   const e = document.createElement(tag);
@@ -116,20 +121,22 @@ function proietta(lng, lat) {
 const chiaveSimbolo = r => (r.layerId === UNITA_100K ? r.attributes.ETA_FORMAZIONE : r.attributes.FORMAZIONE);
 
 // colori della legenda ufficiale (servizio ArcGIS, una sola richiesta): layer → { voce in minuscolo → data URL del simbolo }
-async function caricaSimboli() {
-  if (simboli) return;
-  simboli = {};
-  try {
-    const r = await fetch(`${REST}/legend?f=json`, { signal: AbortSignal.timeout(SCADENZA_MS) });
-    if (!r.ok) throw new Error(String(r.status));
-    for (const l of (await r.json()).layers) {
-      if (![UNITA_100K, UNITA_500K].includes(l.layerId)) continue;
-      const m = simboli[l.layerId] = new Map();
-      for (const v of l.legend) for (const chiave of v.values ?? [v.label]) m.set(String(chiave).toLowerCase(), `data:${v.contentType};base64,${v.imageData}`);
+function caricaSimboli() {
+  return promessaSimboli ??= (async () => {
+    try {
+      const r = await fetch(`${REST}/legend?f=json`, { signal: AbortSignal.timeout(SCADENZA_MS) });
+      if (!r.ok) throw new Error(String(r.status));
+      const legenda = {};
+      for (const l of (await r.json()).layers) {
+        if (![UNITA_100K, UNITA_500K].includes(l.layerId)) continue;
+        const m = legenda[l.layerId] = new Map();
+        for (const v of l.legend) for (const chiave of v.values ?? [v.label]) m.set(String(chiave).toLowerCase(), `data:${v.contentType};base64,${v.imageData}`);
+      }
+      simboli = legenda;
+    } catch {
+      promessaSimboli = null; // si riprova alla prossima richiesta; senza la legenda manca solo il colore
     }
-  } catch {
-    simboli = null; // si riprova alla prossima accensione; il tooltip funziona anche senza il colore
-  }
+  })();
 }
 
 const tronca = testo => (testo.length > MAX_LEGENDA ? `${testo.slice(0, MAX_LEGENDA - 1).trimEnd()}…` : testo);
@@ -156,7 +163,11 @@ function contenuto(risultati) {
   return { contenuto: corpo, colore: COLORE };
 }
 
-// Sui dispositivi senza mouse (nessun passaggio, quindi nessun tooltip) il clic apre un popup con le stesse informazioni.
+// La scheda del luogo si apre con un clic simulato (senza `originalEvent`), che l'intercettore lascia passare
+const apriScheda = lngLat => mappa.fire('click', { point: mappa.project(lngLat), lngLat });
+
+// Sui dispositivi senza mouse (nessun passaggio, quindi nessun tooltip) il clic apre un popup con le stesse informazioni e un
+// collegamento alla scheda; se la carta non risponde o non c'è nulla, il clic apre subito la scheda come negli altri strati.
 async function apriPopup(e) {
   const mia = ++richiestaPopup;
   let risultati;
@@ -164,9 +175,11 @@ async function apriPopup(e) {
     risultati = await interroga(e);
   } catch {
     if (mia === richiestaPopup && !errore) { errore = true; scriviLegenda(); }
+    if (mia === richiestaPopup) apriScheda(e.lngLat);
     return;
   }
-  if (mia !== richiestaPopup || !acceso || !risultati.length) return;
+  if (mia !== richiestaPopup || !acceso) return;
+  if (!risultati.length) return apriScheda(e.lngLat);
   popup?.remove();
   const chiudi = () => { popup?.remove(); popup = null; };
   const coordinate = [e.lngLat.lng, e.lngLat.lat];
@@ -179,9 +192,12 @@ async function apriPopup(e) {
   if (simbolo) rigaEta.append(simbolo);
   rigaEta.append(`${eta.etichetta}: ${eta.valore}`);
   const corpo = [rigaEta];
+  const apri = Object.assign(el('a', 'traffico-link', t('geologia.apriScheda')), { href: '#' });
+  apri.addEventListener('click', ev => { ev.preventDefault(); apriScheda(e.lngLat); });
   const nomi = [...new Set(altre.map(x => modello(x).titolo))].filter(n => n && n !== m.titolo);
   if (nomi.length) corpo.push(el('p', 'traffico-stato', t('geologia.altre', { elenco: nomi.join('; ') })));
-  popup = new maplibregl.Popup({ maxWidth: '300px', className: 'traffico-popup-box', anchor, offset, closeButton: false })
+  corpo.push(apri);
+  popup = new maplibregl.Popup({ maxWidth: '300px', className: 'traffico-popup-box geologia-popup', anchor, offset, closeButton: false })
     .setLngLat(coordinate)
     .setDOMContent(contenutoPopupTraffico({ sezione: t('geologia.titolo'), icona: 'terremoto', colore: COLORE, modello: { titolo: m.titolo, sottotitolo: m.sottotitolo, righe }, corpo, coordinate, chiudi }))
     .addTo(mappa);
@@ -218,6 +234,38 @@ function fornitore(e) {
   return null;
 }
 
+// Sezione «Geologia» della scheda del luogo (a strato acceso): la risposta della carta arriva dopo, il resto della scheda è già visibile
+function corpoScheda(risultati) {
+  const [r, ...altre] = risultati;
+  const m = modello(r);
+  const titolo = el('p');
+  titolo.append(el('strong', null, m.titolo));
+  const [eta, ...righe] = m.righe;
+  const rigaEta = el('p');
+  const simbolo = campione(r, chiaveSimbolo(r));
+  if (simbolo) rigaEta.append(simbolo);
+  rigaEta.append(`${eta.etichetta}: ${eta.valore}`);
+  const nodi = [titolo, el('p', 'uffici-nota', m.sottotitolo), rigaEta, ...righe.map(x => el('p', null, `${x.etichetta}: ${x.valore}`))];
+  const nomi = [...new Set(altre.map(x => modello(x).titolo))].filter(n => n && n !== m.titolo);
+  if (nomi.length) nodi.push(el('p', 'uffici-nota', t('geologia.altre', { elenco: nomi.join('; ') })));
+  return nodi;
+}
+
+function voceScheda(lngLat) {
+  return {
+    chiave: 'geologia', tipo: 'geologia', peso: PESO_SCHEDA, titolo: t('geologia.titolo'), icona: 'terremoto', sempre: true,
+    dinamico: () => {
+      const nodo = el('div', 'geologia-scheda');
+      nodo.append(el('p', 'uffici-nota', t('geologia.lettura')));
+      Promise.all([interroga({ lngLat }), caricaSimboli()])
+        .then(([risultati]) => nodo.replaceChildren(...(risultati.length ? corpoScheda(risultati) : [el('p', 'uffici-nota', t('geologia.nessuna'))])))
+        .catch(() => nodo.replaceChildren(el('p', 'uffici-nota', t('geologia.nonDisponibile'))));
+      return nodo;
+    },
+    fonte: t('layer.fonte', { fonte: FONTE }),
+  };
+}
+
 export default {
   id: 'geologia',
   titolo: 'Carta geologica (ISPRA)',
@@ -236,13 +284,21 @@ export default {
     map.addLayer({ id: L_500K, type: 'raster', source: SRC_500K, maxzoom: ZOOM_CAMBIO, layout: { visibility: 'none' }, paint: { 'raster-opacity': OPACITA } }, sotto);
     map.addLayer({ id: L_100K, type: 'raster', source: SRC_100K, minzoom: ZOOM_CAMBIO, layout: { visibility: 'none' }, paint: { 'raster-opacity': OPACITA } }, sotto);
     registraTooltip(map, fornitore, 2);
-    map.on('click', e => { if (acceso && matchMedia('(hover: none)').matches) apriPopup(e); });
+    intercettaClic(e => {
+      if (!acceso || !matchMedia('(hover: none)').matches) return false;
+      apriPopup(e);
+      return true;
+    });
     map.on('mouseout', () => { ultimoEvento = null; clearTimeout(timer); });
     map.on('error', e => {
       if (!acceso || ![SRC_500K, SRC_100K].includes(e.sourceId) || errore) return;
       errore = true;
       scriviLegenda();
     });
+  },
+  scheda: {
+    layers: [L_500K, L_100K],
+    voci: (_trovati, lngLat) => (acceso ? [voceScheda(lngLat)] : []),
   },
   legendaPannello: '.lg-geologia',
   strati: [{
