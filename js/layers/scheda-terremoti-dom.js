@@ -4,7 +4,7 @@ import { t, tn, localeIntl } from '../core/i18n.js';
 import { titoloConInfo, apriGrande } from '../core/info-grafico.js';
 import { zoomGrafico } from '../core/zoom-grafico.js';
 import { barraNavigazione } from '../core/scheda-navigazione.js';
-import { ANNO_INIZIO, periodoAnno, serieAnnuale, scaricaRiepilogo } from './scheda-archivio.js';
+import { ANNO_INIZIO, periodoAnno, periodoAnnoIntero, annoDi, serieAnnuale, scaricaRiepilogo } from './scheda-archivio.js';
 import { iconaAttesa } from '../core/scheda-util.js';
 import { SCELTE_GIORNI, SCELTE_MAGNITUDO, PROFONDITA, UNITA, MAG_STORICO, ANNI_STORICO, filtro, chiaveProfondita, altriTerremoti, accordionTerremoti, posizioneEvento, urlStorico, rispostaDaArchivio, scaricaEventiTutti, eventiDaTesto, eventiDaFeatures, serieEventi, puntiMagnitudo, curvaCumulativa, omori, rilascioCumulativo, tempiTraEventi, spazioTempo, finestraTempo, proprietaStorico, voceTerremoto, inquadra, proiettaMiniatura, miniatura, etichettaBarra, periodoSequenza, statisticheEvento, sintesiSerie, quoteClassi, SOGLIA_BASSA } from './scheda-terremoti.js';
 import { coloreMagnitudo, raggioMagnitudo } from '../core/magnitudo.js';
@@ -164,15 +164,21 @@ function menuPeriodo() {
     o.value = String(g);
     sel.append(o);
   }
+  for (let a = new Date().getUTCFullYear(); a >= ANNO_INIZIO; a--) { // un anno intero dell'archivio, con le barre della timeline sul suo periodo
+    const o = el('option', null, String(a));
+    o.value = `anno:${a}`;
+    sel.append(o);
+  }
   const personalizzato = el('option', null, t('terremoti.periodoPersonalizzato'));
   personalizzato.value = 'personalizzato';
   sel.append(personalizzato);
   const nota = el('small', 'terremoti-periodo-nota');
   const allinea = () => {
     const p = filtro.periodo;
-    sel.value = p ? 'personalizzato' : String(filtro.giorni);
-    nota.hidden = !p;
-    nota.textContent = p ? testoPeriodoBreve(p) : '';
+    const anno = p && periodoAnnoIntero(p);
+    sel.value = !p ? String(filtro.giorni) : anno ? `anno:${annoDi(p)}` : 'personalizzato';
+    nota.hidden = !p || anno;
+    nota.textContent = nota.hidden ? '' : testoPeriodoBreve(p);
   };
   sel.addEventListener('change', () => {
     if (sel.value === 'personalizzato') {
@@ -182,6 +188,12 @@ function menuPeriodo() {
         alApplica: p => { filtro.periodo = p; filtro.finestra = null; emetti(); },
         alChiudi: allinea,
       });
+      return;
+    }
+    if (sel.value.startsWith('anno:')) {
+      filtro.periodo = periodoAnno(Number(sel.value.slice(5)));
+      filtro.finestra = null;
+      emetti();
       return;
     }
     filtro.giorni = Number(sel.value);

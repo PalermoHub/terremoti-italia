@@ -3244,8 +3244,6 @@
   "terremoti.pf.grafici": "Grafici",
   "terremoti.pf.tempo": "Eventi nel tempo",
   "terremoti.pf.velocita": "Velocità della riproduzione: ×{v} (clic per cambiarla)",
-  "terremoti.pf.periodo": "Periodo",
-  "terremoti.pf.recenti": "Ultimi 30 giorni",
   "terremoti.pf.slider": "Intervallo di tempo",
   "terremoti.pf.da": "Inizio dell'intervallo",
   "terremoti.pf.a": "Fine dell'intervallo",

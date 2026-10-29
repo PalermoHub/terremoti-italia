@@ -2341,7 +2341,7 @@ a.scheda-badge-tinta:hover, a.scheda-badge-tinta:focus-visible { background: col
 .terremoti-periodo-nota { display: block; font-size: 10px; line-height: 1.2; color: var(--text-muted); white-space: normal; }
 .terremoti-periodo-nota[hidden] { display: none; }
 .terremoti-filtri > .terremoti-filtro-unita { grid-column: 1 / -1; }
-.terremoti-pf-sezione-tempo[hidden], .terremoti-pf-periodo[hidden] { display: none; }
+.terremoti-pf-sezione-tempo[hidden] { display: none; }
 .terremoti-periodo-dialog { width: min(92vw, 380px); padding: 0; border: 1px solid var(--border-ui); border-radius: var(--r-md); background: var(--surface); color: var(--text); box-shadow: var(--ombra); }
 .terremoti-periodo-dialog::backdrop { background: rgb(0 0 0 / .35); }
 .terremoti-periodo-dialog form { display: flex; flex-direction: column; gap: 10px; padding: 16px; }
@@ -2421,7 +2421,8 @@ a.scheda-badge-tinta:hover, a.scheda-badge-tinta:focus-visible { background: col
 .legenda .terremoti-pannello, #confronto-pannello .terremoti-pannello, #mappe-pannello .terremoti-pannello { display: flex; flex-direction: column; align-items: stretch; gap: 4px; margin: 6px 0; }
 .legenda .terremoti-pannello p, #confronto-pannello .terremoti-pannello p, #mappe-pannello .terremoti-pannello p { margin: 0; text-align: left; }
 .terremoti-pf-et { margin-top: 4px; font-size: var(--fs-xs); color: var(--text-muted); }
-.legenda .terremoti-pf-barre { display: flex; align-items: flex-end; gap: 1px; height: 44px; }
+.legenda .terremoti-pf-barre { display: flex; align-items: flex-end; gap: 1px; height: 44px; width: 100%; }
+.legenda .terremoti-pannello .terremoti-pf-sezione-tempo { display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
 .legenda .terremoti-pf-barre i { flex: 1 1 0; min-width: 0; width: auto; height: 0; border: 0; border-radius: 1px 1px 0 0; background: var(--accent); opacity: .85; }
 .legenda .terremoti-pf-barre i.fuori { opacity: .2; }
 .legenda .terremoti-pf-slider { position: relative; display: block; height: 22px; }

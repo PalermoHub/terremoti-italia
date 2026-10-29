@@ -60,7 +60,11 @@ export const CLASSI_MAG = CLASSI_MAGNITUDO;
 // Intervallo [da, a] in millisecondi: il periodo personalizzato se c'è, altrimenti la finestra dello slider o gli
 // ultimi `giorni`. Il limite finale della finestra piena è aperto, così gli eventi nuovi restano dentro.
 export function intervallo({ giorni, finestra, periodo } = filtro, adesso = Date.now()) {
-  if (periodo) return [periodo.da, periodo.a];
+  if (periodo && !finestra) return [periodo.da, periodo.a];
+  if (periodo) { // la finestra è in fasce di GIORNI_MAX dell'intero periodo (fino a oggi, se non è ancora finito)
+    const fine = Math.min(periodo.a, adesso), fascia = (fine - periodo.da) / GIORNI_MAX;
+    return [periodo.da + finestra[0] * fascia, finestra[1] >= GIORNI_MAX ? periodo.a : periodo.da + finestra[1] * fascia];
+  }
   if (!finestra) return [adesso - giorni * GIORNO_MS, Infinity];
   const [da, a] = finestra;
   return [adesso - (GIORNI_MAX - da) * GIORNO_MS, a >= GIORNI_MAX ? Infinity : adesso - (GIORNI_MAX - a) * GIORNO_MS];

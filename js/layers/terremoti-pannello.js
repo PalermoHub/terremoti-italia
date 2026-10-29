@@ -4,13 +4,11 @@ import { t, tn, localeIntl } from '../core/i18n.js';
 import { GIORNI_MAX, CLASSI_MAG, filtro, intervallo, passaFiltro, eventiPerGiorno, eventiPerClasse, avanzaFinestra, sintesiClassi, SOGLIA_BASSA, SOGLIA_ALTA } from './scheda-terremoti.js';
 import { evidenziaEventi, nascondiEvidenzaEventi } from '../core/evidenza-eventi.js';
 import { titoloConInfo } from '../core/info-grafico.js';
-import { EVENTO_FILTRO, apriDialogoPeriodo, testoPeriodoBreve } from './scheda-terremoti-dom.js';
-import { ANNO_INIZIO, periodoAnno, periodoAnnoIntero, annoDi } from './scheda-archivio.js';
+import { EVENTO_FILTRO } from './scheda-terremoti-dom.js';
 
 const PASSO_RIPRODUZIONE_MS = 100; // un fotogramma ogni 100 ms: la finestra scorre di frazioni di giorno, così conta anche l'ora
 const GIORNI_AL_SECONDO = 0.5; // a velocità ×1 la finestra avanza di 12 ore ogni secondo
 const VELOCITA = [1, 2, 4, 8, 16];
-const BARRE_MAX = 60; // un periodo lungo si divide in al più tante barre di uguale durata
 const GIORNO_MS = 86400000;
 
 function el(tag, classe, testo) {
@@ -80,24 +78,6 @@ export function pannelloFiltro(eventi, mappa = () => null) {
   };
   const inizio = campo('terremoti.pf.da', 0), fine = campo('terremoti.pf.a', GIORNI_MAX);
   slider.append(inizio, fine);
-  // menu «Periodo»: gli ultimi 30 giorni (con slider), un anno intero dall'archivio oppure un periodo scelto dal calendario
-  const menuPeriodo = el('select');
-  menuPeriodo.setAttribute('aria-label', t('terremoti.pf.periodo'));
-  const opzione = (valore, testo) => menuPeriodo.append(Object.assign(el('option', null, testo), { value: valore }));
-  opzione('recenti', t('terremoti.pf.recenti'));
-  for (let a = new Date().getUTCFullYear(); a >= ANNO_INIZIO; a--) opzione(String(a), String(a));
-  opzione('personalizzato', t('terremoti.periodoPersonalizzato'));
-  const notaScelta = el('small', 'terremoti-periodo-nota');
-  const scegli = p => { Object.assign(filtro, { periodo: p, finestra: null }); ferma(); emetti(); };
-  menuPeriodo.addEventListener('change', () => {
-    if (menuPeriodo.value === 'personalizzato') {
-      apriDialogoPeriodo({ da: filtro.periodo?.da ?? null, a: filtro.periodo?.a ?? null, alApplica: scegli, alChiudi: aggiorna });
-      return;
-    }
-    scegli(menuPeriodo.value === 'recenti' ? null : periodoAnno(Number(menuPeriodo.value)));
-  });
-  const scelta = el('label', 'terremoti-filtro terremoti-filtro-periodo');
-  scelta.append(el('span', null, t('terremoti.pf.periodo')), menuPeriodo, notaScelta);
   const testoIntervallo = el('p', 'terremoti-pf-intervallo');
   const riproduci = el('button', 'terremoti-pf-icona');
   riproduci.type = 'button';
@@ -157,7 +137,7 @@ export function pannelloFiltro(eventi, mappa = () => null) {
   const sintesi = el('p', 'terremoti-sintesi');
 
   const sezioneTempo = el('div', 'terremoti-pf-sezione-tempo');
-  sezioneTempo.append(titoloConInfo('p', 'terremoti-pf-et', t('terremoti.pf.tempo'), 'pf-tempo'), scelta, barre, slider);
+  sezioneTempo.append(titoloConInfo('p', 'terremoti-pf-et', t('terremoti.pf.tempo'), 'pf-tempo'), barre, slider);
   corpo.append(sezioneTempo, titoloConInfo('p', 'terremoti-pf-et', t('terremoti.pf.magnitudo'), 'pf-magnitudo'), istogramma, sintesi, scala, el('p', 'uffici-nota', t('terremoti.pf.nota')));
   nodo.append(testa, testoIntervallo, corpo);
   apri(false);
@@ -195,7 +175,6 @@ export function pannelloFiltro(eventi, mappa = () => null) {
       if (document.activeElement === inizio) da = a - 1; else a = da + 1;
       if (da < 0) { da = 0; a = 1; }
     }
-    filtro.periodo = null; // lo slider riprende il periodo relativo agli ultimi 30 giorni
     filtro.finestra = da === 0 && a === GIORNI_MAX ? null : [da, a];
     ferma();
     emetti();
@@ -206,43 +185,27 @@ export function pannelloFiltro(eventi, mappa = () => null) {
   function aggiorna() {
     const adesso = Date.now();
     const tutti = eventi();
-    const personalizzato = Boolean(filtro.periodo);
-    // Con un periodo scelto la serie lo copre per intero in barre di uguale durata; lo slider e la riproduzione
-    // restano degli ultimi 30 giorni. L'istogramma di magnitudo e «Azzera» valgono sempre.
-    menuPeriodo.value = !personalizzato ? 'recenti' : periodoAnnoIntero(filtro.periodo) ? String(annoDi(filtro.periodo)) : 'personalizzato';
-    notaScelta.hidden = !personalizzato || menuPeriodo.value !== 'personalizzato';
-    notaScelta.textContent = notaScelta.hidden ? '' : testoPeriodoBreve(filtro.periodo);
-    slider.hidden = personalizzato;
-    riproduci.hidden = personalizzato;
-    veloce.hidden = personalizzato;
-    if (personalizzato) ferma();
-    if (!personalizzato) {
-      preparaColonne(GIORNI_MAX);
-      const [da, a] = filtro.finestra ?? [0, GIORNI_MAX];
-      inizio.value = String(da);
-      fine.value = String(a);
-      const perGiorno = eventiPerGiorno(tutti, filtro, adesso);
-      const max = Math.max(1, ...perGiorno);
-      colonne.forEach((c, i) => {
-        c.style.height = `${perGiorno[i] ? Math.max(6, perGiorno[i] / max * 100) : 0}%`;
-        c.classList.toggle('fuori', filtro.finestra != null && (i < da || i >= a));
-        c.title = `${giorno(adesso - (GIORNI_MAX - i) * GIORNO_MS)}: ${perGiorno[i]}`;
-      });
-    } else {
-      const da = filtro.periodo.da, a = Math.min(filtro.periodo.a, adesso);
-      const n = Math.max(1, Math.min(BARRE_MAX, Math.ceil((a - da) / GIORNO_MS)));
-      const larghezza = (a - da) / n;
-      preparaColonne(n);
-      const perBarra = Array(n).fill(0);
-      for (const p of tutti) if (passaFiltro(p, filtro, adesso)) perBarra[Math.min(n - 1, Math.max(0, Math.floor((p.ts - da) / larghezza)))]++;
-      const max = Math.max(1, ...perBarra);
-      colonne.forEach((c, i) => {
-        c.style.height = `${perBarra[i] ? Math.max(6, perBarra[i] / max * 100) : 0}%`;
-        c.classList.remove('fuori');
-        const inizioBarra = da + i * larghezza, fineBarra = da + (i + 1) * larghezza - 1;
-        c.title = `${larghezza > GIORNO_MS * 1.5 ? `${giorno(inizioBarra)} – ${giorno(fineBarra)}` : giorno(inizioBarra)}: ${perBarra[i]}`;
-      });
-    }
+    // Le barre coprono gli ultimi 30 giorni o, con un periodo scelto, il periodo intero (le stesse GIORNI_MAX fasce di uguale durata):
+    // lo slider, la riproduzione e la finestra lavorano in fasce, quindi funzionano allo stesso modo.
+    preparaColonne(GIORNI_MAX);
+    const [da, a] = filtro.finestra ?? [0, GIORNI_MAX];
+    inizio.value = String(da);
+    fine.value = String(a);
+    const p = filtro.periodo;
+    const inizioSerie = p ? p.da : adesso - GIORNI_MAX * GIORNO_MS;
+    const larghezza = ((p ? Math.min(p.a, adesso) : adesso) - inizioSerie) / GIORNI_MAX;
+    let perFascia;
+    if (p) {
+      perFascia = Array(GIORNI_MAX).fill(0);
+      for (const e of tutti) if (passaFiltro(e, { ...filtro, finestra: null }, adesso)) perFascia[Math.min(GIORNI_MAX - 1, Math.max(0, Math.floor((e.ts - inizioSerie) / larghezza)))]++;
+    } else perFascia = eventiPerGiorno(tutti, filtro, adesso);
+    const max = Math.max(1, ...perFascia);
+    colonne.forEach((c, i) => {
+      c.style.height = `${perFascia[i] ? Math.max(6, perFascia[i] / max * 100) : 0}%`;
+      c.classList.toggle('fuori', filtro.finestra != null && (i < da || i >= a));
+      const inizioFascia = inizioSerie + i * larghezza;
+      c.title = `${larghezza > GIORNO_MS * 1.5 ? `${giorno(inizioFascia)} – ${giorno(inizioFascia + larghezza - 1)}` : giorno(inizioFascia)}: ${perFascia[i]}`;
+    });
     const [dal, al] = intervallo(filtro, adesso);
     if (timer) {
       const fino = Math.min(al, adesso);

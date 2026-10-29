@@ -3244,8 +3244,6 @@
   "terremoti.pf.grafici": "Charts",
   "terremoti.pf.tempo": "Events over time",
   "terremoti.pf.velocita": "Playback speed: ×{v} (click to change)",
-  "terremoti.pf.periodo": "Period",
-  "terremoti.pf.recenti": "Last 30 days",
   "terremoti.pf.slider": "Time range",
   "terremoti.pf.da": "Start of range",
   "terremoti.pf.a": "End of range",
