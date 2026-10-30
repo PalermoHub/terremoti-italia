@@ -39,6 +39,8 @@ Uso su desktop e telefono, in italiano e inglese. Le viste si condividono tramit
 
 Nome «Terremoti Italia»; logo Open Data Sicilia in basso a destra; font Montserrat (marca) e Atkinson Hyperlegible (leggibilità dei dati); accento ambra.
 
+Scelta di restyling (2026-10-30): resta nel sistema attuale, portato al livello migliore della categoria («categoria standard, eseguita fino in fondo»). Metro di qualità: Mapbox Studio / Felt, USGS Earthquake Map, Google Maps / Apple Maps.
+
 ## Evidence on Hand
 
 Dati reali INGV, DPC, ShakeMap, MPS04 con licenze e DOI in `NOTICE.md`. Nessuna testimonianza, cliente o benchmark: non inventarne.

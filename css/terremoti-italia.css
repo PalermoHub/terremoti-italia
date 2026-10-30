@@ -218,3 +218,16 @@
   #info-modale { left: 0; right: 0; max-width: none; bottom: calc(var(--tab-h) + var(--footer-h, 0px)); height: min(80dvh, calc(100dvh - var(--tab-h) - var(--footer-h, 0px) - 12px)); }
   body:has(#info-modale:not([hidden])) #barra-strumenti { z-index: calc(var(--z-foglio) + 1); }
 }
+
+/* Rifinitura: le parti del browser che non disegniamo portano la palette dell'app */
+html { accent-color: var(--accent-strong); }
+::selection { background: var(--accent-soft); color: inherit; }
+input, textarea, [contenteditable] { caret-color: var(--accent-strong); }
+* { scrollbar-width: thin; scrollbar-color: color-mix(in srgb, var(--text-muted) 45%, transparent) transparent; }
+.uffici-nota, .legenda-avviso { text-wrap: pretty; }
+#scheda h2, #scheda h3, .info-pannello h2, .info-pannello h3 { text-wrap: balance; }
+#piede-coord, .ultimo-evento-quando { font-variant-numeric: tabular-nums; }
+
+/* Legenda dei terremoti: il titolo del gruppo si stacca dal blocco della magnitudo con un filetto e più aria sopra che sotto */
+.lg-terremoti { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-ui); }
+.lg-terremoti > strong { display: block; margin-bottom: 6px; font-size: var(--fs-sm); font-weight: 700; }
