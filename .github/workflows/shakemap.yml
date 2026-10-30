@@ -18,7 +18,8 @@ jobs:
       - name: Estrai il ramo shakemap (se esiste)
         run: |
           if git ls-remote --exit-code --heads origin shakemap >/dev/null 2>&1; then
-            git worktree add --detach "$RUNNER_TEMP/shakemap" origin/shakemap
+            git fetch --depth=1 origin shakemap
+            git worktree add --detach "$RUNNER_TEMP/shakemap" FETCH_HEAD
           else
             mkdir "$RUNNER_TEMP/shakemap" && git -C "$RUNNER_TEMP/shakemap" init -q -b shakemap
           fi
