@@ -94,6 +94,7 @@
 .raggio-evento:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
 .raggio-punto { width: 10px; height: 10px; border-radius: 50%; box-shadow: 0 0 0 1px var(--surface); }
 .raggio-mag { font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.raggio-evento.raggio-senza-distanza { grid-template-columns: 10px auto minmax(0, 1fr) auto; }
 .raggio-distanza { color: var(--text-muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
 .raggio-luogo { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .raggio-quando { color: var(--accent-strong); font-weight: 700; font-size: var(--fs-xs); white-space: nowrap; }

@@ -11,7 +11,7 @@ import { el, icona, sincronizzaStrato, acceseDaScheda, spegniStratiDaScheda, cre
 import { ICONA_X } from './scheda-pannello-preferenze.js';
 import { t as tr, tl } from './i18n.js';
 import { mostraCerchio, nascondiCerchio, mostraEtichetta, nascondiEtichetta } from './cerchio-raggio.js';
-import { raggioVicini, raggioAttivo, cerchioVisibile, EVENTO_RAGGIO, eventiVicini, voceEventiVicini, impostaAreaRaggio } from './raggio-vicini.js';
+import { raggioVicini, raggioAttivo, poligonoAttivo, areaRaggio, cerchioVisibile, EVENTO_RAGGIO, eventiVicini, voceEventiVicini, eventiNelPoligono, voceEventiPoligono, centroERaggioPoligono, impostaAreaRaggio } from './raggio-vicini.js';
 import { EVENTO_TABELLA } from './tabella-dati.js';
 import { inModoEmergenza, moduliAlClic } from './modo-emergenza.js';
 import { clicCatturato } from './cattura-clic.js';
@@ -423,7 +423,12 @@ export function collegaScheda(map, moduli, contenitore, opzioni = {}) {
     clearTimeout(attesaRaggio);
     attesaRaggio = setTimeout(() => {
       // accesa o spenta, se una scheda è aperta si rifà sullo stesso punto: la lista e il cerchio seguono il nuovo stato
-      if (ultimoClic && !contenitore.hidden) map.fire('click', { point: map.project(ultimoClic), lngLat: ultimoClic });
+      if (poligonoAttivo()) { // il cerchio lascia il posto al disegno; con il poligono chiuso e la scheda aperta, l'elenco si rifà
+        nascondiCerchio(map);
+        const anello = areaRaggio()?.anello;
+        if (anello && !contenitore.hidden) { const { centro } = centroERaggioPoligono(anello); map.fire('click', { point: map.project(centro), lngLat: centro, poligono: anello }); }
+      }
+      else if (ultimoClic && !contenitore.hidden) map.fire('click', { point: map.project(ultimoClic), lngLat: ultimoClic });
       else if (!raggioAttivo()) nascondiCerchio(map);
       if (!raggioAttivo()) document.dispatchEvent(new Event(EVENTO_TABELLA)); // spenta: la lista torna intera
     }, 120);
@@ -438,6 +443,7 @@ export function collegaScheda(map, moduli, contenitore, opzioni = {}) {
       segnala(tr('scheda.fuoriComune'));
       return;
     }
+    const anello = e.poligono ?? null; // clic simulato dal poligono chiuso: la scheda è solo l'elenco degli eventi dentro l'area
     ultimoClic = e.lngLat;
     // `mantieniVista` (frecce avanti/indietro di una scheda): la scheda nuova si apre sullo stesso tab e alla stessa altezza di scorrimento di quella che sostituisce
     const vistaPrima = e.mantieniVista && !contenitore.hidden
@@ -451,10 +457,10 @@ export function collegaScheda(map, moduli, contenitore, opzioni = {}) {
     // Un oggetto 3D sopra la mappa (es. l'edificio per piani, anche esploso) sta più in alto del terreno: e.lngLat è il punto
     // a terra dietro di lui. Lo strato che lo possiede dice dove sta l'oggetto, e la scheda (luogo, edificio, catasto…) si
     // apre lì; il suo strato si interroga invece al pixel cliccato.
-    const sopra = moduliClic.map(m => ({ m, lngLat: m.scheda.puntoAlClic?.(map, e) })).find(x => x.lngLat);
+    const sopra = anello ? null : moduliClic.map(m => ({ m, lngLat: m.scheda.puntoAlClic?.(map, e) })).find(x => x.lngLat);
     const lngLat = sopra?.lngLat ?? e.lngLat;
     const punto = sopra ? map.project(lngLat) : e.point;
-    for (const m of moduliClic) {
+    for (const m of anello ? [] : moduliClic) {
       const layers = m.scheda.layers.filter(id => map.getLayer(id));
       if (!layers.length) continue;
       const esatti = trovaFeature(map, m === sopra?.m ? e.point : punto, layers);
@@ -471,14 +477,16 @@ export function collegaScheda(map, moduli, contenitore, opzioni = {}) {
     // La ricerca nel raggio (core/raggio-vicini.js) mette in scheda gli eventi entro il cerchio; se il clic ha preso
     // un evento, la lista gli sta subito sotto, così la sua scheda resta la prima cosa che si legge.
     let totaleVicini = null; // eventi nel raggio, scritti al centro del cerchio quando la scheda si chiude
-    if (raggioAttivo()) {
+    const periodoScelto = () => [...new Set(conScheda.map(m => m.scheda.periodoVicini?.()).filter(Boolean))].join(' · '); // il periodo scelto dagli strati con eventi in lista
+    if (anello) {
+      voci.push(voceEventiPoligono(eventiNelPoligono(conScheda, anello), periodoScelto()));
+    } else if (raggioAttivo()) {
       const raggio = raggioVicini();
       const vicini = eventiVicini(conScheda, lngLat, raggio);
       totaleVicini = vicini.totale;
       impostaAreaRaggio(lngLat, raggio); // la Lista Terremoti si restringe al cerchio
       document.dispatchEvent(new Event(EVENTO_TABELLA));
-      const periodo = [...new Set(conScheda.map(m => m.scheda.periodoVicini?.()).filter(Boolean))].join(' · '); // il periodo scelto dagli strati con eventi in lista
-      const voce = voceEventiVicini(vicini, raggio, periodo);
+      const voce = voceEventiVicini(vicini, raggio, periodoScelto());
       const iEvento = voci.findIndex(v => v.evento);
       voci.splice(iEvento >= 0 ? iEvento + 1 : 0, 0, voce);
     }
@@ -510,7 +518,10 @@ export function collegaScheda(map, moduli, contenitore, opzioni = {}) {
     for (const m of conScheda) m.scheda.suEvidenza?.(base); // chi ridisegna l'evidenza dopo il clic (es. percorso di una linea) tiene anche questa
     const scelte = [...base, ...extra];
     // Ricerca nel raggio accesa: il cerchio resta sotto all'evidenza; spenta, si toglie e la scheda torna quella del punto
-    if (!fuori && raggioAttivo()) {
+    if (anello) { // il disegno è già in mappa: la vista inquadra tutto il poligono
+      raggioCerchio = centroERaggioPoligono(anello).raggioM;
+      nascondiCerchio(map);
+    } else if (!fuori && raggioAttivo()) {
       raggioCerchio = raggioVicini();
       if (cerchioVisibile()) { mostraCerchio(map, lngLat, raggioCerchio); nascondiEtichetta(); } // a scheda aperta la lista è in scheda
       else nascondiCerchio(map);

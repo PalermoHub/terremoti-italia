@@ -806,6 +806,13 @@ body:has(#scheda:not([hidden])) .traffico-popup-box { z-index: 1; } /* ma sotto 
 /* avviso sulle fonti, in fondo alla legenda sotto l'interruttore di Live Zoom */
 .legenda-avviso { margin: 0; padding: 0 10px 8px; font-size: var(--fs-3xs); line-height: 1.4; color: var(--text-muted); }
 #legende-raggio input[type=range] { width: 100%; }
+.legende-raggio-forma { display: flex; gap: 4px; margin-top: 4px; }
+.legende-raggio-forma button, .legende-raggio-poligono button { flex: 1; padding: 4px 8px; border: 1px solid var(--border-ui); border-radius: var(--r-md); background: transparent; color: inherit; font: inherit; cursor: pointer; }
+.legende-raggio-forma button[aria-pressed=true] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.legende-raggio-forma button:focus-visible, .legende-raggio-poligono button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.legende-raggio-poligono { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+.legende-raggio-poligono[hidden] { display: none; }
+.legende-raggio-cerchio[hidden] { display: none; }
 .legende-raggio-cerchio { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 4px; cursor: pointer; }
 .legende-raggio-cerchio input { appearance: none; flex: none; position: relative; width: 34px; height: 18px; margin: 0; border: 1px solid var(--border-ui); border-radius: var(--r-pill); background: var(--surface-alt); cursor: pointer; transition: background var(--t-rapida), border-color var(--t-rapida); }
 .legende-raggio-cerchio input::after { content: ''; position: absolute; top: 1px; left: 1px; width: 14px; height: 14px; border-radius: 50%; background: var(--surface); border: 1px solid var(--border-ui); box-sizing: border-box; box-shadow: var(--ombra); transition: transform var(--t-rapida); }

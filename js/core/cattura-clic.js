@@ -10,6 +10,6 @@ export const intercettaClic = fn => { if (fn) intercettori.push(fn); else interc
 // `fn(e)` riceve l'evento di clic di MapLibre; `null` libera la prenotazione
 export const catturaClic = fn => { ricevente = fn; };
 export const clicCatturato = e => {
-  if (ricevente) { ricevente(e); return true; }
+  if (ricevente && !e.poligono) { ricevente(e); return true; } // `poligono`: riapertura della scheda dell'area disegnata, non un clic da prenotare
   return !!e.originalEvent && intercettori.some(fn => fn(e) === true);
 };

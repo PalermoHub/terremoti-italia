@@ -7,6 +7,7 @@ import { pannelloArchivio } from './terremoti-archivio.js';
 import { creaPopupTerremoti, righeTooltip } from './terremoti-popup.js';
 import { EVENTO_TABELLA } from '../core/tabella-dati.js';
 import { evidenziaEventi, nascondiEvidenzaEventi } from '../core/evidenza-eventi.js';
+import { puntoInGeometrie } from '../core/aree.js';
 import { raggioAttivo, EVENTO_RAGGIO, filtraArea, areaRaggio } from '../core/raggio-vicini.js';
 import { creaEvidenzaMappa } from '../core/evidenza-eventi.js';
 import { registraTooltipStrati } from '../core/tooltip.js';
@@ -142,6 +143,11 @@ function creaLegenda() {
   applicaTema();
 }
 
+// eventi dell'anno che passano i filtri in mappa
+const filtrati = () => eventi.filter(p => passaMagnitudo(p) && (!filtro.classi || filtro.classi.has(p.classeMag)));
+// riga della lista «eventi vicini» in scheda; `distanzaM` manca per la ricerca a poligono
+const voceVicina = (p, distanzaM) => ({ id: p.id, ts: p.ts, mag: p.mag, luogo: p.luogo, colore: p.colore, quando: quantoTempoFa(p.ts), distanzaM, apri: () => vaiAEvento(p), evidenzia: () => evidenziaEventi(mappa, [p], { inquadra: false }), nascondi: () => nascondiEvidenzaEventi(mappa) });
+
 export default {
   id: 'terremoti-storico',
   titolo: 'Terremoti storici',
@@ -204,11 +210,16 @@ export default {
     eventiVicini(lngLat, raggioM) {
       if (!acceso) return [];
       const raggioKm = raggioM / 1000;
-      return eventi
-        .filter(p => passaMagnitudo(p) && (!filtro.classi || filtro.classi.has(p.classeMag)))
+      return filtrati()
         .map(p => ({ p, km: distanzaKm([lngLat.lng, lngLat.lat], [p.lon, p.lat]) }))
         .filter(({ km: d }) => d <= raggioKm)
-        .map(({ p, km: d }) => ({ id: p.id, mag: p.mag, luogo: p.luogo, colore: p.colore, quando: quantoTempoFa(p.ts), distanzaM: d * 1000, apri: () => vaiAEvento(p), evidenzia: () => evidenziaEventi(mappa, [p], { inquadra: false }), nascondi: () => nascondiEvidenzaEventi(mappa) }));
+        .map(({ p, km: d }) => voceVicina(p, d * 1000));
+    },
+    // stessa lista per la ricerca a poligono: gli eventi dentro l'anello, senza distanza dal centro
+    eventiNelPoligono(anello) {
+      if (!acceso) return [];
+      const area = [{ type: 'Polygon', coordinates: [anello] }];
+      return filtrati().filter(p => puntoInGeometrie(p.lon, p.lat, area)).map(p => voceVicina(p));
     },
     voci(trovati) {
       const primo = evento(trovati.filter(f => f.layer.id === HIT));
@@ -274,7 +285,7 @@ export default {
     fonte: t('tabella.fonte.ingvLocale'),
     licenza: 'CC BY 4.0',
     colonne: () => colonneTabellaTerremoti({ anno: true }),
-    righe: () => filtraArea(eventi.filter(p => passaMagnitudo(p) && (!filtro.classi || filtro.classi.has(p.classeMag))), distanzaKm),
+    righe: () => filtraArea(filtrati(), distanzaKm),
     area: areaRaggio,
     attivo: () => acceso,
     apri: p => vaiAEvento(p),

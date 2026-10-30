@@ -275,7 +275,7 @@ export function collegaTabellaDati({ bottone: comando, fornitori = [] } = {}) {
       b.disabled = righe.length === 0 || colonne.length === 0;
     }
     const a = f.area?.(); // ricerca attorno a un punto accesa: la lista è già ristretta al cerchio
-    const resto = [a ? t('tabella.nota.raggio', { r: formattaDistanza(a.raggioM) }) : '', t('tabella.nota.territorio'), nRighe > MAX_RIGHE ? t('tabella.mostrate', { n: MAX_RIGHE }) : ''].filter(Boolean).join(' · ');
+    const resto = [a ? (a.anello ? t('tabella.nota.poligono') : t('tabella.nota.raggio', { r: formattaDistanza(a.raggioM) })) : '', t('tabella.nota.territorio'), nRighe > MAX_RIGHE ? t('tabella.mostrate', { n: MAX_RIGHE }) : ''].filter(Boolean).join(' · ');
     nota.replaceChildren(`${t('tabella.nota')} `, el('strong', null, t('tabella.nota.clic')), ` ${t('tabella.nota.ordina')} · ${resto}`);
     nota.title = nota.textContent;
     return { righe, colonne };

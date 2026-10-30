@@ -17,6 +17,7 @@ import { aggiornaLegendaInMappa, EVENTO_TEMA_MAGNITUDO, temaMagnitudoAttivo } fr
 import { legendaMagnitudo } from './legenda-magnitudo.js';
 import { creaPopupTerremoti, righeTooltip } from './terremoti-popup.js';
 import { EVENTO_TABELLA } from '../core/tabella-dati.js';
+import { puntoInGeometrie } from '../core/aree.js';
 import { raggioAttivo, EVENTO_RAGGIO, filtraArea, areaRaggio } from '../core/raggio-vicini.js';
 import { creaEvidenzaMappa, evidenziaEventi, nascondiEvidenzaEventi } from '../core/evidenza-eventi.js';
 
@@ -245,6 +246,8 @@ function creaLegenda() {
 
 // Eventi che si vedono in mappa: filtri di periodo e magnitudo, più le fasce d'età accese in legenda
 const visibili = () => eventi.filter(p => passaFiltro(p) && fasceAccese.has(p.colore) && inArea(p));
+// riga della lista «eventi vicini» in scheda; `distanzaM` manca per la ricerca a poligono
+const voceVicina = (p, distanzaM) => ({ id: p.id, ts: p.ts, mag: p.mag, luogo: p.luogo, colore: p.colore, quando: quantoTempoFa(p.ts), distanzaM, apri: () => vaiAEvento(p), evidenzia: () => evidenziaEventi(mappa, [p], { inquadra: false }), nascondi: () => nascondiEvidenzaEventi(mappa) });
 
 // Le frecce della scheda scelgono l'evento da aprire: il clic simulato sul suo cerchio, dove ce ne sono di sovrapposti, non deve ripiegare sul più forte
 const FINESTRA_SCELTA_MS = 1500;
@@ -351,7 +354,13 @@ export default {
       return visibili()
         .map(p => ({ p, km: distanzaKm([lngLat.lng, lngLat.lat], [p.lon, p.lat]) }))
         .filter(({ km: d }) => d <= raggioKm)
-        .map(({ p, km: d }) => ({ id: p.id, mag: p.mag, luogo: p.luogo, colore: p.colore, quando: quantoTempoFa(p.ts), distanzaM: d * 1000, apri: () => vaiAEvento(p), evidenzia: () => evidenziaEventi(mappa, [p], { inquadra: false }), nascondi: () => nascondiEvidenzaEventi(mappa) }));
+        .map(({ p, km: d }) => voceVicina(p, d * 1000));
+    },
+    // stessa lista per la ricerca a poligono: gli eventi dentro l'anello, senza distanza dal centro
+    eventiNelPoligono(anello) {
+      if (!acceso) return [];
+      const area = [{ type: 'Polygon', coordinates: [anello] }];
+      return visibili().filter(p => puntoInGeometrie(p.lon, p.lat, area)).map(p => voceVicina(p));
     },
     // prima l'evento cliccato (il più forte sotto il cerchio, in evidenza), poi tutti gli altri che passano il filtro, anche quelli sovrapposti;
     // senza un evento sotto il dito, la card dei terremoti del comune (se il clic è caduto su un comune)

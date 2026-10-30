@@ -3,6 +3,7 @@
 // Il raggio è uno solo per tutta l'app; stato e valore stanno in localStorage.
 import { t, localeIntl } from './i18n.js';
 import { badgeMagnitudo } from './badge-magnitudo.js';
+import { puntoInGeometrie } from './aree.js';
 
 export const CHIAVE_RAGGIO = 'dt-raggio-vicini';
 export const CHIAVE_CERCHIO = 'dt-raggio-cerchio';
@@ -11,6 +12,7 @@ export const RAGGIO_MIN = 200; // metri
 export const RAGGIO_MAX = 50000;
 export const RAGGIO_PASSO = 50;
 export const RAGGIO_INIZIALE = 30000; // metri: per i terremoti un raggio urbano non troverebbe quasi mai nulla, e con 10 km e pochi giorni quasi ovunque la lista è vuota
+export const EVENTO_POLIGONO_ANNULLA = 'dt:poligono-annulla'; // sul document: il pulsante «Annulla» chiede di cancellare il disegno
 export const EVENTO_RAGGIO = 'dt:raggio'; // sul document a ogni modifica (raggio, cerchio o interruttore): la scheda aperta si rifà
 export const MASSIMO_VICINI = 50; // righe in scheda: oltre non si leggono, e con uno sciame sarebbero migliaia
 
@@ -43,14 +45,32 @@ export const raggioAttivo = () => attivo;
 const segnaAttivo = () => document.body?.classList.toggle('raggio-attivo', attivo);
 export const cerchioVisibile = () => cerchio;
 
-// Area dell'ultima ricerca (punto cliccato e raggio): la Lista Terremoti mostra solo gli eventi qui dentro, finché la ricerca è accesa.
+// Forma della ricerca: il cerchio attorno al punto cliccato o un poligono disegnato a mano (solo per la sessione).
+export const FORME = ['cerchio', 'poligono'];
+let forma = 'cerchio';
+export const formaRaggio = () => forma;
+export const poligonoAttivo = () => attivo && forma === 'poligono';
+export function impostaForma(v) {
+  forma = v === 'poligono' ? 'poligono' : 'cerchio';
+  return forma;
+}
+
+// Area dell'ultima ricerca: il cerchio (punto cliccato e raggio) o l'anello del poligono. La Lista Terremoti mostra solo
+// gli eventi qui dentro, finché la ricerca è accesa.
 let area = null;
 export const areaRaggio = () => (attivo ? area : null);
 export const impostaAreaRaggio = (lngLat, raggioM) => { area = lngLat ? { lng: lngLat.lng, lat: lngLat.lat, raggioM } : null; };
+// Anello chiuso [[lng, lat], …] (almeno 3 vertici): esce dalla ricerca a cerchio e viceversa
+export const impostaAreaPoligono = anello => { area = anello?.length >= 3 ? { anello } : null; };
 // `distanza([lng, lat], [lng, lat])` in km; senza ricerca attiva restituisce gli eventi com'erano
 export function filtraArea(eventi, distanza) {
   const a = areaRaggio();
-  return a ? eventi.filter(p => distanza([a.lng, a.lat], [p.lon, p.lat]) <= a.raggioM / 1000) : eventi;
+  if (!a) return eventi;
+  if (a.anello) {
+    const geometria = [{ type: 'Polygon', coordinates: [a.anello] }];
+    return eventi.filter(p => puntoInGeometrie(p.lon, p.lat, geometria));
+  }
+  return eventi.filter(p => distanza([a.lng, a.lat], [p.lon, p.lat]) <= a.raggioM / 1000);
 }
 
 export function caricaRaggio(storage) {
@@ -109,6 +129,33 @@ export function creaRegolatoreRaggio(storage = null, { filtri = null } = {}) {
   const opzioni = document.createElement('div');
   opzioni.className = 'legende-raggio-opzioni';
 
+  // Forma della ricerca: cerchio (cursore del raggio) o poligono (disegnato a clic, con suggerimento e «Annulla»)
+  const gruppoForma = document.createElement('div');
+  gruppoForma.className = 'legende-raggio-forma';
+  gruppoForma.setAttribute('role', 'group');
+  gruppoForma.setAttribute('aria-label', t('raggio.forma'));
+  const bottoniForma = FORME.map(f => {
+    const b = Object.assign(document.createElement('button'), { type: 'button', textContent: t(`raggio.forma.${f}`) });
+    b.dataset.forma = f;
+    b.addEventListener('click', () => {
+      if (formaRaggio() === f) return;
+      impostaForma(f);
+      impostaAreaRaggio(null); // l'area dell'altra forma non vale più: la lista torna intera finché non si disegna di nuovo
+      aggiorna();
+      document.dispatchEvent(new Event(EVENTO_RAGGIO)); // la lista si rifà: la fa chi segue l'evento (scheda.js, poligono-ricerca.js)
+    });
+    return b;
+  });
+  gruppoForma.append(...bottoniForma);
+  const poligonoBox = document.createElement('div');
+  poligonoBox.className = 'legende-raggio-poligono';
+  const aiuto = document.createElement('span');
+  aiuto.className = 'legende-raggio-testo';
+  aiuto.textContent = t('raggio.poligono.aiuto');
+  const annulla = Object.assign(document.createElement('button'), { type: 'button', textContent: t('raggio.poligono.annulla') });
+  annulla.addEventListener('click', () => document.dispatchEvent(new Event(EVENTO_POLIGONO_ANNULLA)));
+  poligonoBox.append(aiuto, annulla);
+
   const testo = document.createElement('span');
   testo.className = 'legende-raggio-testo';
   testo.id = 'raggio-etichetta';
@@ -128,7 +175,8 @@ export function creaRegolatoreRaggio(storage = null, { filtri = null } = {}) {
   const casella = Object.assign(document.createElement('input'), { type: 'checkbox', checked: cerchio });
   casella.setAttribute('role', 'switch');
   casella.addEventListener('change', () => { impostaCerchio(casella.checked, storage); document.dispatchEvent(new Event(EVENTO_RAGGIO)); });
-  interruttore.append(t('legenda.raggio.cerchio'), casella);
+  const etichettaInterruttore = document.createElement('span');
+  interruttore.append(etichettaInterruttore, casella);
 
   casellaAttivo.addEventListener('change', () => {
     impostaAttivo(casellaAttivo.checked, storage);
@@ -142,11 +190,16 @@ export function creaRegolatoreRaggio(storage = null, { filtri = null } = {}) {
     casellaAttivo.checked = attivo;
     casella.checked = cerchio;
     cursore.value = corrente;
+    const poligono = formaRaggio() === 'poligono';
+    for (const b of bottoniForma) b.setAttribute('aria-pressed', String(b.dataset.forma === formaRaggio()));
+    testo.hidden = cursore.hidden = poligono;
+    etichettaInterruttore.textContent = t(poligono ? 'legenda.raggio.poligono' : 'legenda.raggio.cerchio'); // lo stesso interruttore mostra o nasconde il disegno
+    poligonoBox.hidden = !poligono;
     mostra();
   }
 
   testa.append(t('raggio.attivo'), casellaAttivo);
-  opzioni.append(testo, cursore, interruttore);
+  opzioni.append(gruppoForma, testo, cursore, interruttore, poligonoBox);
   let nodoFiltri = null; // creato alla prima accensione: i menu seguono già il filtro condiviso, non serve prima
   box.append(testa, opzioni);
   aggiorna();
@@ -171,12 +224,47 @@ export function eventiVicini(moduli, lngLat, raggioM) {
   return { eventi: tutti.slice(0, MASSIMO_VICINI), totale: tutti.length };
 }
 
+// Centro (media dei vertici) e raggio di inquadratura (il vertice più lontano, in metri) di un anello chiuso: la scheda del
+// poligono si apre sul centro e la mappa inquadra tutto il disegno.
+export function centroERaggioPoligono(anello) {
+  const vertici = anello.slice(0, -1);
+  const centro = { lng: vertici.reduce((a, v) => a + v[0], 0) / vertici.length, lat: vertici.reduce((a, v) => a + v[1], 0) / vertici.length };
+  const k = Math.cos(centro.lat * Math.PI / 180);
+  const raggioM = Math.max(...vertici.map(([x, y]) => Math.hypot((x - centro.lng) * k, y - centro.lat) * 111320));
+  return { centro, raggioM };
+}
+
+// Eventi dentro l'anello del poligono (`scheda.eventiNelPoligono(anello)` dei moduli), dal più recente. Stessa forma di `eventiVicini`, senza distanze.
+export function eventiNelPoligono(moduli, anello) {
+  const visti = new Set();
+  const tutti = [];
+  for (const m of moduli) {
+    for (const e of m.scheda?.eventiNelPoligono?.(anello) ?? []) {
+      const chiave = String(e.id ?? `${e.lon},${e.lat},${e.ts}`);
+      if (visti.has(chiave)) continue;
+      visti.add(chiave);
+      tutti.push(e);
+    }
+  }
+  tutti.sort((a, b) => (b.ts ?? 0) - (a.ts ?? 0));
+  return { eventi: tutti.slice(0, MASSIMO_VICINI), totale: tutti.length };
+}
+
 // Voce della scheda con la lista degli eventi nel raggio (vedi scheda-disegno.js): `dinamico` perché ogni riga è un pulsante.
 export function voceEventiVicini({ eventi, totale }, raggioM, periodo = '') {
   return {
     chiave: 'raggio:eventi', tipo: 'terremoto', peso: 8, titolo: t('raggio.titolo', { r: formattaRaggio(raggioM) }), icona: 'terremoto', sempre: true,
     ...(totale ? { badge: String(totale) } : {}),
     gruppi: [], dinamico: () => elencoVicini(eventi, totale, raggioM, periodo),
+  };
+}
+
+// Come `voceEventiVicini`, per il poligono: titolo «Eventi nel poligono», righe senza distanza
+export function voceEventiPoligono({ eventi, totale }, periodo = '') {
+  return {
+    chiave: 'raggio:eventi', tipo: 'terremoto', peso: 8, titolo: t('raggio.poligono.titolo'), icona: 'terremoto', sempre: true,
+    ...(totale ? { badge: String(totale) } : {}),
+    gruppi: [], dinamico: () => elencoVicini(eventi, totale, null, periodo),
   };
 }
 
@@ -199,7 +287,7 @@ function elencoVicini(eventi, totale, raggioM, periodo = '') {
     box.append(titolo);
   }
   if (!eventi.length) {
-    box.append(nota(t('raggio.vuoto', { r: formattaRaggio(raggioM) })));
+    box.append(nota(raggioM == null ? t('raggio.poligono.vuoto') : t('raggio.vuoto', { r: formattaRaggio(raggioM) })));
     return box;
   }
   const lista = document.createElement('ul');
@@ -216,7 +304,8 @@ function elencoVicini(eventi, totale, raggioM, periodo = '') {
     magnitudo.className += ' raggio-mag';
     const distanza = document.createElement('span');
     distanza.className = 'raggio-distanza';
-    distanza.textContent = formattaDistanza(e.distanzaM);
+    distanza.textContent = e.distanzaM == null ? '' : formattaDistanza(e.distanzaM);
+    if (e.distanzaM == null) bottone.classList.add('raggio-senza-distanza'); // poligono: nessuna distanza dal centro
     const luogo = document.createElement('span');
     luogo.className = 'raggio-luogo';
     luogo.textContent = e.luogo || t('terremoti.zonaSconosciuta');
@@ -224,7 +313,7 @@ function elencoVicini(eventi, totale, raggioM, periodo = '') {
     quando.className = 'raggio-quando';
     quando.textContent = e.quando ?? '';
     bottone.title = t('raggio.apri', { luogo: luogo.textContent });
-    bottone.append(punto, magnitudo, distanza, luogo, quando);
+    bottone.append(...[punto, magnitudo, e.distanzaM == null ? null : distanza, luogo, quando].filter(Boolean));
     bottone.addEventListener('click', () => e.apri?.());
     bottone.addEventListener('pointerenter', () => e.evidenzia?.()); // l'evento si accende in mappa, senza spostare la vista
     bottone.addEventListener('pointerleave', () => e.nascondi?.());

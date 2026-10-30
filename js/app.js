@@ -16,6 +16,7 @@ import { collegaTabMobile } from './core/tab-mobile.js';
 import { traduciModuli } from './core/traduci-moduli.js';
 import { collegaShakeMap } from './core/shakemap-mappa.js';
 import { caricaLiveZoom, collegaLiveZoom, creaInterruttoreLegenda as interruttoreLiveZoomLegenda } from './core/live-zoom.js';
+import { collegaPoligono } from './core/poligono-ricerca.js';
 import { creaRegolatoreRaggio, raggioAttivo, EVENTO_RAGGIO } from './core/raggio-vicini.js';
 import { EVENTO_FILTRO } from './layers/scheda-terremoti-dom.js';
 import { collegaMinimappa } from './core/minimappa.js';
@@ -101,6 +102,7 @@ map.once('style.load', async () => {
   costruisciPannello(map, MODULI, document.getElementById('pannello'), document.getElementById('barra-gruppi'));
   collegaTooltipScheda(map, MODULI);
   collegaScheda(map, MODULI, document.getElementById('scheda'), {});
+  collegaPoligono(map); // forma «poligono» della ricerca attorno a un punto
   const storico = collegaStorico(document.getElementById('storico-pannello'));
   const confrontoPannello = document.getElementById('confronto-pannello');
   collegaConfronto(confrontoPannello, nodoConfronto());
