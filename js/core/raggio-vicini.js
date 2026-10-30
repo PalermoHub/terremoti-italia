@@ -43,6 +43,16 @@ export const raggioAttivo = () => attivo;
 const segnaAttivo = () => document.body?.classList.toggle('raggio-attivo', attivo);
 export const cerchioVisibile = () => cerchio;
 
+// Area dell'ultima ricerca (punto cliccato e raggio): la Lista Terremoti mostra solo gli eventi qui dentro, finché la ricerca è accesa.
+let area = null;
+export const areaRaggio = () => (attivo ? area : null);
+export const impostaAreaRaggio = (lngLat, raggioM) => { area = lngLat ? { lng: lngLat.lng, lat: lngLat.lat, raggioM } : null; };
+// `distanza([lng, lat], [lng, lat])` in km; senza ricerca attiva restituisce gli eventi com'erano
+export function filtraArea(eventi, distanza) {
+  const a = areaRaggio();
+  return a ? eventi.filter(p => distanza([a.lng, a.lat], [p.lon, p.lat]) <= a.raggioM / 1000) : eventi;
+}
+
 export function caricaRaggio(storage) {
   try {
     corrente = normalizzaRaggio(storage?.getItem(CHIAVE_RAGGIO));

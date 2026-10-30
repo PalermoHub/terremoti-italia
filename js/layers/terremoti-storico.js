@@ -6,7 +6,7 @@ import { ANNO_INIZIO, periodoAnno } from './scheda-archivio.js';
 import { pannelloArchivio } from './terremoti-archivio.js';
 import { creaPopupTerremoti, righeTooltip } from './terremoti-popup.js';
 import { EVENTO_TABELLA } from '../core/tabella-dati.js';
-import { raggioAttivo, EVENTO_RAGGIO } from '../core/raggio-vicini.js';
+import { raggioAttivo, EVENTO_RAGGIO, filtraArea, areaRaggio } from '../core/raggio-vicini.js';
 import { creaEvidenzaMappa } from '../core/evidenza-eventi.js';
 import { registraTooltipStrati } from '../core/tooltip.js';
 import { clicSu } from '../core/scheda-navigazione.js';
@@ -273,7 +273,8 @@ export default {
     fonte: t('tabella.fonte.ingvLocale'),
     licenza: 'CC BY 4.0',
     colonne: () => colonneTabellaTerremoti({ anno: true }),
-    righe: () => eventi.filter(p => passaMagnitudo(p) && (!filtro.classi || filtro.classi.has(p.classeMag))),
+    righe: () => filtraArea(eventi.filter(p => passaMagnitudo(p) && (!filtro.classi || filtro.classi.has(p.classeMag))), distanzaKm),
+    area: areaRaggio,
     attivo: () => acceso,
     apri: p => vaiAEvento(p),
   },

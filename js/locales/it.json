@@ -1757,6 +1757,7 @@
   "tabella.selezionate.altri": "{n} selezionate",
   "tabella.nessunRisultato": "Nessuna riga con i filtri attuali.",
   "tabella.nessunaColonna": "Nessuna colonna scelta: aprine una dal menu «Colonne».",
+  "tabella.nota.raggio": "Solo gli eventi entro {r} dal punto cliccato.",
   "tabella.nota": "Eventi che passano i filtri della mappa.",
   "tabella.nota.clic": "Clicca su un evento per vederne la posizione in mappa.",
   "tabella.nota.ordina": "Clicca sull’intestazione di una colonna per ordinare.",

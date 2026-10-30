@@ -11,7 +11,8 @@ import { el, icona, sincronizzaStrato, acceseDaScheda, spegniStratiDaScheda, cre
 import { ICONA_X } from './scheda-pannello-preferenze.js';
 import { t as tr, tl } from './i18n.js';
 import { mostraCerchio, nascondiCerchio, mostraEtichetta, nascondiEtichetta } from './cerchio-raggio.js';
-import { raggioVicini, raggioAttivo, cerchioVisibile, EVENTO_RAGGIO, eventiVicini, voceEventiVicini } from './raggio-vicini.js';
+import { raggioVicini, raggioAttivo, cerchioVisibile, EVENTO_RAGGIO, eventiVicini, voceEventiVicini, impostaAreaRaggio } from './raggio-vicini.js';
+import { EVENTO_TABELLA } from './tabella-dati.js';
 import { inModoEmergenza, moduliAlClic } from './modo-emergenza.js';
 import { clicCatturato } from './cattura-clic.js';
 
@@ -424,6 +425,7 @@ export function collegaScheda(map, moduli, contenitore, opzioni = {}) {
       // accesa o spenta, se una scheda è aperta si rifà sullo stesso punto: la lista e il cerchio seguono il nuovo stato
       if (ultimoClic && !contenitore.hidden) map.fire('click', { point: map.project(ultimoClic), lngLat: ultimoClic });
       else if (!raggioAttivo()) nascondiCerchio(map);
+      if (!raggioAttivo()) document.dispatchEvent(new Event(EVENTO_TABELLA)); // spenta: la lista torna intera
     }, 120);
   });
   map.on('click', async e => {
@@ -473,6 +475,8 @@ export function collegaScheda(map, moduli, contenitore, opzioni = {}) {
       const raggio = raggioVicini();
       const vicini = eventiVicini(conScheda, lngLat, raggio);
       totaleVicini = vicini.totale;
+      impostaAreaRaggio(lngLat, raggio); // la Lista Terremoti si restringe al cerchio
+      document.dispatchEvent(new Event(EVENTO_TABELLA));
       const voce = voceEventiVicini(vicini, raggio);
       const iEvento = voci.findIndex(v => v.evento);
       voci.splice(iEvento >= 0 ? iEvento + 1 : 0, 0, voce);

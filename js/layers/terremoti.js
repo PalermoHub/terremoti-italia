@@ -17,7 +17,7 @@ import { aggiornaLegendaInMappa, EVENTO_TEMA_MAGNITUDO, temaMagnitudoAttivo } fr
 import { legendaMagnitudo } from './legenda-magnitudo.js';
 import { creaPopupTerremoti, righeTooltip } from './terremoti-popup.js';
 import { EVENTO_TABELLA } from '../core/tabella-dati.js';
-import { raggioAttivo, EVENTO_RAGGIO } from '../core/raggio-vicini.js';
+import { raggioAttivo, EVENTO_RAGGIO, filtraArea, areaRaggio } from '../core/raggio-vicini.js';
 import { creaEvidenzaMappa } from '../core/evidenza-eventi.js';
 
 // Terremoti in tempo reale in Italia: gli eventi degli ultimi 30 giorni dal nostro archivio (GET /terremoti), che il server tiene allineato al servizio FDSN dell'INGV.
@@ -412,7 +412,8 @@ export default {
     fonte: t('tabella.fonte.ingvLocale'),
     licenza: 'CC BY 4.0',
     colonne: () => colonneTabellaTerremoti(),
-    righe: () => visibili(),
+    righe: () => filtraArea(visibili(), distanzaKm),
+    area: areaRaggio,
     attivo: () => acceso,
     apri: p => vaiAEvento(p),
   },

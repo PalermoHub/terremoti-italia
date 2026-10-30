@@ -1757,6 +1757,7 @@
   "tabella.selezionate.altri": "{n} selected",
   "tabella.nessunRisultato": "No rows match the current filters.",
   "tabella.nessunaColonna": "No column chosen: open one from the “Columns” menu.",
+  "tabella.nota.raggio": "Only events within {r} of the clicked point.",
   "tabella.nota": "Events that pass the map filters.",
   "tabella.nota.clic": "Click an event to see its position on the map.",
   "tabella.nota.ordina": "Click a column header to sort.",

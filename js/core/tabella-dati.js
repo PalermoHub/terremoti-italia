@@ -1,6 +1,7 @@
 import { t, tn, localeIntl } from './i18n.js';
 import { svgIcona } from './icone.js';
 import { caricaTerritorio } from './territorio-eventi.js';
+import { formattaDistanza } from './raggio-vicini.js';
 
 // Tabella dei dati: cassetto in basso con le righe degli strati accesi, la selezione di righe e colonne
 // e l'esportazione in CSV e JSON. La posizione orizzontale è affidata al CSS: #tabella-dati sta tra
@@ -273,7 +274,8 @@ export function collegaTabellaDati({ bottone: comando, fornitori = [] } = {}) {
       b.querySelector('.tabella-esporta-n').textContent = `${righe.length} × ${colonne.length}`;
       b.disabled = righe.length === 0 || colonne.length === 0;
     }
-    const resto = [t('tabella.nota.territorio'), nRighe > MAX_RIGHE ? t('tabella.mostrate', { n: MAX_RIGHE }) : ''].filter(Boolean).join(' · ');
+    const a = f.area?.(); // ricerca attorno a un punto accesa: la lista è già ristretta al cerchio
+    const resto = [a ? t('tabella.nota.raggio', { r: formattaDistanza(a.raggioM) }) : '', t('tabella.nota.territorio'), nRighe > MAX_RIGHE ? t('tabella.mostrate', { n: MAX_RIGHE }) : ''].filter(Boolean).join(' · ');
     nota.replaceChildren(`${t('tabella.nota')} `, el('strong', null, t('tabella.nota.clic')), ` ${t('tabella.nota.ordina')} · ${resto}`);
     nota.title = nota.textContent;
     return { righe, colonne };
