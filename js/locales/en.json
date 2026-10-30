@@ -3253,6 +3253,7 @@
   "terremoti.pf.finoAdesso": "now",
   "terremoti.pf.riproduci": "Play",
   "terremoti.pf.pausa": "Pause",
+  "terremoti.pf.spegni": "Turn off the timeline",
   "terremoti.pf.azzera": "Reset",
   "terremoti.pf.magnitudo": "Events by magnitude (click to turn a class on or off)",
   "terremoti.pf.classe": "Magnitude {classe}: {n}",

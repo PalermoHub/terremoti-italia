@@ -22,7 +22,7 @@ function el(tag, classe, testo) {
 
 // Icone dei comandi (stesso tratto delle altre iconcine del sito)
 const svg = tracciato => `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${tracciato}</svg>`;
-const ICONE = { riproduci: svg('<path d="M7 4.5v15l12-7.5z" fill="currentColor"/>'), pausa: svg('<path d="M8 5v14M16 5v14"/>'), azzera: svg('<path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5"/>'), grafici: svg('<path d="M5 20V11M12 20V4M19 20v-6"/>') };
+const ICONE = { riproduci: svg('<path d="M7 4.5v15l12-7.5z" fill="currentColor"/>'), pausa: svg('<path d="M8 5v14M16 5v14"/>'), azzera: svg('<path d="M3 12a9 9 0 1 0 3-6.7L3 8M3 3v5h5"/>'), grafici: svg('<path d="M5 20V11M12 20V4M19 20v-6"/>'), spegni: svg('<path d="M6 6l12 12M18 6L6 18"/>') };
 function comando(el, nome, etichetta) {
   el.innerHTML = ICONE[nome];
   el.title = etichetta;
@@ -35,14 +35,15 @@ const giorno = ts => new Date(ts).toLocaleDateString(localeIntl(), { day: 'numer
 const emetti = () => document.dispatchEvent(new CustomEvent(EVENTO_FILTRO));
 
 // Durante la riproduzione la barra di ricerca lascia il posto a questa: anno grande, giorni della finestra e posizione nei 30 giorni.
-// La traccia mostra gli eventi per fascia (barrette, accese quelle nella finestra in corso) e i confini di mese (tacche e nomi).
+// La traccia mostra gli eventi per fascia (barrette, accese quelle nella finestra in corso), i confini di mese (tacche e nomi) e la lente sulla finestra: un clic mette in pausa.
 function barraTempo() {
   const nodo = el('div', 'cerca-tempo');
   nodo.hidden = true;
   nodo.setAttribute('role', 'status');
   const anno = el('strong', 'cerca-tempo-anno'), date = el('span', 'cerca-tempo-date');
-  const traccia = el('div', 'cerca-tempo-traccia'), barre = el('div', 'cerca-tempo-barre'), tacche = el('div', 'cerca-tempo-tacche');
-  traccia.append(barre, tacche);
+  const traccia = el('div', 'cerca-tempo-traccia'), barre = el('div', 'cerca-tempo-barre'), tacche = el('div', 'cerca-tempo-tacche'), lente = el('button', 'cerca-tempo-lente');
+  lente.type = 'button';
+  traccia.append(barre, tacche, lente);
   const mesi = el('div', 'cerca-tempo-mesi');
   const testo = el('div', 'cerca-tempo-testo');
   const comandi = el('div', 'cerca-tempo-comandi');
@@ -52,11 +53,16 @@ function barraTempo() {
   let colonne = [], chiaveMesi = '';
   return {
     comandi,
+    lente,
     mostra(vero) { nodo.hidden = !vero; document.body.classList.toggle('timeline-in-corso', vero); },
     scrivi(dal, al, [da, a]) {
       date.textContent = t('terremoti.pf.intervallo', { da: giornoOra(dal), a: giornoOra(al) });
       anno.textContent = new Date(al).toLocaleDateString(localeIntl(), { year: 'numeric' });
-      colonne.forEach((c, i) => c.classList.toggle('fuori', i < da || i >= a)); // come nel grafico della legenda: le fasce nella finestra restano accese
+      // la lente copre sempre barre intere (la finestra scorre a frazioni di giorno): le stesse accese sotto
+      const primaBarra = Math.floor(da), dopoBarra = Math.ceil(a);
+      lente.style.left = `${primaBarra / GIORNI_MAX * 100}%`;
+      lente.style.width = `${(dopoBarra - primaBarra) / GIORNI_MAX * 100}%`;
+      colonne.forEach((c, i) => c.classList.toggle('fuori', i < primaBarra || i >= dopoBarra)); // come nel grafico della legenda: le fasce nella finestra restano accese
     },
     // `perFascia` = eventi per fascia; la serie va da `inizioSerie` e ogni fascia dura `larghezza` ms
     disegna(perFascia, inizioSerie, larghezza) {
@@ -113,6 +119,10 @@ export function pannelloFiltro(eventi, mappa = () => null, { mostraEvento = () =
   const azzera = el('button', 'terremoti-pf-icona');
   azzera.type = 'button';
   comando(azzera, 'azzera', t('terremoti.pf.azzera'));
+  const spegni = el('button', 'terremoti-pf-icona');
+  spegni.type = 'button';
+  spegni.hidden = true;
+  comando(spegni, 'spegni', t('terremoti.pf.spegni'));
   let velocita = 0; // indice in VELOCITA
   const veloce = el('button', 'terremoti-pf-icona terremoti-pf-velocita');
   veloce.type = 'button';
@@ -135,7 +145,10 @@ export function pannelloFiltro(eventi, mappa = () => null, { mostraEvento = () =
   const veloceBarra = gemello('terremoti-pf-icona terremoti-pf-velocita', veloce);
   const azzeraBarra = gemello('terremoti-pf-icona', azzera);
   comando(azzeraBarra, 'azzera', t('terremoti.pf.azzera'));
-  barraT.comandi.append(pausaBarra, veloceBarra, azzeraBarra);
+  const spegniBarra = gemello('terremoti-pf-icona', spegni);
+  comando(spegniBarra, 'spegni', t('terremoti.pf.spegni'));
+  barraT.lente.addEventListener('click', () => riproduci.click()); // pausa se scorre, riparte se è in pausa
+  barraT.comandi.append(pausaBarra, veloceBarra, azzeraBarra, spegniBarra);
   scriviVelocita();
   veloce.addEventListener('click', () => { velocita = (velocita + 1) % VELOCITA.length; scriviVelocita(); });
   const grafici = el('button', 'terremoti-pf-icona');
@@ -143,7 +156,7 @@ export function pannelloFiltro(eventi, mappa = () => null, { mostraEvento = () =
   comando(grafici, 'grafici', t('terremoti.pf.grafici'));
   const testa = el('div', 'terremoti-pf-testa');
   const comandi = el('div', 'terremoti-pf-comandi');
-  comandi.append(riproduci, veloce, azzera, grafici);
+  comandi.append(riproduci, veloce, azzera, spegni, grafici);
   testa.append(el('strong', null, t('terremoti.pf.titolo')), comandi);
   // i grafici stanno in una parte che si apre e si chiude; parte chiusa, e si apre con la riproduzione
   const corpo = el('div', 'terremoti-pf-corpo');
@@ -186,21 +199,34 @@ export function pannelloFiltro(eventi, mappa = () => null, { mostraEvento = () =
   nodo.append(testa, testoIntervallo, corpo);
   apri(false);
 
-  // riproduzione: la finestra scorre di un giorno alla volta
-  let timer = null;
-  const ferma = () => {
+  // riproduzione: la finestra scorre di un giorno alla volta.
+  // `attiva` = la timeline è accesa (barra in alto visibile), anche in pausa; `timer` = la finestra sta scorrendo.
+  let timer = null, attiva = false;
+  const segnaRiproduzione = scorre => {
+    const nome = scorre ? 'pausa' : 'riproduci', etichetta = t(scorre ? 'terremoti.pf.pausa' : 'terremoti.pf.riproduci');
+    comando(riproduci, nome, etichetta);
+    comando(pausaBarra, nome, etichetta);
+    barraT.lente.title = etichetta;
+    barraT.lente.setAttribute('aria-label', etichetta);
+    riproduci.setAttribute('aria-pressed', String(scorre));
+  };
+  const pausa = () => {
     clearInterval(timer);
     timer = null;
+    segnaRiproduzione(false);
+  };
+  const ferma = () => { // spegne la timeline: finestra ferma dove sta, barra e luci in mappa spente
+    pausa();
+    attiva = false;
+    spegni.hidden = true;
     barraT.mostra(false);
     nascondiEvidenzaEventi(mappa());
-    comando(riproduci, 'riproduci', t('terremoti.pf.riproduci'));
-    riproduci.setAttribute('aria-pressed', 'false');
   };
   riproduci.addEventListener('click', () => {
-    if (timer) { ferma(); return; }
-    comando(riproduci, 'pausa', t('terremoti.pf.pausa'));
-    comando(pausaBarra, 'pausa', t('terremoti.pf.pausa'));
-    riproduci.setAttribute('aria-pressed', 'true');
+    if (timer) { pausa(); return; }
+    segnaRiproduzione(true);
+    attiva = true;
+    spegni.hidden = false;
     apri(true);
     barraT.mostra(true);
     const riprendi = () => { nascondiEvento(); timer = setInterval(passo, PASSO_RIPRODUZIONE_MS); };
@@ -221,6 +247,7 @@ export function pannelloFiltro(eventi, mappa = () => null, { mostraEvento = () =
     if (!timer) timer = setInterval(passo, PASSO_RIPRODUZIONE_MS);
     aggiorna(); // il primo passo è già partito: la barra in alto lo scrive ora che la riproduzione è attiva
   });
+  spegni.addEventListener('click', ferma);
   azzera.addEventListener('click', () => {
     ferma();
     Object.assign(filtro, { finestra: null, classi: null, periodo: null });
@@ -234,7 +261,7 @@ export function pannelloFiltro(eventi, mappa = () => null, { mostraEvento = () =
       if (da < 0) { da = 0; a = 1; }
     }
     filtro.finestra = da === 0 && a === GIORNI_MAX ? null : [da, a];
-    ferma();
+    pausa();
     emetti();
   };
   inizio.addEventListener('input', daSlider);
@@ -265,7 +292,7 @@ export function pannelloFiltro(eventi, mappa = () => null, { mostraEvento = () =
       c.title = `${larghezza > GIORNO_MS * 1.5 ? `${giorno(inizioFascia)} – ${giorno(inizioFascia + larghezza - 1)}` : giorno(inizioFascia)}: ${perFascia[i]}`;
     });
     const [dal, al] = intervallo(filtro, adesso);
-    if (timer) {
+    if (attiva) {
       barraT.disegna(perFascia, inizioSerie, larghezza);
       const fino = Math.min(al, adesso);
       barraT.scrivi(dal, fino, filtro.finestra ?? [0, GIORNI_MAX]);
