@@ -305,8 +305,8 @@ dialog li { margin: 4px 0; }
 #cerca-filtri:hover { filter: brightness(1.1); }
 #cerca-filtri[aria-expanded="true"] { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
 /* durante la riproduzione della timeline la barra di ricerca cede il posto ad anno e date della finestra */
-@media (min-width: 721px) { body.timeline-in-corso #cerca, body.timeline-in-corso #cerca-pannello { display: none; } }
-@media (max-width: 720px) { .cerca-tempo { display: none !important; } } /* telefono: niente barra della timeline sopra la mappa (i comandi restano nel filtro del pannello) e la ricerca resta al suo posto */
+@media (min-width: 721px) and (not ((pointer: coarse) and (max-height: 500px))) { body.timeline-in-corso #cerca, body.timeline-in-corso #cerca-pannello { display: none; } }
+@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) { .cerca-tempo { display: none !important; } } /* telefono (anche ruotato): niente barra della timeline sopra la mappa (i comandi restano nel filtro del pannello) e la ricerca resta al suo posto */
 .cerca-tempo { display: flex; flex-direction: column; gap: 8px; padding: 10px 18px 12px; background: var(--surface); border: 1px solid var(--border-ui); border-radius: var(--r-lg, 20px); box-shadow: var(--ombra); }
 .cerca-tempo[hidden] { display: none; }
 .cerca-tempo-testo { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
@@ -933,6 +933,7 @@ details.scheda-sez > summary { display: flex; align-items: center; gap: 6px; min
   #area-ricerca { left: calc(var(--sx) + (100% - var(--sx) - var(--scheda-l)) / 2); }
 }
 @media (min-width: 721px) and (max-width: 1099px) { #legende-box { --legende-bottom: 100px; bottom: 100px; } }
+@media (max-height: 500px) { #legende-box { --legende-alto: 64px; } } /* telefono ruotato: lo spazio sopra la legenda è solo la fila dei pulsanti, il resto serve alla legenda (che scorre) */
 
 @media (max-width: 720px) {
   #barra-strati { display: none; }
