@@ -444,7 +444,7 @@ dialog li { margin: 4px 0; }
    scheda (--traffico-h) la scrive popup-traffico.js dopo averla misurata. */
 .traffico-popup-box { --traffico-orizz: 28px; --traffico-gancio: 24px; z-index: 5; }
 .traffico-popup-box.geologia-popup { z-index: 3; } /* sopra la legenda e i pulsanti della mappa (z-index 2), così il suo collegamento si tocca */
-body:has(#scheda:not([hidden])) .traffico-popup-box { z-index: 1; } /* ma sotto la scheda del luogo aperta (z-index 2, a tutto schermo 4): in mobile la scheda è un foglio sopra la mappa */
+@media (max-width: 720px) { body:has(#scheda:not([hidden])) .traffico-popup-box { z-index: 1; } } /* sotto la scheda del luogo aperta solo sul telefono, dove è un foglio a tutto schermo sopra la mappa; su desktop il popup resta sopra la legenda e non ne viene tagliato */
 .traffico-popup-box .maplibregl-popup-content { padding: 0; background: color-mix(in srgb, var(--surface) 94%, transparent); color: var(--text); border: 1px solid var(--border); border-radius: var(--r-md); box-shadow: 0 8px 28px rgba(0, 0, 0, .28); backdrop-filter: blur(8px); overflow: visible; }
 .traffico-popup-box .maplibregl-popup-tip { position: absolute; width: 2px; height: calc(var(--traffico-h, 300px) + 3px); margin: 0; border: 0; background: var(--traffico-colore, var(--text-muted)); }
 .traffico-popup-box .maplibregl-popup-tip::before { content: ''; position: absolute; width: var(--traffico-orizz); height: 2px; background: var(--traffico-colore, var(--text-muted)); }
@@ -1093,7 +1093,7 @@ label.sotto-voce:has(input:checked) .occhio { box-shadow: none; }
 .strato-opacita output { text-align: right; font-variant-numeric: tabular-nums; }
 #strati-chip { position: fixed; z-index: var(--z-mappa-ui); top: 14px; left: calc(var(--sx) + 12px); right: calc(var(--scheda-l) + 240px); display: flex; flex-wrap: nowrap; gap: 6px; overflow: hidden; pointer-events: none; }
 #strati-chip:empty { display: none; }
-.strato-chip { pointer-events: auto; flex: none; max-width: 180px; height: 32px; padding: 0 8px 0 12px; display: inline-flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--border-ui); border-radius: var(--r-pill); box-shadow: var(--ombra); color: var(--text); font-size: var(--fs-sm); font-weight: 600; white-space: nowrap; }
+.strato-chip { pointer-events: auto; flex: none; max-width: 260px; height: 32px; padding: 0 8px 0 12px; display: inline-flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--border-ui); border-radius: var(--r-pill); box-shadow: var(--ombra); color: var(--text); font-size: var(--fs-sm); font-weight: 600; white-space: nowrap; }
 .strato-chip span { overflow: hidden; text-overflow: ellipsis; }
 .shakemap-chip { max-width: 340px; }
 .lg-shakemap .shakemap-righe { display: grid; grid-template-columns: 1fr 1fr; column-gap: 12px; }
