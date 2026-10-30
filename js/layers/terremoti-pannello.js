@@ -35,24 +35,50 @@ const giorno = ts => new Date(ts).toLocaleDateString(localeIntl(), { day: 'numer
 const emetti = () => document.dispatchEvent(new CustomEvent(EVENTO_FILTRO));
 
 // Durante la riproduzione la barra di ricerca lascia il posto a questa: anno grande, giorni della finestra e posizione nei 30 giorni.
+// La traccia mostra gli eventi per fascia (barrette, accese quelle nella finestra in corso) e i confini di mese (tacche e nomi).
 function barraTempo() {
   const nodo = el('div', 'cerca-tempo');
   nodo.hidden = true;
   nodo.setAttribute('role', 'status');
   const anno = el('strong', 'cerca-tempo-anno'), date = el('span', 'cerca-tempo-date');
-  const traccia = el('div', 'cerca-tempo-traccia'), riempi = el('i');
-  traccia.append(riempi);
+  const traccia = el('div', 'cerca-tempo-traccia'), barre = el('div', 'cerca-tempo-barre'), tacche = el('div', 'cerca-tempo-tacche');
+  traccia.append(barre, tacche);
+  const mesi = el('div', 'cerca-tempo-mesi');
   const testo = el('div', 'cerca-tempo-testo');
-  testo.append(anno, date);
-  nodo.append(testo, traccia);
+  const comandi = el('div', 'cerca-tempo-comandi');
+  testo.append(anno, comandi, date);
+  nodo.append(testo, traccia, mesi);
   document.getElementById('area-ricerca')?.append(nodo);
+  let colonne = [], chiaveMesi = '';
   return {
+    comandi,
     mostra(vero) { nodo.hidden = !vero; document.body.classList.toggle('timeline-in-corso', vero); },
     scrivi(dal, al, [da, a]) {
       date.textContent = t('terremoti.pf.intervallo', { da: giornoOra(dal), a: giornoOra(al) });
       anno.textContent = new Date(al).toLocaleDateString(localeIntl(), { year: 'numeric' });
-      riempi.style.left = `${da / GIORNI_MAX * 100}%`;
-      riempi.style.width = `${(a - da) / GIORNI_MAX * 100}%`;
+      colonne.forEach((c, i) => c.classList.toggle('fuori', i < da || i >= a)); // come nel grafico della legenda: le fasce nella finestra restano accese
+    },
+    // `perFascia` = eventi per fascia; la serie va da `inizioSerie` e ogni fascia dura `larghezza` ms
+    disegna(perFascia, inizioSerie, larghezza) {
+      if (colonne.length !== perFascia.length) {
+        colonne = perFascia.map(() => el('i'));
+        barre.replaceChildren(...colonne);
+      }
+      const max = Math.max(1, ...perFascia);
+      colonne.forEach((c, i) => { c.style.height = perFascia[i] ? `${Math.max(8, perFascia[i] / max * 100)}%` : '0'; });
+      const chiave = `${Math.floor(inizioSerie / GIORNO_MS)}|${Math.round(larghezza / 3600000)}`;
+      if (chiave === chiaveMesi) return;
+      chiaveMesi = chiave;
+      const durata = perFascia.length * larghezza, fineSerie = inizioSerie + durata;
+      const loc = localeIntl();
+      const primo = new Date(inizioSerie);
+      const confini = [];
+      for (let m = new Date(primo.getFullYear(), primo.getMonth() + 1, 1); m.getTime() < fineSerie; m = new Date(m.getFullYear(), m.getMonth() + 1, 1)) confini.push(new Date(m));
+      const lungo = confini.length > 14; // periodi di anni: tacche e nomi solo a gennaio
+      const voci = confini.filter(m => !lungo || m.getMonth() === 0).map(m => ({ pct: (m.getTime() - inizioSerie) / durata * 100, nome: m.getMonth() === 0 ? String(m.getFullYear()) : m.toLocaleDateString(loc, { month: 'short' }) })).filter(v => v.pct < 92); // l'ultima tacca vicina al bordo destro non ha spazio per il nome
+      if (!lungo && (!voci.length || voci[0].pct > 18)) voci.unshift({ pct: 0, nome: primo.toLocaleDateString(loc, { month: 'short' }), inizio: true });
+      tacche.replaceChildren(...voci.filter(v => !v.inizio).map(v => { const i = el('i'); i.style.left = `${v.pct}%`; return i; }));
+      mesi.replaceChildren(...voci.map(v => { const s = el('span', v.inizio ? 'inizio' : null, v.nome); s.style.left = `${v.pct}%`; return s; }));
     },
   };
 }
@@ -94,7 +120,22 @@ export function pannelloFiltro(eventi, mappa = () => null, { mostraEvento = () =
     veloce.textContent = `×${VELOCITA[velocita]}`;
     veloce.title = t('terremoti.pf.velocita', { v: VELOCITA[velocita] });
     veloce.setAttribute('aria-label', veloce.title);
+    veloceBarra.textContent = veloce.textContent;
+    veloceBarra.title = veloce.title;
+    veloceBarra.setAttribute('aria-label', veloce.title);
   };
+  // comandi gemelli nella barra del tempo: ogni clic passa al pulsante della legenda, che resta l'unico a decidere lo stato
+  const gemello = (classe, origine) => {
+    const b = el('button', classe);
+    b.type = 'button';
+    b.addEventListener('click', () => origine.click());
+    return b;
+  };
+  const pausaBarra = gemello('terremoti-pf-icona', riproduci);
+  const veloceBarra = gemello('terremoti-pf-icona terremoti-pf-velocita', veloce);
+  const azzeraBarra = gemello('terremoti-pf-icona', azzera);
+  comando(azzeraBarra, 'azzera', t('terremoti.pf.azzera'));
+  barraT.comandi.append(pausaBarra, veloceBarra, azzeraBarra);
   scriviVelocita();
   veloce.addEventListener('click', () => { velocita = (velocita + 1) % VELOCITA.length; scriviVelocita(); });
   const grafici = el('button', 'terremoti-pf-icona');
@@ -158,6 +199,7 @@ export function pannelloFiltro(eventi, mappa = () => null, { mostraEvento = () =
   riproduci.addEventListener('click', () => {
     if (timer) { ferma(); return; }
     comando(riproduci, 'pausa', t('terremoti.pf.pausa'));
+    comando(pausaBarra, 'pausa', t('terremoti.pf.pausa'));
     riproduci.setAttribute('aria-pressed', 'true');
     apri(true);
     barraT.mostra(true);
@@ -224,6 +266,7 @@ export function pannelloFiltro(eventi, mappa = () => null, { mostraEvento = () =
     });
     const [dal, al] = intervallo(filtro, adesso);
     if (timer) {
+      barraT.disegna(perFascia, inizioSerie, larghezza);
       const fino = Math.min(al, adesso);
       barraT.scrivi(dal, fino, filtro.finestra ?? [0, GIORNI_MAX]);
       // la finestra avanza di continuo: gli eventi appena entrati (più numerosi a velocità alta) sono i nuovi, e si accendono in mappa

@@ -310,9 +310,24 @@ body.timeline-in-corso #cerca, body.timeline-in-corso #cerca-pannello { display:
 .cerca-tempo[hidden] { display: none; }
 .cerca-tempo-testo { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
 .cerca-tempo-anno { font-size: 28px; line-height: 1; font-weight: 700; color: var(--accent-strong); font-variant-numeric: tabular-nums; }
+@media (min-width: 721px) {
+  body.timeline-in-corso #area-ricerca { width: clamp(340px, calc(100vw - var(--scheda-l) - var(--sx) - 150px), 560px); } /* più larga della ricerca: comandi, anno e date stanno su un rigo */
+}
+.cerca-tempo-testo { flex-wrap: wrap; }
+.cerca-tempo-comandi { display: flex; gap: 4px; margin-right: auto; }
+.cerca-tempo-comandi .terremoti-pf-icona { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 28px; padding: 0; border: 1px solid var(--border); border-radius: var(--r-xs, 4px); background: var(--surface, #fff); color: var(--accent-strong, var(--accent)); cursor: pointer; }
+.cerca-tempo-comandi .terremoti-pf-icona:hover, .cerca-tempo-comandi .terremoti-pf-icona:focus-visible { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.cerca-tempo-comandi .terremoti-pf-icona svg { display: block; }
+.cerca-tempo-comandi .terremoti-pf-velocita { width: auto; min-width: 34px; padding: 0 6px; font: inherit; font-size: var(--fs-xs); font-weight: 600; font-variant-numeric: tabular-nums; }
 .cerca-tempo-date { font-size: var(--fs-sm); color: var(--text-muted); text-align: right; }
-.cerca-tempo-traccia { position: relative; height: 6px; border-radius: 3px; background: var(--border); overflow: hidden; }
-.cerca-tempo-traccia i { position: absolute; top: 0; bottom: 0; border-radius: 3px; background: var(--accent); transition: left .1s linear, width .1s linear; }
+.cerca-tempo-traccia { position: relative; height: 30px; border-radius: 6px; background: color-mix(in srgb, var(--border) 55%, transparent); overflow: hidden; }
+.cerca-tempo-barre { position: absolute; inset: 0; display: flex; align-items: flex-end; gap: 1px; padding: 2px 1px 0; }
+.cerca-tempo-barre i { flex: 1 1 0; min-width: 0; border-radius: 1px 1px 0 0; background: var(--accent); opacity: .85; transition: opacity .1s linear; }
+.cerca-tempo-barre i.fuori { opacity: .2; }
+.cerca-tempo-tacche i { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--text-muted); opacity: .5; }
+.cerca-tempo-mesi { position: relative; height: 12px; margin-top: -2px; font-size: var(--fs-xs); line-height: 12px; color: var(--text-muted); text-transform: capitalize; }
+.cerca-tempo-mesi span { position: absolute; top: 0; padding-left: 3px; white-space: nowrap; }
+.cerca-tempo-mesi span.inizio { padding-left: 0; }
 #cerca-risultati {
   position: absolute; bottom: calc(100% + 10px); left: 0; right: 0; list-style: none; margin: 0; padding: 4px 0;
   max-height: 300px; overflow-y: auto; background: var(--surface); border: 1px solid var(--border-ui); border-radius: var(--r-md); box-shadow: var(--ombra);
