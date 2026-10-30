@@ -2915,3 +2915,5 @@ canvas.grafico-3d.trascina { cursor: grabbing; }
 .ultimo-evento-testi { display: flex; flex-direction: column; min-width: 0; }
 .ultimo-evento-luogo { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
 .ultimo-evento-quando { color: var(--text-muted); }
+/* telefono: la legenda ridotta è solo la barra «Legenda», stretta così non tocca il riquadro titolo/coordinate a destra */
+@media (max-width: 720px) { #legende-box.ridotta { width: 128px; } }
