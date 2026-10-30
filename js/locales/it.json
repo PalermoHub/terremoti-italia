@@ -1502,7 +1502,7 @@
   "raggio.attivo": "Cerca eventi attorno a un punto",
   "raggio.descrizione": "Al clic sulla mappa mostra i terremoti entro il raggio scelto.",
   "raggio.titolo": "Eventi entro {r}",
-  "raggio.vuoto": "Nessun evento entro {r} dal punto cliccato.",
+  "raggio.vuoto": "Nessun evento entro {r} dal punto cliccato. Prova ad allargare il raggio o il periodo.",
   "raggio.apri": "Apri l'evento: {luogo}",
   "raggio.mag": "M {m}",
   "raggio.nota": "Tocca un evento per aprire la sua scheda.",

@@ -1502,7 +1502,7 @@
   "raggio.attivo": "Search events around a point",
   "raggio.descrizione": "On a map click, show the earthquakes within the chosen radius.",
   "raggio.titolo": "Events within {r}",
-  "raggio.vuoto": "No events within {r} of the clicked point.",
+  "raggio.vuoto": "No events within {r} of the clicked point. Try a wider radius or period.",
   "raggio.apri": "Open event: {luogo}",
   "raggio.mag": "M {m}",
   "raggio.nota": "Tap an event to open its card.",

@@ -10,7 +10,7 @@ export const CHIAVE_ATTIVO = 'dt-raggio-attivo';
 export const RAGGIO_MIN = 200; // metri
 export const RAGGIO_MAX = 50000;
 export const RAGGIO_PASSO = 50;
-export const RAGGIO_INIZIALE = 10000; // metri: per i terremoti un raggio urbano non troverebbe quasi mai nulla
+export const RAGGIO_INIZIALE = 30000; // metri: per i terremoti un raggio urbano non troverebbe quasi mai nulla, e con 10 km e pochi giorni quasi ovunque la lista è vuota
 export const EVENTO_RAGGIO = 'dt:raggio'; // sul document a ogni modifica (raggio, cerchio o interruttore): la scheda aperta si rifà
 export const MASSIMO_VICINI = 50; // righe in scheda: oltre non si leggono, e con uno sciame sarebbero migliaia
 
