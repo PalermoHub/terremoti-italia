@@ -24,6 +24,11 @@
 #tabella-dati .tabella-griglia tbody tr.tabella-evidenza { background: color-mix(in srgb, #dc2626 12%, transparent); font-weight: 700; box-shadow: inset 4px 0 0 #dc2626; } /* evento M ≥ 5: stesso rosso della classe in mappa (core/magnitudo.js) */
 #tabella-dati .tabella-griglia tbody tr.tabella-evidenza:hover { background: color-mix(in srgb, #dc2626 20%, transparent); }
 #tabella-dati .tabella-griglia tbody tr.tabella-evidenza[aria-selected="true"] { background: color-mix(in srgb, #dc2626 24%, var(--accent-soft)); }
+/* intestazioni ordinabili: freccia ⇅ discreta sulle colonne non ordinate, evidenziata al passaggio del mouse */
+#tabella-dati .tabella-ordina { display: inline-flex; align-items: center; gap: 4px; }
+#tabella-dati th:not([aria-sort]) .tabella-ordina::after { content: "⇅"; color: var(--text-muted); opacity: .6; font-size: var(--fs-xs); font-weight: 400; }
+#tabella-dati .tabella-ordina:hover { color: var(--accent-strong); text-decoration: underline; text-underline-offset: 3px; }
+#tabella-dati .tabella-ordina:hover::after { color: var(--accent-strong); opacity: 1; }
 #tabella-dati .tabella-num { text-align: right; font-variant-numeric: tabular-nums; }
 #tabella-dati .tabella-griglia td.tabella-num { white-space: nowrap; }
 #tabella-dati .tabella-casella { width: 32px; }
