@@ -1,0 +1,248 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-30T01:05:13+00:00",
+  "title": "Design System: Terremoti Italia",
+  "extensions": {
+    "colorMeta": {
+      "accent": {
+        "role": "primary",
+        "displayName": "Ambra Segnale",
+        "canonical": "#f5a623",
+        "tonalRamp": [
+          "#1b150c",
+          "#393128",
+          "#654e2f",
+          "#956b32",
+          "#c78a2e",
+          "#f9ac35",
+          "#fdd7a6",
+          "#fdf0df"
+        ]
+      },
+      "accent-strong": {
+        "role": "primary",
+        "displayName": "Ambra Bruciato",
+        "canonical": "#b45309",
+        "tonalRamp": [
+          "#270e02",
+          "#522405",
+          "#823b07",
+          "#b5550f",
+          "#cf8358",
+          "#e8af92",
+          "#fbd5c1",
+          "#fdeee7"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Inchiostro Notte",
+        "canonical": "#1b1f24",
+        "tonalRamp": [
+          "#13161b",
+          "#2f3339",
+          "#4e5359",
+          "#70757b",
+          "#94999f",
+          "#b9bec5",
+          "#d9dfe6",
+          "#edf2f9"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Carta Piena Luce",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#161616",
+          "#333333",
+          "#525252",
+          "#747474",
+          "#989898",
+          "#bebebe",
+          "#dedede",
+          "#f2f2f2"
+        ]
+      },
+      "blu-dati": {
+        "role": "secondary",
+        "displayName": "Blu Dati",
+        "canonical": "#1971c2",
+        "tonalRamp": [
+          "#03172c",
+          "#08345d",
+          "#115492",
+          "#2677c5",
+          "#649cda",
+          "#9ac2ee",
+          "#c8e1fd",
+          "#eaf3fd"
+        ]
+      },
+      "focus": {
+        "role": "secondary",
+        "displayName": "Blu Fuoco",
+        "canonical": "#0b5fff",
+        "tonalRamp": [
+          "#02123a",
+          "#042a78",
+          "#0745bc",
+          "#1b65f9",
+          "#5f95fc",
+          "#9dbefb",
+          "#cedffe",
+          "#ebf2ff"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "body": {
+        "displayName": "Corpo",
+        "purpose": "Interfaccia: pannelli, legende, pulsanti (Montserrat)."
+      },
+      "data": {
+        "displayName": "Dati",
+        "purpose": "Numeri e valori dei grafici (Atkinson Hyperlegible)."
+      }
+    },
+    "shadows": [
+      {
+        "name": "ombra",
+        "value": "0 4px 24px rgba(0, 0, 0, .12)",
+        "purpose": "Pannelli e controlli flottanti sopra la mappa."
+      },
+      {
+        "name": "ombra-tooltip",
+        "value": "0 4px 18px rgba(30, 50, 110, .12)",
+        "purpose": "Tooltip e popup."
+      },
+      {
+        "name": "ombra-pannello-dx",
+        "value": "-8px 0 28px rgba(20, 30, 60, .14)",
+        "purpose": "Scheda ancorata a destra."
+      },
+      {
+        "name": "ombra-pannello-sx",
+        "value": "8px 0 28px rgba(20, 30, 60, .14)",
+        "purpose": "Pannello ancorato a sinistra."
+      }
+    ],
+    "motion": [
+      {
+        "name": "t-rapida",
+        "value": ".12s",
+        "purpose": "Hover e cambi di colore dei controlli."
+      },
+      {
+        "name": "t-media",
+        "value": ".2s",
+        "purpose": "Aperture di pannelli e menu."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "telefono",
+        "value": "720px"
+      },
+      {
+        "name": "tablet",
+        "value": "1099px"
+      },
+      {
+        "name": "desktop-stretto",
+        "value": "1180px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Barra di ricerca",
+      "kind": "nav",
+      "refersTo": "search-bar",
+      "description": "Pillola bianca flottante in basso al centro con pulsante Filtri ambra.",
+      "html": "<div class=\"ds-cerca\"><span class=\"ds-cerca-testo\">Cerca comune, provincia o regione…</span><button class=\"ds-filtri\" type=\"button\">Filtri</button></div>",
+      "css": ".ds-cerca{display:flex;align-items:center;gap:8px;padding:6px;border:1px solid var(--border-ui,#d6d6e8);border-radius:999px;background:var(--surface,#fff);box-shadow:0 4px 24px rgba(0,0,0,.12);font:600 13px Montserrat,system-ui,sans-serif;color:var(--text-muted,#5b6570)}.ds-cerca-testo{flex:1;padding-left:12px}.ds-filtri{height:36px;padding:0 14px;border:0;border-radius:999px;background:var(--accent,#f5a623);color:var(--accent-ink,#1a1206);font:600 13px Montserrat,system-ui,sans-serif;cursor:pointer}.ds-filtri:hover{filter:brightness(.96)}.ds-filtri:focus-visible{outline:2px solid var(--focus,#0b5fff);outline-offset:2px}"
+    },
+    {
+      "name": "Pulsante strumento",
+      "kind": "button",
+      "refersTo": "tool-button",
+      "description": "Cerchio 36px bianco con bordo sottile e ombra; ambra quando attivo.",
+      "html": "<button class=\"ds-strumento\" type=\"button\" aria-label=\"Info\"><svg viewBox=\"0 0 24 24\" width=\"18\" height=\"18\" fill=\"currentColor\" aria-hidden=\"true\"><path d=\"M11 7h2v2h-2zm0 4h2v6h-2zm1-9C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z\"/></svg></button>",
+      "css": ".ds-strumento{width:36px;height:36px;display:grid;place-items:center;border:1px solid var(--border,#d0d7de);border-radius:50%;background:var(--surface,#fff);color:var(--text-muted,#5b6570);box-shadow:0 4px 24px rgba(0,0,0,.12);cursor:pointer;transition:background .12s,border-color .12s,color .12s}.ds-strumento:hover{border-color:var(--accent,#f5a623);background:rgba(245,166,35,.14);color:#b45309}.ds-strumento:focus-visible{outline:2px solid var(--focus,#0b5fff);outline-offset:2px}"
+    },
+    {
+      "name": "Badge magnitudo",
+      "kind": "chip",
+      "refersTo": "badge-mag",
+      "description": "Pillola a tinta piena con il colore della classe di magnitudo; testo bianco o scuro secondo la luminanza.",
+      "html": "<span class=\"ds-badge\" style=\"--tinta:#f97316;--testo-tinta:#fff\">M 3,4</span>",
+      "css": ".ds-badge{display:inline-block;padding:0 8px;border-radius:999px;font:700 12px Atkinson Hyperlegible,system-ui,sans-serif;font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--testo-tinta);background:var(--tinta);border:1px solid color-mix(in srgb,var(--tinta) 70%,#000)}"
+    },
+    {
+      "name": "Riga ultimo evento",
+      "kind": "card",
+      "refersTo": "latest-event",
+      "description": "Riga cliccabile in legenda: badge magnitudo, luogo e tempo trascorso.",
+      "html": "<button class=\"ds-ultimo\" type=\"button\"><span class=\"ds-badge\" style=\"--tinta:#fbbf24;--testo-tinta:#1f2937\">2,1</span><span class=\"ds-testi\"><span class=\"ds-luogo\">Tirreno Meridionale [Mare]</span><span class=\"ds-quando\">38 minuti fa</span></span></button>",
+      "css": ".ds-ultimo{display:flex;align-items:center;gap:8px;width:260px;padding:6px 8px;border:1px solid var(--border-ui,#d6d6e8);border-radius:8px;background:var(--surface-alt,#fafbfd);color:var(--text,#1b1f24);font:12px Montserrat,system-ui,sans-serif;text-align:left;cursor:pointer}.ds-ultimo:hover{border-color:var(--accent,#f5a623);background:rgba(245,166,35,.14)}.ds-ultimo:focus-visible{outline:2px solid var(--focus,#0b5fff);outline-offset:2px}.ds-testi{display:flex;flex-direction:column;min-width:0}.ds-luogo{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}.ds-quando{color:var(--text-muted,#5b6570)}.ds-badge{display:inline-block;padding:0 8px;border-radius:999px;font:700 12px Atkinson Hyperlegible,system-ui,sans-serif;color:var(--testo-tinta);background:var(--tinta);border:1px solid color-mix(in srgb,var(--tinta) 70%,#000)}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Il Sismografo in piena luce",
+    "overview": "Strumento scientifico che si legge a colpo d'occhio. La mappa chiara occupa tutto lo schermo; i controlli sono fogli bianchi che galleggiano sopra di essa; un solo segnale ambra indica ciò che è attivo o primario. I numeri sono in un carattere pensato per la leggibilità. Niente decorazione: ogni elemento serve a leggere un dato o a muoversi fra i dati.\n\nLa densità è media: molti strati e filtri, ma un solo pannello laterale aperto alla volta. Il tono è sobrio e preciso, mai allarmistico: è informazione, non allerta. Il tema scuro sostituisce solo i token e mantiene la stessa struttura.",
+    "keyCharacteristics": [
+      "Mappa a tutto schermo, interfaccia come fogli sopra di essa.",
+      "Un solo accento (ambra), usato per stato attivo e azione primaria.",
+      "Colore dei dati ben distinto dal colore dell'interfaccia: la magnitudo ha la sua rampa.",
+      "Testo UI almeno 12px; numeri in Atkinson Hyperlegible.",
+      "Tema chiaro predefinito, tema scuro a token."
+    ],
+    "rules": [
+      {
+        "name": "The One Signal Rule",
+        "body": "L'ambra marca ciò che è attivo o primario, e basta. Non si usa come decorazione né come colore di dato.",
+        "section": "colors"
+      },
+      {
+        "name": "The Data Owns Its Colors Rule",
+        "body": "Il colore forte vive nei dati (magnitudo, età). L'interfaccia resta neutra, così i cerchi si leggono sempre.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two Ambers Rule",
+        "body": "Riempimento = Ambra Segnale con testo scuro; testo e icone su bianco = Ambra Bruciato. Mai testo ambra chiaro su bianco.",
+        "section": "colors"
+      },
+      {
+        "name": "The Twelve Pixel Floor Rule",
+        "body": "Il testo dell'interfaccia non scende sotto 12px. Le etichette di assi SVG possono arrivare a 10px, mai meno.",
+        "section": "typography"
+      },
+      {
+        "name": "The Tabular Numbers Rule",
+        "body": "Magnitudi, conteggi e orari usano cifre tabulari, così le colonne restano allineate.",
+        "section": "typography"
+      },
+      {
+        "name": "The Floating Sheet Rule",
+        "body": "Ombra solo su ciò che sta sopra la mappa. Dentro un pannello la separazione la fanno bordi sottili e superfici alternate, non altre ombre.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** usare l'ambra solo per stato attivo e azione primaria, con testo #1a1206 sopra.",
+      "**Do** usare la rampa magnitudo per ogni elemento che rappresenta una magnitudo (cerchi, badge, istogrammi).",
+      "**Do** mantenere ogni testo UI a 12px o più e i bersagli touch a 44px.",
+      "**Do** dare ai nuovi livelli un token `--z-*` e ai nuovi valori un token `--fs-*` esistente.",
+      "**Do** fornire ogni testo nuovo in italiano e inglese e citare ogni fonte nel modale Info."
+    ],
+    "donts": [
+      "**Don't** usare l'ambra come colore di un dato o come decorazione.",
+      "**Don't** aggiungere ombre dentro i pannelli: separare con bordi e superfici alternate.",
+      "**Don't** usare testo ambra chiaro su fondo bianco (contrasto insufficiente).",
+      "**Don't** introdurre colori fuori dalla palette (viola, magenta, indaco) senza un ruolo semantico: l'evidenza è magenta, il pulsante 3D è indaco, e basta.",
+      "**Don't** usare toni sensazionalistici o rossi di allarme per dati ordinari: l'app informa, non allerta."
+    ]
+  }
+}
