@@ -809,6 +809,11 @@ body:has(#scheda:not([hidden])) .traffico-popup-box { z-index: 1; } /* ma sotto 
 #barra-strumenti button svg { width: 18px; height: 18px; }
 #barra-strumenti button:hover { border-color: var(--accent); background: var(--accent-soft); color: var(--accent-strong); }
 #barra-strumenti button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
+#barra-strumenti #btn-tabella:not([aria-pressed="true"]) { width: auto; min-width: 32px; padding: 0 10px; gap: 6px; border-radius: 16px; border-color: var(--accent); background: var(--accent); color: var(--accent-ink); box-shadow: 0 0 0 3px var(--accent-soft); animation: tabella-pulsa 2.4s ease-in-out infinite; } /* in evidenza: la Lista Terremoti è il percorso principale */
+#barra-strumenti #btn-tabella:not([aria-pressed="true"])::after { content: attr(title); font-size: var(--fs-xs); font-weight: 700; }
+#barra-strumenti #btn-tabella:not([aria-pressed="true"]):hover { background: var(--accent-strong); border-color: var(--accent-strong); color: var(--accent-strong-ink); }
+@keyframes tabella-pulsa { 50% { box-shadow: 0 0 0 6px transparent; } }
+@media (prefers-reduced-motion: reduce) { #barra-strumenti #btn-tabella { animation: none !important; } }
 @media (pointer: coarse) { #barra-strumenti button { width: 44px; height: 44px; } }
 
 

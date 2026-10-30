@@ -160,7 +160,7 @@ export function colonneTabellaTerremoti({ anno = false } = {}) {
   return [
     { id: 'data', etichetta: t('tabella.col.data'), valore: p => Number(dataIsoTabella(p.ts).replaceAll('-', '')), testo: p => dataTabella(p.ts), json: p => dataIsoTabella(p.ts), visibile: true, numerica: true },
     { id: 'ora', etichetta: t('tabella.col.ora'), valore: p => minutiTabella(p.ts), testo: p => oraTabella(p.ts), json: p => oraIsoTabella(p.ts), visibile: true, numerica: true },
-    { id: 'mag', etichetta: t('tabella.col.mag'), valore: p => p.mag, testo: p => misuraTabella(p.mag), visibile: true, numerica: true },
+    { id: 'mag', etichetta: t('tabella.col.mag'), valore: p => p.mag, testo: p => misuraTabella(p.mag), evidenza: p => p.mag >= 5, visibile: true, numerica: true },
     { id: 'prof', etichetta: t('tabella.col.prof'), valore: p => p.prof ?? null, testo: p => misuraTabella(p.prof), visibile: true, numerica: true },
     { id: 'luogo', etichetta: t('tabella.col.luogo'), valore: p => p.luogo ?? '', testo: p => p.luogo || '—', visibile: true },
     colonnaTerritorio('regione', 'regione'),

@@ -21,6 +21,9 @@
 #tabella-dati .tabella-griglia tbody tr[aria-selected="true"] { background: var(--accent-soft); }
 #tabella-dati .tabella-griglia tbody tr[aria-selected="true"]:hover { background: color-mix(in srgb, var(--accent) 22%, transparent); }
 #tabella-dati .tabella-griglia tbody tr[aria-current="true"] { outline: 2px solid var(--accent); outline-offset: -2px; }
+#tabella-dati .tabella-griglia tbody tr.tabella-evidenza { background: color-mix(in srgb, #dc2626 12%, transparent); font-weight: 700; box-shadow: inset 4px 0 0 #dc2626; } /* evento M ≥ 5: stesso rosso della classe in mappa (core/magnitudo.js) */
+#tabella-dati .tabella-griglia tbody tr.tabella-evidenza:hover { background: color-mix(in srgb, #dc2626 20%, transparent); }
+#tabella-dati .tabella-griglia tbody tr.tabella-evidenza[aria-selected="true"] { background: color-mix(in srgb, #dc2626 24%, var(--accent-soft)); }
 #tabella-dati .tabella-num { text-align: right; font-variant-numeric: tabular-nums; }
 #tabella-dati .tabella-griglia td.tabella-num { white-space: nowrap; }
 #tabella-dati .tabella-casella { width: 32px; }

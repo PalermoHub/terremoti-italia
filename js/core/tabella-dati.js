@@ -373,6 +373,7 @@ export function collegaTabellaDati({ bottone: comando, fornitori = [] } = {}) {
       for (const c of colonne) {
         const td = el('td', c.numerica ? 'tabella-num' : null, mostra(c, riga));
         if (c.numerica) td.title = mostra(c, riga);
+        if (c.evidenza?.(riga)) tr.classList.add('tabella-evidenza');
         tr.append(td);
       }
       const apri = () => {
