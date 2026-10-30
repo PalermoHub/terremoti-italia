@@ -839,6 +839,8 @@ body:has(#scheda:not([hidden])) .traffico-popup-box { z-index: 1; } /* ma sotto 
 .legende-raggio-attivo:has(input:checked) { animation: none; }
 /* ricerca attorno a un punto accesa: crocicchio su tutta la mappa, anche sopra gli eventi (che altrimenti mostrano la manina) */
 body.raggio-attivo .maplibregl-canvas, body.raggio-attivo .maplibregl-canvas:active { cursor: crosshair !important; }
+/* numero di eventi al centro del cerchio, a scheda chiusa */
+.cerchio-etichetta { padding: 5px 12px; border: 2px solid var(--accent); border-radius: var(--r-pill); background: var(--surface); color: var(--accent-strong); font-size: var(--fs-sm); font-weight: 700; white-space: nowrap; box-shadow: var(--ombra); pointer-events: none; }
 #legende-raggio .legende-raggio-filtri { grid-template-columns: 1fr; gap: 6px; margin: 4px 0 0; padding-top: 6px; border-top: 1px solid var(--border-ui); }
 @media (prefers-reduced-motion: reduce) { .legende-raggio-attivo { animation: none !important; } }
 #legende { position: static; max-width: none; padding: 0 10px 8px; overflow-y: auto; min-height: 0; }

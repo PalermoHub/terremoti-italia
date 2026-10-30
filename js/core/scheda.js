@@ -10,7 +10,7 @@ import { featureVicine } from './scheda-util.js';
 import { el, icona, sincronizzaStrato, acceseDaScheda, spegniStratiDaScheda, creaInterruttoreStrato, disegnaSezione } from './scheda-disegno.js';
 import { ICONA_X } from './scheda-pannello-preferenze.js';
 import { t as tr, tl } from './i18n.js';
-import { mostraCerchio, nascondiCerchio } from './cerchio-raggio.js';
+import { mostraCerchio, nascondiCerchio, mostraEtichetta, nascondiEtichetta } from './cerchio-raggio.js';
 import { raggioVicini, raggioAttivo, cerchioVisibile, EVENTO_RAGGIO, eventiVicini, voceEventiVicini } from './raggio-vicini.js';
 import { inModoEmergenza, moduliAlClic } from './modo-emergenza.js';
 import { clicCatturato } from './cattura-clic.js';
@@ -468,9 +468,12 @@ export function collegaScheda(map, moduli, contenitore, opzioni = {}) {
     }
     // La ricerca nel raggio (core/raggio-vicini.js) mette in scheda gli eventi entro il cerchio; se il clic ha preso
     // un evento, la lista gli sta subito sotto, così la sua scheda resta la prima cosa che si legge.
+    let totaleVicini = null; // eventi nel raggio, scritti al centro del cerchio quando la scheda si chiude
     if (raggioAttivo()) {
       const raggio = raggioVicini();
-      const voce = voceEventiVicini(eventiVicini(conScheda, lngLat, raggio), raggio);
+      const vicini = eventiVicini(conScheda, lngLat, raggio);
+      totaleVicini = vicini.totale;
+      const voce = voceEventiVicini(vicini, raggio);
       const iEvento = voci.findIndex(v => v.evento);
       voci.splice(iEvento >= 0 ? iEvento + 1 : 0, 0, voce);
     }
@@ -482,7 +485,12 @@ export function collegaScheda(map, moduli, contenitore, opzioni = {}) {
     if (interrogabili.length) voci.push(rndt.segnaposto()); // la scheda si apre subito: le risposte dei servizi arrivano dopo
     let raggioCerchio = null; // metri, se il cerchio dei vicini è in mappa
     const adattaVista = centro => adattaVistaMappa(map, centro, raggioCerchio);
-    const chiudiScheda = () => { spegniStratiDaScheda(); aggiornaUrl(null); document.dispatchEvent(new CustomEvent('scheda:chiusa')); contenitore.hidden = true; contenitore.classList.remove('scheda-piena'); cancellaEvidenza(map); nascondiCerchio(map); adattaVista(); };
+    // a scheda chiusa il cerchio della ricerca resta in mappa, con il numero di eventi trovati al centro (si toglie con l'interruttore o al clic seguente)
+    const chiudiCerchio = () => {
+      if (raggioAttivo() && cerchioVisibile() && totaleVicini != null && raggioCerchio) mostraEtichetta(map, lngLat, tr(totaleVicini ? (totaleVicini === 1 ? 'raggio.dentro.uno' : 'raggio.dentro.altri') : 'raggio.dentro.zero', { n: totaleVicini }));
+      else nascondiCerchio(map);
+    };
+    const chiudiScheda = () => { spegniStratiDaScheda(); aggiornaUrl(null); document.dispatchEvent(new CustomEvent('scheda:chiusa')); contenitore.hidden = true; contenitore.classList.remove('scheda-piena'); cancellaEvidenza(map); chiudiCerchio(); adattaVista(); };
     const dati = unisci(voci);
     if (!dati.sezioni.length) { // clic su un punto vuoto
       chiudiScheda();
@@ -499,7 +507,7 @@ export function collegaScheda(map, moduli, contenitore, opzioni = {}) {
     // Ricerca nel raggio accesa: il cerchio resta sotto all'evidenza; spenta, si toglie e la scheda torna quella del punto
     if (!fuori && raggioAttivo()) {
       raggioCerchio = raggioVicini();
-      if (cerchioVisibile()) mostraCerchio(map, lngLat, raggioCerchio);
+      if (cerchioVisibile()) { mostraCerchio(map, lngLat, raggioCerchio); nascondiEtichetta(); } // a scheda aperta la lista è in scheda
       else nascondiCerchio(map);
     } else nascondiCerchio(map);
     evidenzia(map, scelte);
