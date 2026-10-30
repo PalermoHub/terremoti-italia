@@ -305,31 +305,11 @@ dialog li { margin: 4px 0; }
 #cerca-filtri[aria-expanded="true"] { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 35%, transparent); }
 /* durante la riproduzione della timeline la barra di ricerca cede il posto ad anno e date della finestra */
 @media (min-width: 721px) and (not ((pointer: coarse) and (max-height: 500px))) { body.timeline-in-corso #cerca, body.timeline-in-corso #cerca-pannello { display: none; } }
-@media (max-width: 720px), (pointer: coarse) and (max-height: 500px) { .cerca-tempo { display: none !important; } } /* telefono (anche ruotato): niente barra della timeline sopra la mappa (i comandi restano nel filtro del pannello) e la ricerca resta al suo posto */
 .cerca-tempo { display: flex; flex-direction: column; gap: 8px; padding: 10px 18px 12px; background: var(--surface); border: 1px solid var(--border-ui); border-radius: var(--r-lg, 20px); box-shadow: var(--ombra); }
 .cerca-tempo[hidden] { display: none; }
-.cerca-tempo-testo { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
-.cerca-tempo-anno { font-size: 28px; line-height: 1; font-weight: 700; color: var(--accent-strong); font-variant-numeric: tabular-nums; }
 @media (min-width: 721px) {
-  body.timeline-in-corso #area-ricerca { width: clamp(340px, calc(100vw - var(--scheda-l) - var(--sx) - 150px), 560px); } /* più larga della ricerca: comandi, anno e date stanno su un rigo */
+  body.timeline-in-corso #area-ricerca { width: clamp(340px, calc(100vw - var(--scheda-l) - var(--sx) - 150px), 640px); } /* più larga della ricerca: comandi, anno e date stanno su un rigo */
 }
-.cerca-tempo-testo { flex-wrap: wrap; }
-.cerca-tempo-comandi { display: flex; gap: 4px; margin-right: auto; }
-.cerca-tempo-comandi .terremoti-pf-icona { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 28px; padding: 0; border: 1px solid var(--border); border-radius: var(--r-xs, 4px); background: var(--surface, #fff); color: var(--accent-strong, var(--accent)); cursor: pointer; }
-.cerca-tempo-comandi .terremoti-pf-icona:hover, .cerca-tempo-comandi .terremoti-pf-icona:focus-visible { background: color-mix(in srgb, var(--accent) 12%, transparent); }
-.cerca-tempo-comandi .terremoti-pf-icona svg { display: block; }
-.cerca-tempo-comandi .terremoti-pf-velocita { width: auto; min-width: 34px; padding: 0 6px; font: inherit; font-size: var(--fs-xs); font-weight: 600; font-variant-numeric: tabular-nums; }
-.cerca-tempo-date { font-size: var(--fs-sm); color: var(--text-muted); text-align: right; }
-.cerca-tempo-traccia { position: relative; height: 30px; border-radius: 6px; background: color-mix(in srgb, var(--border) 55%, transparent); overflow: hidden; }
-.cerca-tempo-barre { position: absolute; inset: 0; display: flex; align-items: flex-end; gap: 1px; padding: 2px 0 0; }
-.cerca-tempo-barre i { flex: 1 1 0; min-width: 0; border-radius: 1px 1px 0 0; background: var(--accent); opacity: .85; transition: opacity .1s linear; }
-.cerca-tempo-barre i.fuori { opacity: .2; }
-.cerca-tempo-tacche i { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--text-muted); opacity: .5; }
-.cerca-tempo-lente { position: absolute; top: 0; bottom: 0; padding: 0; border: 0; border-radius: 6px; background: color-mix(in srgb, var(--accent) 14%, transparent); box-shadow: inset 0 0 0 2px var(--accent); cursor: pointer; transition: left .1s linear, width .1s linear; }
-.cerca-tempo-lente:hover, .cerca-tempo-lente:focus-visible { background: color-mix(in srgb, var(--accent) 28%, transparent); }
-.cerca-tempo-mesi { position: relative; height: 12px; margin-top: -2px; font-size: var(--fs-xs); line-height: 12px; color: var(--text-muted); text-transform: capitalize; }
-.cerca-tempo-mesi span { position: absolute; top: 0; padding-left: 3px; white-space: nowrap; }
-.cerca-tempo-mesi span.inizio { padding-left: 0; }
 #cerca-risultati {
   position: absolute; bottom: calc(100% + 10px); left: 0; right: 0; list-style: none; margin: 0; padding: 4px 0;
   max-height: 300px; overflow-y: auto; background: var(--surface); border: 1px solid var(--border-ui); border-radius: var(--r-md); box-shadow: var(--ombra);
@@ -2284,7 +2264,86 @@ a.scheda-badge-tinta:hover, a.scheda-badge-tinta:focus-visible { background: col
 .legenda .terremoti-pf-icona { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 28px; padding: 0; border: 1px solid var(--border); border-radius: var(--r-xs, 4px); background: var(--surface, #fff); color: var(--accent-strong, var(--accent)); cursor: pointer; }
 .legenda .terremoti-pf-icona:hover, .legenda .terremoti-pf-icona:focus-visible { background: color-mix(in srgb, var(--accent) 12%, transparent); }
 .legenda .terremoti-pf-icona svg { display: block; }
-.legenda .terremoti-pf-velocita { width: auto; min-width: 34px; padding: 0 6px; font: inherit; font-size: var(--fs-xs); font-weight: 600; font-variant-numeric: tabular-nums; }
+.legenda .terremoti-pf-velocita { width: auto; white-space: nowrap; min-width: 34px; padding: 0 6px; font: inherit; font-size: var(--fs-xs); font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Timeline dei terremoti (timetile): intervallo in grande, preset, comandi, istogramma impilato con finestra trascinabile, legenda a classi */
+.cerca-tempo.timetile { gap: 10px; padding: 12px 14px; }
+.cerca-tempo.timetile.ridotta { flex-direction: row; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 4px 12px; padding: 8px 14px; }
+.cerca-tempo.timetile.ridotta .tt-intervallo { font-size: 1.5rem; }
+.cerca-tempo.timetile.ridotta .tt-riga2 { flex: 0 0 auto; }
+.cerca-tempo.timetile p { margin: 0; text-align: left; }
+.timetile .tt-testa { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 12px; }
+.timetile .tt-titolo { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; }
+.timetile .tt-riga { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+.timetile .tt-intervallo { font-family: var(--font-ui, 'Montserrat', system-ui, sans-serif); font-size: 2.1rem; line-height: 1.1; font-weight: 800; color: var(--accent-strong); font-variant-numeric: tabular-nums; }
+.timetile .tt-anno { font-size: var(--fs-sm); font-weight: 600; color: var(--text-muted); }
+.timetile .tt-sotto { font-size: var(--fs-sm); color: var(--text-muted); }
+.timetile .tt-preset { display: flex; flex-wrap: wrap; gap: 6px; }
+.timetile .tt-preset[hidden], .timetile .tt-corpo[hidden] { display: none; }
+.timetile .tt-chip, .timetile .tt-btn, .timetile .tt-riduci, .timetile .tt-velocita { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; padding: 0 9px; border: 1px solid var(--border-ui); border-radius: var(--r-sm); background: var(--surface); color: var(--text); font: inherit; font-size: var(--fs-sm); font-weight: 600; cursor: pointer; }
+.timetile .tt-btn { white-space: nowrap; }
+.timetile .tt-chip { min-width: 44px; border-radius: var(--r-pill); }
+.timetile .tt-chip.attivo { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.timetile .tt-chip:hover, .timetile .tt-btn:hover, .timetile .tt-riduci:hover { background: var(--surface-hover); }
+.timetile .tt-chip.attivo:hover { background: var(--accent); filter: brightness(1.08); }
+.timetile .tt-chip:focus-visible, .timetile .tt-btn:focus-visible, .timetile .tt-riduci:focus-visible, .timetile .tt-velocita:focus-visible, .timetile .tt-voce:focus-visible, .timetile .tt-finestra:focus-visible, .timetile .tt-maniglia:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 2px; }
+.timetile .tt-punto { width: 8px; height: 8px; border: 0; border-radius: 50%; background: #e03131; }
+.timetile .tt-riduci { margin-left: auto; font-weight: 500; color: var(--text-muted); }
+.timetile .tt-corpo { display: flex; flex-direction: column; gap: 10px; }
+.timetile .tt-comandi { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; }
+.timetile .tt-avvia[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); }
+.timetile .tt-etichetta-vel { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-sm); color: var(--text-muted); }
+.timetile .tt-velocita { padding: 0 8px; }
+.timetile .tt-grafico { position: relative; height: 92px; border-radius: var(--r-sm); background: color-mix(in srgb, var(--border) 45%, transparent); overflow: hidden; touch-action: none; }
+.timetile .tt-barre { position: absolute; inset: 4px 2px 0; display: flex; align-items: flex-end; gap: 1px; }
+.timetile .tt-col { flex: 1 1 0; min-width: 0; height: 100%; display: flex; flex-direction: column-reverse; justify-content: flex-start; }
+.timetile .tt-col i { display: block; width: 100%; min-height: 0; border: 0; flex: 0 0 auto; }
+.timetile .tt-col i.alta { min-height: 3px; }
+.timetile .tt-barre.spenta-0 i[data-c="0"], .timetile .tt-barre.spenta-1 i[data-c="1"], .timetile .tt-barre.spenta-2 i[data-c="2"], .timetile .tt-barre.spenta-3 i[data-c="3"], .timetile .tt-barre.spenta-4 i[data-c="4"] { opacity: .15; }
+.timetile .tt-finestra { position: absolute; top: 0; bottom: 0; display: block; box-sizing: border-box; min-width: 28px; border: 2px solid var(--accent-strong); border-radius: var(--r-sm); background: color-mix(in srgb, var(--accent) 16%, transparent); cursor: grab; touch-action: none; }
+.timetile .tt-finestra:active { cursor: grabbing; }
+.timetile .tt-maniglia { position: absolute; top: 0; bottom: 0; width: 14px; display: flex; align-items: center; justify-content: center; cursor: ew-resize; touch-action: none; background: var(--accent-strong); }
+.timetile .tt-maniglia.sx { left: -2px; border-radius: var(--r-sm) 0 0 var(--r-sm); }
+.timetile .tt-maniglia.dx { right: -2px; border-radius: 0 var(--r-sm) var(--r-sm) 0; }
+.timetile .tt-maniglia i { width: 2px; height: 16px; border: 0; border-radius: 1px; background: var(--accent-strong-ink); box-shadow: 4px 0 0 var(--accent-strong-ink); transform: translateX(-2px); }
+.timetile .tt-asse { position: relative; height: 14px; font-size: var(--fs-xs); line-height: 14px; color: var(--text-muted); }
+.timetile .tt-asse span { position: absolute; top: 0; transform: translateX(-50%); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.timetile .tt-legenda { display: flex; flex-wrap: wrap; gap: 4px 6px; }
+.timetile .tt-voce { display: inline-flex; align-items: center; gap: 5px; min-height: 36px; padding: 0 8px; border: 0; border-radius: var(--r-sm); background: none; color: var(--text-muted); font: inherit; font-size: var(--fs-sm); cursor: pointer; }
+.timetile .tt-voce:hover { background: var(--surface-hover); }
+.timetile .tt-voce b { font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+.timetile .tt-voce.spenta { opacity: .45; }
+.timetile .tt-pallino { width: 10px; height: 10px; border: 1px solid color-mix(in srgb, var(--text) 25%, transparent); border-radius: 3px; }
+.timetile .tt-chiudi { display: inline-flex; align-items: center; justify-content: center; min-width: 36px; min-height: 36px; padding: 0; border: 1px solid var(--border-ui); border-radius: var(--r-sm); background: var(--surface); color: var(--text-muted); font: inherit; font-size: 1rem; cursor: pointer; }
+.timetile .tt-chiudi:hover { background: var(--surface-hover); color: var(--text); }
+.timetile .tt-chiudi:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 2px; }
+.timetile .tt-destra { display: flex; align-items: center; gap: 6px; }
+.timetile .tt-semplifica { min-width: 36px; padding: 0; font-size: 1.1rem; }
+.timetile .tt-riga2 { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px 6px; }
+.timetile .tt-comandi[hidden] { display: none; }
+.timetile .tt-azioni { display: flex; align-items: center; gap: 6px; margin-left: auto; }
+.timetile .tt-azioni .tt-riduci { margin-left: 0; }
+.timetile .tt-semplifica { display: inline-flex; align-items: center; justify-content: center; min-height: 36px; padding: 0 9px; border: 1px solid var(--border-ui); border-radius: var(--r-sm); background: var(--surface); color: var(--text-muted); font: inherit; font-size: var(--fs-sm); font-weight: 500; cursor: pointer; }
+.timetile .tt-semplifica:hover { background: var(--surface-hover); }
+.timetile .tt-semplifica:focus-visible, .timetile .tt-sposta:focus-visible { outline: 2px solid var(--accent-strong); outline-offset: 2px; }
+.timetile .tt-sposta { display: inline-flex; align-items: center; justify-content: center; width: 28px; min-height: 36px; padding: 0; border: 0; border-radius: var(--r-sm); background: none; color: var(--text-muted); font-size: 1.1rem; line-height: 1; cursor: grab; touch-action: none; }
+.timetile .tt-sposta:hover { background: var(--surface-hover); }
+.timetile .tt-sposta:active { cursor: grabbing; }
+.cerca-tempo.timetile.libera { position: fixed; z-index: var(--z-barra, 20); width: min(640px, calc(100vw - 16px)); max-width: calc(100vw - 16px); right: auto; bottom: auto; transform: none; margin: 0; }
+.cerca-tempo.timetile.libera.semplice { width: min(380px, calc(100vw - 16px)); }
+.cerca-tempo.timetile.semplice { gap: 8px; padding: 8px 12px; }
+.timetile.semplice .tt-preset, .timetile.semplice .tt-etichetta-vel, .timetile.semplice .tt-reset, .timetile.semplice .tt-asse, .timetile.semplice .tt-legenda { display: none; }
+.timetile.semplice .tt-grafico { height: 52px; }
+.timetile.semplice .tt-intervallo { font-size: 1.6rem; }
+.timetile.semplice .tt-corpo { gap: 8px; }
+.timetile.semplice .tt-comandi { flex-wrap: nowrap; }
+.timetile.semplice .tt-comandi .tt-btn { padding: 0 8px; }
+.timetile.semplice .tt-semplifica, .timetile.semplice .tt-riduci { min-width: 36px; padding: 0; font-size: 1.1rem; }
+.timetile.semplice .tt-azioni { gap: 4px; }
+.timetile.semplice .tt-sposta { width: 24px; }
+.timetile.ridotta .tt-semplifica { display: none; }
+@media (max-width: 480px) { .timetile .tt-etichetta-vel { flex: 1 1 100%; } .timetile .tt-velocita { flex: 1; } .timetile .tt-intervallo { font-size: 1.7rem; } }
+@media (prefers-reduced-motion: reduce) { .timetile .tt-chip, .timetile .tt-btn { transition: none; } }
 
 /* punto «La mia posizione» */
 .mia-posizione { width: 16px; height: 16px; border-radius: 50%; background: #1a73e8; border: 3px solid #fff; box-shadow: 0 0 0 2px rgba(26,115,232,.35), 0 1px 4px rgba(0,0,0,.4); }

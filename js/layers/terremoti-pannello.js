@@ -1,17 +1,11 @@
 // Pannello «Filtro sulla mappa» nella legenda dei terremoti: serie temporale (eventi per giorno) con slider a due maniglie e istogramma di magnitudo a classi cliccabili.
 // Scrive nel filtro condiviso (`finestra`, `classi`) e avvisa con EVENTO_FILTRO: mappa, menu ed elenco si aggiornano da soli.
 import { t, tn, localeIntl } from '../core/i18n.js';
-import { GIORNI_MAX, CLASSI_MAG, filtro, intervallo, passaFiltro, eventiPerGiorno, eventiPerClasse, avanzaFinestra, sintesiClassi, SOGLIA_BASSA, SOGLIA_ALTA } from './scheda-terremoti.js';
-import { evidenziaEventi, nascondiEvidenzaEventi } from '../core/evidenza-eventi.js';
+import { GIORNI_MAX, CLASSI_MAG, filtro, intervallo, passaFiltro, eventiPerGiorno, eventiPerClasse, sintesiClassi, SOGLIA_BASSA, SOGLIA_ALTA } from './scheda-terremoti.js';
+import { nascondiEvidenzaEventi } from '../core/evidenza-eventi.js';
 import { titoloConInfo } from '../core/info-grafico.js';
 import { EVENTO_FILTRO } from './scheda-terremoti-dom.js';
-
-const PASSO_RIPRODUZIONE_MS = 100; // un fotogramma ogni 100 ms: la finestra scorre di frazioni di giorno, così conta anche l'ora
-const GIORNI_AL_SECONDO = 0.5; // a velocità ×1 la finestra avanza di 12 ore ogni secondo
-const VELOCITA = [1, 2, 4, 8, 16];
-const GIORNO_MS = 86400000;
-const MAG_PAUSA = 5; // un evento di questa magnitudo (o più) che entra in finestra ferma la riproduzione...
-const PAUSA_EVENTO_MS = 2000; // ...per questo tempo, mostrando l'evento
+import { timetile } from './terremoti-timetile.js';
 
 function el(tag, classe, testo) {
   const e = document.createElement(tag);
@@ -29,71 +23,22 @@ function comando(el, nome, etichetta) {
   el.setAttribute('aria-label', etichetta);
 }
 
+const GIORNO_MS = 86400000;
 const nomeClasse = c => (c.a === Infinity ? `≥ ${c.da}` : `${c.da}–${c.a}`);
 const giornoOra = ts => new Date(ts).toLocaleString(localeIntl(), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
 const giorno = ts => new Date(ts).toLocaleDateString(localeIntl(), { day: 'numeric', month: 'short' });
 const emetti = () => document.dispatchEvent(new CustomEvent(EVENTO_FILTRO));
 
-// Durante la riproduzione la barra di ricerca lascia il posto a questa: anno grande, giorni della finestra e posizione nei 30 giorni.
-// La traccia mostra gli eventi per fascia (barrette, accese quelle nella finestra in corso), i confini di mese (tacche e nomi) e la lente sulla finestra: un clic mette in pausa.
-function barraTempo() {
-  const nodo = el('div', 'cerca-tempo');
-  nodo.hidden = true;
-  nodo.setAttribute('role', 'status');
-  const anno = el('strong', 'cerca-tempo-anno'), date = el('span', 'cerca-tempo-date');
-  const traccia = el('div', 'cerca-tempo-traccia'), barre = el('div', 'cerca-tempo-barre'), tacche = el('div', 'cerca-tempo-tacche'), lente = el('button', 'cerca-tempo-lente');
-  lente.type = 'button';
-  traccia.append(barre, tacche, lente);
-  const mesi = el('div', 'cerca-tempo-mesi');
-  const testo = el('div', 'cerca-tempo-testo');
-  const comandi = el('div', 'cerca-tempo-comandi');
-  testo.append(anno, comandi, date);
-  nodo.append(testo, traccia, mesi);
-  document.getElementById('area-ricerca')?.append(nodo);
-  let colonne = [], chiaveMesi = '';
-  return {
-    comandi,
-    lente,
-    mostra(vero) { nodo.hidden = !vero; document.body.classList.toggle('timeline-in-corso', vero); },
-    scrivi(dal, al, [da, a]) {
-      date.textContent = t('terremoti.pf.intervallo', { da: giornoOra(dal), a: giornoOra(al) });
-      anno.textContent = new Date(al).toLocaleDateString(localeIntl(), { year: 'numeric' });
-      // la lente copre sempre barre intere (la finestra scorre a frazioni di giorno): le stesse accese sotto
-      const primaBarra = Math.floor(da), dopoBarra = Math.ceil(a);
-      lente.style.left = `${primaBarra / GIORNI_MAX * 100}%`;
-      lente.style.width = `${(dopoBarra - primaBarra) / GIORNI_MAX * 100}%`;
-      colonne.forEach((c, i) => c.classList.toggle('fuori', i < primaBarra || i >= dopoBarra)); // come nel grafico della legenda: le fasce nella finestra restano accese
-    },
-    // `perFascia` = eventi per fascia; la serie va da `inizioSerie` e ogni fascia dura `larghezza` ms
-    disegna(perFascia, inizioSerie, larghezza) {
-      if (colonne.length !== perFascia.length) {
-        colonne = perFascia.map(() => el('i'));
-        barre.replaceChildren(...colonne);
-      }
-      const max = Math.max(1, ...perFascia);
-      colonne.forEach((c, i) => { c.style.height = perFascia[i] ? `${Math.max(8, perFascia[i] / max * 100)}%` : '0'; });
-      const chiave = `${Math.floor(inizioSerie / GIORNO_MS)}|${Math.round(larghezza / 3600000)}`;
-      if (chiave === chiaveMesi) return;
-      chiaveMesi = chiave;
-      const durata = perFascia.length * larghezza, fineSerie = inizioSerie + durata;
-      const loc = localeIntl();
-      const primo = new Date(inizioSerie);
-      const confini = [];
-      for (let m = new Date(primo.getFullYear(), primo.getMonth() + 1, 1); m.getTime() < fineSerie; m = new Date(m.getFullYear(), m.getMonth() + 1, 1)) confini.push(new Date(m));
-      const lungo = confini.length > 14; // periodi di anni: tacche e nomi solo a gennaio
-      const voci = confini.filter(m => !lungo || m.getMonth() === 0).map(m => ({ pct: (m.getTime() - inizioSerie) / durata * 100, nome: m.getMonth() === 0 ? String(m.getFullYear()) : m.toLocaleDateString(loc, { month: 'short' }) })).filter(v => v.pct < 92); // l'ultima tacca vicina al bordo destro non ha spazio per il nome
-      if (!lungo && (!voci.length || voci[0].pct > 18)) voci.unshift({ pct: 0, nome: primo.toLocaleDateString(loc, { month: 'short' }), inizio: true });
-      tacche.replaceChildren(...voci.filter(v => !v.inizio).map(v => { const i = el('i'); i.style.left = `${v.pct}%`; return i; }));
-      mesi.replaceChildren(...voci.map(v => { const s = el('span', v.inizio ? 'inizio' : null, v.nome); s.style.left = `${v.pct}%`; return s; }));
-    },
-  };
-}
-
 // `eventi()` = eventi scaricati (tutti i 30 giorni). `mostraEvento(p)` / `nascondiEvento()` aprono e chiudono l'evento forte durante la pausa.
 // Restituisce { nodo, aggiorna, ferma }.
 export function pannelloFiltro(eventi, mappa = () => null, { mostraEvento = () => {}, nascondiEvento = () => {} } = {}) {
   const nodo = el('div', 'terremoti-pannello');
-  const barraT = barraTempo();
+  // la riproduzione sta nella barra della timeline sopra la mappa (terremoti-timetile.js); i comandi qui la accendono e la seguono
+  let scorre = false;
+  const tile = timetile(eventi, mappa, {
+    mostraEvento, nascondiEvento, suChiudi: () => ferma(),
+    suStato: ({ scorre: va, velocita: nome }) => { scorre = va; segnaRiproduzione(va); scriviVelocita(nome); },
+  });
 
   // serie temporale + slider
   const barre = el('div', 'terremoti-pf-barre');
@@ -123,34 +68,15 @@ export function pannelloFiltro(eventi, mappa = () => null, { mostraEvento = () =
   spegni.type = 'button';
   spegni.hidden = true;
   comando(spegni, 'spegni', t('terremoti.pf.spegni'));
-  let velocita = 0; // indice in VELOCITA
   const veloce = el('button', 'terremoti-pf-icona terremoti-pf-velocita');
   veloce.type = 'button';
-  const scriviVelocita = () => {
-    veloce.textContent = `×${VELOCITA[velocita]}`;
-    veloce.title = t('terremoti.pf.velocita', { v: VELOCITA[velocita] });
+  function scriviVelocita(nome = '') {
+    veloce.textContent = nome.replace(/^1 s = (.*)$/, '$1/s');
+    veloce.title = t('terremoti.pf.velocita', { v: nome });
     veloce.setAttribute('aria-label', veloce.title);
-    veloceBarra.textContent = veloce.textContent;
-    veloceBarra.title = veloce.title;
-    veloceBarra.setAttribute('aria-label', veloce.title);
-  };
-  // comandi gemelli nella barra del tempo: ogni clic passa al pulsante della legenda, che resta l'unico a decidere lo stato
-  const gemello = (classe, origine) => {
-    const b = el('button', classe);
-    b.type = 'button';
-    b.addEventListener('click', () => origine.click());
-    return b;
-  };
-  const pausaBarra = gemello('terremoti-pf-icona', riproduci);
-  const veloceBarra = gemello('terremoti-pf-icona terremoti-pf-velocita', veloce);
-  const azzeraBarra = gemello('terremoti-pf-icona', azzera);
-  comando(azzeraBarra, 'azzera', t('terremoti.pf.azzera'));
-  const spegniBarra = gemello('terremoti-pf-icona', spegni);
-  comando(spegniBarra, 'spegni', t('terremoti.pf.spegni'));
-  barraT.lente.addEventListener('click', () => riproduci.click()); // pausa se scorre, riparte se è in pausa
-  barraT.comandi.append(pausaBarra, veloceBarra, azzeraBarra, spegniBarra);
+  }
   scriviVelocita();
-  veloce.addEventListener('click', () => { velocita = (velocita + 1) % VELOCITA.length; scriviVelocita(); });
+  veloce.addEventListener('click', () => tile.ciclaVelocita());
   const grafici = el('button', 'terremoti-pf-icona');
   grafici.type = 'button';
   comando(grafici, 'grafici', t('terremoti.pf.grafici'));
@@ -199,53 +125,24 @@ export function pannelloFiltro(eventi, mappa = () => null, { mostraEvento = () =
   nodo.append(testa, testoIntervallo, corpo);
   apri(false);
 
-  // riproduzione: la finestra scorre di un giorno alla volta.
-  // `attiva` = la timeline è accesa (barra in alto visibile), anche in pausa; `timer` = la finestra sta scorrendo.
-  let timer = null, attiva = false;
-  const segnaRiproduzione = scorre => {
-    const nome = scorre ? 'pausa' : 'riproduci', etichetta = t(scorre ? 'terremoti.pf.pausa' : 'terremoti.pf.riproduci');
+  const segnaRiproduzione = va => {
+    const nome = va ? 'pausa' : 'riproduci', etichetta = t(va ? 'terremoti.pf.pausa' : 'terremoti.pf.riproduci');
     comando(riproduci, nome, etichetta);
-    comando(pausaBarra, nome, etichetta);
-    barraT.lente.title = etichetta;
-    barraT.lente.setAttribute('aria-label', etichetta);
-    riproduci.setAttribute('aria-pressed', String(scorre));
+    riproduci.setAttribute('aria-pressed', String(va));
   };
-  const pausa = () => {
-    clearInterval(timer);
-    timer = null;
-    segnaRiproduzione(false);
-  };
+  segnaRiproduzione(false);
+  scriviVelocita(tile.velocitaNome());
+  const pausa = () => tile.ferma();
   const ferma = () => { // spegne la timeline: finestra ferma dove sta, barra e luci in mappa spente
-    pausa();
-    attiva = false;
+    tile.mostra(false);
     spegni.hidden = true;
-    barraT.mostra(false);
     nascondiEvidenzaEventi(mappa());
   };
   riproduci.addEventListener('click', () => {
-    if (timer) { pausa(); return; }
-    segnaRiproduzione(true);
-    attiva = true;
     spegni.hidden = false;
     apri(true);
-    barraT.mostra(true);
-    const riprendi = () => { nascondiEvento(); timer = setInterval(passo, PASSO_RIPRODUZIONE_MS); };
-    const passo = () => {
-      const adesso = Date.now();
-      const prima = Math.min(intervallo(filtro, adesso)[1], adesso);
-      filtro.finestra = avanzaFinestra(filtro.finestra, VELOCITA[velocita] * GIORNI_AL_SECONDO * PASSO_RIPRODUZIONE_MS / 1000);
-      const dopo = Math.min(intervallo(filtro, adesso)[1], adesso);
-      emetti();
-      // eventi forti entrati in questo passo (se la finestra riparte da capo `dopo` < `prima`: nessuno): si ferma e si mostra il più forte
-      const forte = eventi().filter(e => e.mag >= MAG_PAUSA && e.ts > prima && e.ts <= dopo && passaFiltro(e, filtro, adesso)).sort((a, b) => b.mag - a.mag)[0];
-      if (!forte || !timer) return;
-      clearInterval(timer);
-      timer = setTimeout(riprendi, PAUSA_EVENTO_MS); // `timer` resta valorizzato: la riproduzione è in pausa breve, non ferma
-      mostraEvento(forte);
-    };
-    passo();
-    if (!timer) timer = setInterval(passo, PASSO_RIPRODUZIONE_MS);
-    aggiorna(); // il primo passo è già partito: la barra in alto lo scrive ora che la riproduzione è attiva
+    if (!tile.acceso()) tile.mostra(true);
+    tile.alterna();
   });
   spegni.addEventListener('click', ferma);
   azzera.addEventListener('click', () => {
@@ -292,13 +189,6 @@ export function pannelloFiltro(eventi, mappa = () => null, { mostraEvento = () =
       c.title = `${larghezza > GIORNO_MS * 1.5 ? `${giorno(inizioFascia)} – ${giorno(inizioFascia + larghezza - 1)}` : giorno(inizioFascia)}: ${perFascia[i]}`;
     });
     const [dal, al] = intervallo(filtro, adesso);
-    if (attiva) {
-      barraT.disegna(perFascia, inizioSerie, larghezza);
-      const fino = Math.min(al, adesso);
-      barraT.scrivi(dal, fino, filtro.finestra ?? [0, GIORNI_MAX]);
-      // la finestra avanza di continuo: gli eventi appena entrati (più numerosi a velocità alta) sono i nuovi, e si accendono in mappa
-      evidenziaEventi(mappa(), tutti.filter(p => p.ts > fino - 6 * 3600000 * VELOCITA[velocita] && passaFiltro(p, filtro, adesso)), { inquadra: false });
-    }
     testoIntervallo.hidden = !filtro.finestra; // la riga dice l'intervallo scelto, anche a grafici chiusi
     testoIntervallo.textContent = filtro.finestra ? t('terremoti.pf.intervallo', { da: giorno(dal), a: al === Infinity ? t('terremoti.pf.finoAdesso') : giorno(al) }) : '';
     const perClasse = eventiPerClasse(tutti, filtro, adesso);
