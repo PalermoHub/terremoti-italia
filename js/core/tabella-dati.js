@@ -274,7 +274,7 @@ export function collegaTabellaDati({ bottone: comando, fornitori = [] } = {}) {
       b.disabled = righe.length === 0 || colonne.length === 0;
     }
     const resto = [t('tabella.nota.territorio'), nRighe > MAX_RIGHE ? t('tabella.mostrate', { n: MAX_RIGHE }) : ''].filter(Boolean).join(' · ');
-    nota.replaceChildren(`${t('tabella.nota')} `, el('strong', null, t('tabella.nota.clic')), ` · ${resto}`);
+    nota.replaceChildren(`${t('tabella.nota')} `, el('strong', null, t('tabella.nota.clic')), ` ${t('tabella.nota.ordina')} · ${resto}`);
     nota.title = nota.textContent;
     return { righe, colonne };
   }
