@@ -57,11 +57,14 @@ caricaTemaMagnitudo(localStorage);
 // riquadro in fondo alla legenda in mappa: Live Zoom e «Cerca eventi attorno a un punto» (si nasconde con la legenda ridotta)
 document.getElementById('legende-raggio').append(interruttoreLiveZoomLegenda(localStorage), creaRegolatoreRaggio(localStorage));
 const riduciLegenda = document.getElementById('legende-riduci');
-riduciLegenda.addEventListener('click', () => {
-  const ridotta = document.getElementById('legende-box').classList.toggle('ridotta');
+const mostraLegendaRidotta = ridotta => {
+  document.getElementById('legende-box').classList.toggle('ridotta', ridotta);
   riduciLegenda.setAttribute('aria-expanded', String(!ridotta));
   riduciLegenda.textContent = ridotta ? t('app.legenda.apri') : t('html.legende.riduci');
-});
+};
+riduciLegenda.addEventListener('click', () => mostraLegendaRidotta(!document.getElementById('legende-box').classList.contains('ridotta')));
+// sul telefono la legenda aperta copre quasi tutta la mappa: parte ridotta, un tocco la apre
+if (matchMedia('(max-width: 720px)').matches) mostraLegendaRidotta(true);
 
 // ordine = ordine di sovrapposizione dei layer (il primo sta sotto). I quattro gruppi precedono i moduli che mettono lì i
 // loro strati: Protezione Civile (allerte), Terremoti (tempo reale, archivio, confronto), Faglie (ITHACA, EGDI, DISS), Territorio (confini)

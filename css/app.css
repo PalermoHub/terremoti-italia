@@ -2907,3 +2907,11 @@ canvas.grafico-3d.trascina { cursor: grabbing; }
 .sezione-guida-ok:hover { filter: brightness(1.08); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 35%, transparent); }
 .sezione-guida .sezione-guida-dove { margin: 0 0 4px; color: var(--text); font-weight: 600; }
 .sezione-guida-comandi { margin: 0 0 12px; padding-left: 18px; font-size: var(--fs-sm); color: var(--text-muted); }
+
+/* Legenda dei terremoti: evento più recente, un clic apre la scheda */
+.ultimo-evento { display: flex; align-items: center; gap: 8px; width: 100%; margin: 6px 0; padding: 6px 8px; border: 1px solid var(--border-ui); border-radius: var(--r-sm); background: var(--surface-alt); color: var(--text); font: inherit; font-size: var(--fs-xs); text-align: left; cursor: pointer; }
+.ultimo-evento:hover { border-color: var(--accent); background: var(--accent-soft); }
+.ultimo-evento[hidden] { display: none; }
+.ultimo-evento-testi { display: flex; flex-direction: column; min-width: 0; }
+.ultimo-evento-luogo { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.ultimo-evento-quando { color: var(--text-muted); }

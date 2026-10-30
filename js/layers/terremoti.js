@@ -6,6 +6,7 @@ import { FASCE, GIORNI_MAX, scaricaEventi, filtro, FILTRO_INIZIALE, profonditaDa
 import { voceComune } from './scheda-comune.js';
 import { zonaComune } from './classificazione.js';
 import { fasciaAlPunto } from './pericolosita.js';
+import { badgeMagnitudo } from '../core/badge-magnitudo.js';
 import { EVENTO_FILTRO, menuFiltro, menuMagnitudo, menuProfondita, elencoAltri, graficoSerie, testoPeriodo, barraEventi } from './scheda-terremoti-dom.js';
 import { pannelloFiltro } from './terremoti-pannello.js';
 import { registraTooltipStrati } from '../core/tooltip.js';
@@ -32,6 +33,7 @@ const VUOTO = { type: 'FeatureCollection', features: [] };
 let mappa = null;
 let legenda = null;
 let nota = null;
+let ultimoEvento = null; // riga in cima alla legenda: l'evento più recente, un clic apre la sua scheda
 let timer = null;
 let ultimo = 0;
 let troncato = false; // l'archivio ha più eventi di quanti ne arrivino in mappa
@@ -60,9 +62,25 @@ function el(tag, classe, testo) {
   return e;
 }
 
+// Evento più recente tra quelli in mappa: magnitudo, luogo e quanto tempo fa
+function scriviUltimoEvento(visibiliOra) {
+  if (!ultimoEvento) return;
+  const p = visibiliOra.reduce((a, b) => (b.ts > (a?.ts ?? -Infinity) ? b : a), null);
+  ultimoEvento.hidden = !p;
+  if (!p) return;
+  const mag = Number.isFinite(p.mag) ? p.mag.toLocaleString(localeIntl(), { minimumFractionDigits: 1 }) : '–';
+  const testi = el('span', 'ultimo-evento-testi');
+  testi.append(el('span', 'ultimo-evento-luogo', p.luogo), el('span', 'ultimo-evento-quando', quantoTempoFa(p.ts)));
+  ultimoEvento.replaceChildren(badgeMagnitudo(p.mag, mag), testi);
+  ultimoEvento.onclick = () => vaiAEvento(p);
+  ultimoEvento.title = t('terremoti.apriScheda');
+}
+
 function scriviNota(ok) {
   if (!nota) return;
-  const r = riassuntoTerremoti(eventi.filter(p => passaFiltro(p) && inArea(p)));
+  const visibiliOra = eventi.filter(p => passaFiltro(p) && inArea(p));
+  scriviUltimoEvento(visibiliOra);
+  const r = riassuntoTerremoti(visibiliOra);
   if (!ok && !ultimo) { nota.textContent = t('terremoti.nonDisponibile'); return; }
   const ora = new Date(ultimo).toLocaleTimeString(localeIntl(), { hour: '2-digit', minute: '2-digit' });
   const base = r ? t('terremoti.riassunto', { giorni: testoPeriodo(), n: r.n, ora, mag: r.forte.mag.toLocaleString(localeIntl(), { minimumFractionDigits: 1 }), luogo: r.forte.luogo }) : t('terremoti.nessuno', { ora, giorni: testoPeriodo() });
@@ -185,6 +203,9 @@ function creaLegenda() {
   legenda = el('div', 'legenda legenda-monumenti lg-terremoti');
   legenda.hidden = !acceso;
   titolo = el('strong', null, 'Terremoti in tempo reale');
+  ultimoEvento = el('button', 'ultimo-evento');
+  ultimoEvento.type = 'button';
+  ultimoEvento.hidden = true;
   bloccoFasce = el('div', 'legenda-fasce');
   for (const f of FASCE) {
     const chip = el('i', 'incendi-campione');
@@ -205,7 +226,7 @@ function creaLegenda() {
     },
     nascondiEvento: () => popup.chiudi(),
   });
-  legenda.append(titolo, bloccoFasce, pannelloPf.nodo, menuFiltro({ magnitudo: false }), el('p', 'uffici-nota', t('terremoti.clicca')));
+  legenda.append(titolo, ultimoEvento, bloccoFasce, pannelloPf.nodo, menuFiltro({ magnitudo: false }), el('p', 'uffici-nota', t('terremoti.clicca')));
   nota = el('p', 'uffici-nota');
   bottoneAggiorna = el('button', 'legenda-aggiorna');
   bottoneAggiorna.type = 'button';
