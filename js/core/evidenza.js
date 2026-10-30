@@ -34,7 +34,6 @@ export const FONTI = {
   'piano-triennale-hit-punti': { etichetta: t('evidenza.piano'), colore: '#c2255c' },
   'voli-hit': { etichetta: t('evidenza.volo'), colore: '#1971c2' },
   'voli-aeroporto-hit': { etichetta: t('evidenza.aeroporto'), colore: '#0b3d91' },
-  'navi-hit': { etichetta: t('evidenza.nave'), colore: '#7048e8' },
   'satelliti-hit': { etichetta: t('evidenza.satellite'), colore: '#e8590c' },
   'terremoti-hit': { etichetta: t('evidenza.terremoto'), colore: '#e03131' },
   'colonnine-hit': { etichetta: t('evidenza.colonnina'), colore: '#2b8a3e' },
@@ -56,7 +55,7 @@ const ICONE_PUNTI = {
 };
 // Layer con la propria sagoma in mappa (aerei e navi ruotati, satelliti) e un tooltip proprio: la selezione resta un cerchio alone,
 // senza icona sovrapposta, e non aggiunge al tooltip la riga con il nome del layer.
-const SENZA_TOOLTIP = new Set(['voli-hit', 'voli-aeroporto-hit', 'navi-hit', 'satelliti-hit', 'terremoti-hit']);
+const SENZA_TOOLTIP = new Set(['voli-hit', 'voli-aeroporto-hit', 'satelliti-hit', 'terremoti-hit']);
 const DISCHI = new Set(['trasporto-hit-fermate', 'trasporto-hit-stazioni', 'trasporto-hit-fermate-vicini', 'trasporto-hit-stazioni-vicini']); // punti con il disco di contrasto
 const ICONE_EXTRA = ['tram']; // icone che una singola feature può scegliere con `properties.icona` (fermate di tram)
 const iconaDi = (id, geometria) => (geometria.type === 'Point' ? ICONE_PUNTI[id] ?? ICONE_PUNTI[id.replace(/-vicini$/, '')] ?? '' : '');

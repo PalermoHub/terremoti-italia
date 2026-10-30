@@ -479,7 +479,6 @@ body:has(#scheda:not([hidden])) .traffico-popup-box { z-index: 1; } /* ma sotto 
 .traffico-corpo .monumento-desc, .traffico-corpo .monumento-cat, .traffico-corpo .monumento-fonte, .traffico-corpo .monumento-scomparso { margin-left: 0; margin-right: 0; }
 .traffico-corpo .monumento-cat { color: var(--text-muted); }
 .traffico-corpo .monumento-link { margin: 8px 0 4px; }
-.traffico-corpo .pnrr-popup-elenco { margin-top: 4px; }
 .traffico-etichette { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
 .traffico-etichette .tooltip-badge { margin-top: 0; }
 .traffico-coordinate { margin: 6px 0 0; padding-top: 6px; border-top: 1px solid var(--border); font: var(--fs-xs) ui-monospace, monospace; color: var(--text-muted); }
@@ -741,38 +740,12 @@ body:has(#scheda:not([hidden])) .traffico-popup-box { z-index: 1; } /* ma sotto 
 .legenda-peba i.mef-campione { display: inline-block; width: 14px; height: 10px; margin-right: 6px; border-radius: 2px; border: 1px solid rgb(0 0 0 / .35); flex: none; vertical-align: middle; }
 .legenda .peba-famiglia { flex-direction: column; align-items: stretch; gap: 0; margin-top: 6px; }
 .legenda-peba { max-height: 60vh; overflow-y: auto; }
-.legenda-pnrr { max-height: 60vh; overflow-y: auto; }
-.legenda-pnrr .pnrr-sezione-soggetti { display: block; width: 100%; }
-.legenda-pnrr .pnrr-sezione-soggetti > p { margin: 6px 0 0; }
-.legenda-pnrr .pnrr-soggetti { display: flex; flex-direction: column; align-items: stretch; gap: 2px; }   /* un soggetto per riga */
-.legenda-pnrr .pnrr-soggetti > label { display: flex; align-items: center; gap: 4px; }
-.legenda-pnrr .pnrr-soggetti input[type=radio] { margin: 0 4px 0 0; flex: none; }
-/* come una scelta singola: nessuna voce sbiadita, la selezionata ha il pallino pieno e il testo in grassetto */
-.legenda-pnrr .pnrr-soggetti > label:has(input:not(:checked)) { opacity: 1; }
-.legenda-pnrr .pnrr-soggetti > label:has(input:not(:checked)) > :not(input) { filter: none; }
-.legenda-pnrr .pnrr-soggetti > label i.monumenti-pallino { background: transparent; border: 2px solid #868e96; flex: none; }
-.legenda-pnrr .pnrr-soggetti > label:has(input:checked) { font-weight: 700; }
 .tooltip-elenco { margin-top: 4px; font-size: var(--fs-xs); font-weight: 400; }
 .tooltip-suggerimento { margin-top: 6px; font-size: var(--fs-xs); font-weight: 400; font-style: italic; color: var(--text-muted); }
 .tooltip-elenco > div { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* cerchietto che gira per le attese (tooltip dei comuni, scheda): la stessa animazione degli avvisi di attesa */
 .gira-attesa { display: inline-block; flex: none; width: 10px; height: 10px; margin-left: 5px; border: 2px solid color-mix(in srgb, currentColor 25%, transparent); border-top-color: currentColor; border-radius: 50%; vertical-align: -1px; animation: giro-attesa .8s linear infinite; }
 .comuni-gira { color: #c27c0e; }
-/* menu a tendina ben riconoscibili (scheda e legenda): bordo e fondo colorati, testo in grassetto, etichetta sopra */
-.pnrr-scelta { display: block; margin-top: 10px; }
-.pnrr-tendina select:focus-visible, .legenda-pnrr .pnrr-soggetti select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-.pnrr-tendina select:disabled { opacity: .55; cursor: not-allowed; border-style: dashed; }
-.pnrr-tendina-carta { margin-top: 10px; }
-.pnrr-popup { padding: 14px 16px 12px; }
-.pnrr-popup h3 { margin: 0 24px 4px 0; }               /* a destra resta lo spazio della × di chiusura */
-.pnrr-popup .monumento-cat { margin: 0 0 8px; }
-.pnrr-popup-elenco { margin: 8px 0 0; padding: 0 6px 0 0; list-style: none; max-height: 260px; overflow-y: auto; font-size: var(--fs-xs); }
-.pnrr-popup-elenco li { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-top: 1px solid var(--border-ui); line-height: 1.4; }
-.pnrr-popup-elenco small { margin-top: 2px; }
-.pnrr-popup .uffici-suggerimento { margin: 10px 0 0; }
-.pnrr-popup-elenco li:first-child { border-top: 0; }
-.pnrr-popup-elenco i.monumenti-pallino { display: inline-block; flex: none; width: 10px; height: 10px; margin-top: 4px; border-radius: 50%; border: 1px solid rgb(0 0 0 / .3); }
-.pnrr-popup-elenco small { display: block; color: var(--text-muted); }
 /* valore o voce di un grafico che fa da filtro della mappa: si presenta come un collegamento */
 .scheda-filtro { padding: 0; border: 0; background: none; font: inherit; color: var(--accent); text-align: left; text-decoration: underline dotted; cursor: pointer; }
 .scheda-filtro:hover, .scheda-filtro:focus-visible { text-decoration: underline; }
@@ -2094,172 +2067,6 @@ body:has(#tabella-dati:not([hidden])) #area-ricerca { bottom: calc(40px + env(sa
 .legenda-pendolarismo i.pend-linea { display: inline-block; width: 18px; height: 4px; margin-right: 6px; border-radius: 2px; flex: none; vertical-align: middle; }
 .scheda-sunto-titolo { margin: 12px 0 0; font-size: var(--fs-sm); letter-spacing: .06em; text-transform: uppercase; color: var(--text-muted); }
 .scheda-sunto-titolo + .scheda-sunto { margin-top: 6px; }
-
-/* ==========================================================================
-   Strati in 3D (js/core/strati-3d.js): palco scuro come il reel, pannelli con i colori dell'app
-   ========================================================================== */
-.strati3d-velo { position: fixed; inset: 0; z-index: var(--z-viewer); display: grid; place-items: center; background: rgba(14, 18, 26, .55); }
-.strati3d-velo p { padding: 12px 18px; border-radius: var(--r-pill); background: var(--surface); color: var(--text); font-weight: 600; font-size: var(--fs-sm); box-shadow: var(--ombra); }
-.strati3d { position: fixed; inset: 0; z-index: var(--z-viewer); color: #fff; background: transparent; transition: background .45s ease; }
-.strati3d.aperta { background:
-  radial-gradient(ellipse 70% 50% at 50% 55%, rgba(245, 166, 35, .13), transparent 70%),
-  radial-gradient(circle, rgba(255, 255, 255, .07) 1.4px, transparent 1.8px) 0 0 / 44px 44px, #0e121a; }
-.strati3d.chiude { background: transparent; }
-.strati3d.sfuma { opacity: 0; transition: opacity .3s ease; }
-.strati3d-palco { position: absolute; inset: 0; perspective: 2600px; overflow: hidden; cursor: grab; touch-action: none; }
-.strati3d-palco.su-oggetto:not(.trascina) { cursor: pointer; }
-.strati3d-tooltip { position: absolute; left: 0; top: 0; z-index: 2; max-width: 380px; pointer-events: none; color: var(--text); text-align: left; } /* sul palco scuro il testo è bianco: il tooltip riprende quello dell'app */
-.strati3d-tooltip[hidden] { display: none; }
-.strati3d-tip { display: flex; flex-direction: column; gap: 4px; min-width: 200px; }
-.strati3d-tip-sez { padding: 4px 6px 5px; border-radius: 6px; border-left: 3px solid transparent; }
-.strati3d-tip-sez + .strati3d-tip-sez { border-top: 1px solid var(--tooltip-bordo); border-top-left-radius: 0; border-top-right-radius: 0; }
-.strati3d-tip-sez.qui { background: var(--accent-soft); border-left-color: var(--accent); }
-.strati3d-tip-sez.qui[style*="--colore-strato"] { background: color-mix(in srgb, var(--colore-strato) 16%, transparent); border-left-color: var(--colore-strato); }
-.strati3d-tip-testa { display: flex; align-items: center; gap: 6px; margin-bottom: 2px; font-size: var(--fs-3xs); text-transform: uppercase; letter-spacing: .04em; color: var(--text-muted); }
-.strati3d-tip-testa i { font-style: normal; font-weight: 700; min-width: 16px; height: 16px; display: grid; place-items: center; border-radius: 4px; border: 1.5px solid currentColor; }
-.strati3d-tip-sez.qui .strati3d-tip-testa { color: var(--accent-strong); }
-/* attributi di un oggetto nel tooltip della pila: campo e valore */
-.strati3d-tip-attr { display: grid; grid-template-columns: auto 1fr; gap: 1px 8px; margin: 2px 0 4px; font-size: var(--fs-3xs); line-height: 1.35; }
-.strati3d-tip-attr dt { color: var(--text-muted); text-transform: lowercase; }
-.strati3d-tip-attr dt::first-letter { text-transform: uppercase; }
-.strati3d-tip-attr dd { margin: 0; color: var(--text); overflow-wrap: anywhere; }
-.strati3d-mondo { position: absolute; width: 0; height: 0; transform-style: preserve-3d; }
-.strati3d-piano { position: absolute; transform-style: preserve-3d; border: 2px solid rgba(255, 255, 255, calc(var(--vetro, 0) * .4));
-  background: rgba(20, 26, 38, calc(var(--vetro, 0) * .32)); transition: opacity .25s; }
-.strati3d-piano[data-base] { background: none; }
-.strati3d-piano.att { border-color: var(--accent); box-shadow: 0 0 60px rgba(245, 166, 35, .55); }
-/* bordo cliccabile dei piani (fuori dal piano): sceglie lo strato su cui entrare o camminare */
-.strati3d-bordo { position: absolute; cursor: pointer; background: rgba(245, 166, 35, 0); transition: background .15s; }
-.strati3d-bordo-su, .strati3d-bordo-giu { left: calc(-1 * var(--bordo)); right: calc(-1 * var(--bordo)); height: var(--bordo); }
-.strati3d-bordo-su { top: calc(-1 * var(--bordo)); }
-.strati3d-bordo-giu { bottom: calc(-1 * var(--bordo)); }
-.strati3d-bordo-sx, .strati3d-bordo-dx { top: 0; bottom: 0; width: var(--bordo); }
-.strati3d-bordo-sx { left: calc(-1 * var(--bordo)); }
-.strati3d-bordo-dx { right: calc(-1 * var(--bordo)); }
-.strati3d-piano:has(.strati3d-bordo:hover) { border-color: var(--accent); }
-.strati3d-piano:has(.strati3d-bordo:hover) .strati3d-bordo { background: rgba(245, 166, 35, .28); }
-.strati3d-img { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
-.strati3d :is(.strati3d-testata, .strati3d-elenco, .strati3d-comandi, .strati3d-nav, .strati3d-aiuto) { transition: opacity .3s ease; }
-.strati3d:not(.aperta) :is(.strati3d-testata, .strati3d-elenco, .strati3d-comandi, .strati3d-nav, .strati3d-aiuto),
-.strati3d.chiude :is(.strati3d-testata, .strati3d-elenco, .strati3d-comandi, .strati3d-nav, .strati3d-aiuto) { opacity: 0; pointer-events: none; }
-/* cursore secondo il gesto: ruota il modello, trascina, sposta, cammina, guardati attorno, zoom con la rotella */
-.strati3d-palco[data-cursore="ruota"] { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'%3E%3Cg fill='none' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M22 9.5A9.5 9.5 0 0 0 5.2 10M6 18.5A9.5 9.5 0 0 0 22.8 18' stroke='%23000' stroke-width='5'/%3E%3Cpath d='M22 9.5A9.5 9.5 0 0 0 5.2 10M6 18.5A9.5 9.5 0 0 0 22.8 18' stroke='%23fff' stroke-width='2.4'/%3E%3Cpath d='M23 4.5v5.5h-5.5M5 23.5V18h5.5' stroke='%23000' stroke-width='5'/%3E%3Cpath d='M23 4.5v5.5h-5.5M5 23.5V18h5.5' stroke='%23fff' stroke-width='2.4'/%3E%3Ccircle cx='14' cy='14' r='2' fill='%23f5a623' stroke='%23000'/%3E%3C/g%3E%3C/svg%3E") 14 14, grab; }
-.strati3d-palco[data-cursore="trascina"] { cursor: grabbing; }
-.strati3d-palco[data-cursore="sposta"] { cursor: move; }
-.strati3d-palco[data-cursore="cammina"] { cursor: crosshair; }
-.strati3d-palco[data-cursore="guarda"] { cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 28 28'%3E%3Cg fill='none' stroke-linecap='round'%3E%3Cpath d='M2.5 14S7 6.5 14 6.5 25.5 14 25.5 14 21 21.5 14 21.5 2.5 14 2.5 14z' stroke='%23000' stroke-width='4.5'/%3E%3Cpath d='M2.5 14S7 6.5 14 6.5 25.5 14 25.5 14 21 21.5 14 21.5 2.5 14 2.5 14z' stroke='%23fff' stroke-width='2'/%3E%3Ccircle cx='14' cy='14' r='3.6' fill='%23f5a623' stroke='%23000' stroke-width='1.2'/%3E%3C/g%3E%3C/svg%3E") 14 14, grabbing; }
-.strati3d-palco[data-cursore="zoom-in"] { cursor: zoom-in; }
-.strati3d-palco[data-cursore="zoom-out"] { cursor: zoom-out; }
-/* navigatore alla Google Earth: bussola con joystick al centro, colonna di zoom, inclinazione, centra e guida */
-.strati3d-nav { position: absolute; left: 16px; bottom: 18px; display: flex; align-items: center; gap: 8px; padding: 8px;
-  border-radius: 60px 18px 18px 60px; background: rgba(16, 20, 29, .9); border: 1px solid rgba(255, 255, 255, .12); touch-action: none; user-select: none; }
-.strati3d-bussola { position: relative; width: 104px; height: 104px; border-radius: 50%; cursor: grab;
-  background: radial-gradient(circle, rgba(255, 255, 255, .04) 0 46%, rgba(255, 255, 255, .1) 47% 100%); border: 1px solid rgba(255, 255, 255, .22); }
-.strati3d-bussola:hover, .strati3d-bussola:focus-visible { border-color: var(--accent); outline: none; }
-.strati3d-bussola.gira { cursor: grabbing; border-color: var(--accent); }
-.strati3d-rosa { position: absolute; inset: 0; pointer-events: none; transition: transform .08s linear; }
-.strati3d-rosa b { position: absolute; left: 50%; top: 2px; transform: translateX(-50%); font-size: 12px; font-weight: 800; color: var(--accent); }
-.strati3d-rosa b::after { content: ""; position: absolute; left: 50%; top: 15px; margin-left: -4px; border: 4px solid transparent; border-bottom: 7px solid var(--accent); border-top: 0; }
-.strati3d-rosa i { position: absolute; width: 4px; height: 4px; margin: -2px; border-radius: 50%; background: rgba(255, 255, 255, .55); }
-.strati3d-rosa i.e { left: calc(100% - 9px); top: 50%; }
-.strati3d-rosa i.s { left: 50%; top: calc(100% - 9px); }
-.strati3d-rosa i.o { left: 9px; top: 50%; }
-.strati3d-manopola { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; margin: -20px; border-radius: 50%; cursor: grab;
-  background: radial-gradient(circle at 40% 35%, #4a5366, #232a38); border: 2px solid rgba(255, 255, 255, .35); box-shadow: 0 2px 8px rgba(0, 0, 0, .5);
-  transition: transform .18s cubic-bezier(.3, 1.6, .5, 1), border-color .15s; }
-.strati3d-manopola::after { content: ""; position: absolute; inset: 13px; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .4); }
-.strati3d-manopola:hover { border-color: var(--accent); }
-.strati3d-manopola.premuto { cursor: grabbing; transition: border-color .15s; border-color: var(--accent); }
-.strati3d-nav-colonna { display: grid; grid-template-columns: repeat(2, 32px); gap: 4px; }
-.strati3d-nav-colonna button { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 1px solid rgba(255, 255, 255, .2); border-radius: var(--r-sm);
-  background: none; color: #fff; cursor: pointer; touch-action: none; }
-.strati3d-nav-colonna button:hover, .strati3d-nav-colonna button:focus-visible { border-color: var(--accent); color: var(--accent); }
-.strati3d-nav-colonna button.premuto { background: rgba(245, 166, 35, .25); border-color: var(--accent); color: var(--accent); }
-.strati3d-nav-centra, .strati3d-nav-guida { color: var(--accent) !important; }
-/* guida ai comandi */
-/* navigatore della vista 3D della mappa: in basso a sinistra, accanto al pannello (--sx); la legenda gli sale sopra */
-.strati3d-nav.mappa-nav { position: fixed; z-index: var(--z-mappa-ui); left: calc(var(--sx, 0px) + 12px); bottom: calc(var(--footer-h, 0px) + 12px); }
-.strati3d-nav.mappa-nav[hidden] { display: none; }
-body.nav3d #legende-box { bottom: calc(var(--footer-h, 0px) + 146px); }
-.strati3d-guida.mappa-guida { position: fixed; z-index: var(--z-mappa-ui); max-height: calc(100% - 80px); }
-@media (max-width: 720px) {
-  .strati3d-nav.mappa-nav { left: 8px; bottom: calc(var(--tab-h, 60px) + var(--footer-h, 0px) + 8px); flex-direction: row; padding: 6px; border-radius: 44px 14px 14px 44px; }
-  .strati3d-nav.mappa-nav .strati3d-bussola { width: 84px; height: 84px; }
-  body.nav3d #legende-box { bottom: calc(var(--tab-h, 60px) + var(--footer-h, 0px) + 116px); }
-}
-.strati3d-guida { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 3; width: min(720px, calc(100% - 32px)); max-height: calc(100% - 140px); overflow: auto;
-  padding: 18px 22px; border-radius: var(--r-md); background: rgba(16, 20, 29, .96); border: 1px solid rgba(255, 255, 255, .16); box-shadow: 0 20px 60px rgba(0, 0, 0, .6); }
-.strati3d-guida[hidden] { display: none; }
-.strati3d-guida h3 { margin: 0 0 12px; font-size: var(--fs-md, 1.05rem); }
-.strati3d-guida-griglia { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px 22px; }
-.strati3d-guida h4 { margin: 0 0 6px; font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: .05em; color: var(--accent); }
-.strati3d-guida ul { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: var(--fs-sm); line-height: 1.45; color: #d5dae3; }
-.strati3d-guida kbd { display: inline-block; margin: 0 2px; padding: 0 6px; border-radius: 5px; border: 1px solid rgba(255, 255, 255, .3); border-bottom-width: 2px;
-  background: rgba(255, 255, 255, .07); font: 600 var(--fs-xs) / 1.6 inherit; color: #fff; white-space: nowrap; }
-.strati3d-guida-ok { margin-top: 14px; padding: 8px 18px; border-radius: var(--r-pill); border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); font-weight: 700; cursor: pointer; }
-.strati3d-testata { position: absolute; left: 16px; right: calc(var(--libero-d, 0px) + 16px); top: 14px; display: flex; align-items: center; gap: 12px; pointer-events: none; }
-.strati3d-testata h2 { margin: 0; font-size: var(--fs-sm); font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
-.strati3d-chiudi { pointer-events: auto; margin-left: auto; padding: 9px 16px; border-radius: var(--r-pill); border: 1px solid var(--accent); background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: var(--fs-sm); cursor: pointer; }
-.strati3d-elenco { position: absolute; left: 16px; right: calc(var(--libero-d, 0px) + 16px); top: 58px; display: flex; flex-wrap: wrap; gap: 6px; max-height: 76px; overflow: auto; scrollbar-width: thin; }
-.strati3d-elenco button { display: flex; align-items: center; gap: 8px; padding: 4px 8px; border: 0; border-radius: var(--r-pill); background: none; color: #fff; text-align: left; cursor: pointer; font-size: var(--fs-sm); white-space: nowrap; }
-.strati3d-elenco button:hover, .strati3d-elenco button:focus-visible { background: rgba(255, 255, 255, .08); }
-.strati3d-elenco button.att { background: rgba(245, 166, 35, .22); }
-.strati3d-elenco i { flex: none; width: 20px; height: 20px; display: grid; place-items: center; border-radius: 6px; border: 2px solid rgba(255, 255, 255, .4); font-style: normal; font-size: var(--fs-3xs); font-weight: 700; color: #aab2c0; }
-.strati3d-elenco button.att i { border-color: var(--accent); color: var(--accent); }
-.strati3d-elenco b { font-weight: 600; }
-.strati3d-riga { flex: none; display: flex; align-items: center; gap: 2px; padding: 2px; border-radius: var(--r-pill); background: rgba(16, 20, 29, .9); border: 1px solid rgba(255, 255, 255, .12); }
-.strati3d-occhio { flex: none; width: 26px !important; height: 26px; padding: 0 !important; justify-content: center; border-radius: 50% !important; color: var(--accent) !important; }
-.strati3d-occhio[aria-pressed="false"] { color: #6b7380 !important; }
-.strati3d-riga.spenta .strati3d-nome { opacity: .45; text-decoration: line-through; }
-.strati3d-comandi { position: absolute; left: calc((100% - var(--libero-d, 0px)) / 2); bottom: max(18px, env(safe-area-inset-bottom)); transform: translateX(-50%); display: flex; align-items: center; gap: 12px; white-space: nowrap;
-  padding: 8px 16px; border-radius: var(--r-pill); background: rgba(16, 20, 29, .9); border: 1px solid rgba(255, 255, 255, .12); }
-/* con la scheda aperta lo spazio si stringe: la barra si mette a destra del navigatore e, se serve, va a capo */
-@media (min-width: 721px) {
-  .strati3d.con-scheda .strati3d-comandi { left: 252px; transform: none; max-width: calc(100% - var(--libero-d, 0px) - 268px); flex-wrap: wrap; white-space: normal; border-radius: var(--r-md); }
-}
-.strati3d-comandi label { display: flex; align-items: center; gap: 8px; font-size: var(--fs-sm); font-weight: 600; color: #aab2c0; }
-.strati3d-comandi input[type=range] { width: 150px; accent-color: var(--accent); }
-.strati3d-comandi button { padding: 6px 12px; border-radius: var(--r-pill); border: 1px solid rgba(255, 255, 255, .2); background: none; color: #fff; font-size: var(--fs-sm); font-weight: 600; cursor: pointer; }
-.strati3d-comandi button:hover, .strati3d-comandi button:focus-visible, .strati3d-comandi button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
-/* da dentro la pila: compaiono i comandi del varco, spariscono esplodi, gira e «dall'alto» */
-.strati3d-dentro { display: none; align-items: center; gap: 6px; }
-.strati3d.dentro .strati3d-dentro { display: flex; }
-.strati3d.dentro .solo-fuori { display: none; }
-.strati3d-comandi .strati3d-dentro button:is(.strati3d-varco-giu, .strati3d-varco-su) { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; }
-.strati3d-comandi button:disabled { opacity: .4; cursor: default; }
-.strati3d-varco { font-size: var(--fs-xs); font-weight: 600; color: #aab2c0; }
-.strati3d-aiuto { position: absolute; left: 16px; bottom: 162px; max-width: 280px; margin: 0; font-size: var(--fs-xs); line-height: 1.4; color: #aab2c0; pointer-events: none; }
-.strati3d-aiuto.via { opacity: 0; transition-delay: 1.2s; }
-/* spillo sul punto cliccato: due strisce incrociate in verticale e un pallino su ogni strato */
-.strati3d-spillo { position: absolute; width: 0; transform-style: preserve-3d; transform-origin: 0 0; transform: rotateX(90deg); pointer-events: none; }
-.strati3d-spillo i { position: absolute; left: -3px; top: 0; width: 6px; height: 100%; background: linear-gradient(var(--accent), rgba(245, 166, 35, .35)); }
-.strati3d-spillo i + i { transform: rotateY(90deg); }
-.strati3d-punto { position: absolute; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; border: 4px solid var(--accent); background: rgba(245, 166, 35, .35); box-shadow: 0 0 18px rgba(245, 166, 35, .8); pointer-events: none; }
-/* la scheda del luogo (e il rail per riaprirla) si aprono sopra la scena 3D */
-body.strati3d-attiva :is(#scheda, #rail-pannelli) { z-index: calc(var(--z-viewer) + 1); }
-/* «in sviluppo»: targhetta nella scena, bollino β sul pulsante */
-.strati3d-beta { padding: 3px 9px; border-radius: var(--r-pill); border: 1px solid var(--accent); color: var(--accent); font-size: var(--fs-3xs); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; pointer-events: auto; cursor: help; }
-.strati3d-beta--mini { padding: 0 5px; text-transform: none; font-size: var(--fs-3xs); line-height: 1.4; cursor: inherit; }
-@media (max-width: 720px) {
-  .strati3d-testata h2 { display: none; }
-  .strati3d-elenco { left: 8px; right: 8px; top: 58px; flex-wrap: nowrap; overflow-x: auto; max-height: none; }
-  .strati3d-elenco button { padding: 3px 6px; font-size: var(--fs-xs); }
-  .strati3d-comandi { left: 8px; right: 8px; transform: none; justify-content: center; flex-wrap: wrap; gap: 6px 8px; padding: 8px 10px; border-radius: var(--r-md); }
-  .strati3d-comandi input[type=range] { width: 96px; }
-  .strati3d-varco { display: none; }
-  .strati3d-dentro { gap: 4px; }
-  .strati3d.dentro .strati3d-comandi { gap: 4px; padding: 6px 8px; flex-wrap: wrap; justify-content: center; border-radius: var(--r-md); }
-  .strati3d.dentro .strati3d-dentro { flex-wrap: wrap; justify-content: center; }
-  .strati3d.dentro .strati3d-comandi button:not(.strati3d-varco-giu, .strati3d-varco-su) { padding: 6px 8px; }
-  .strati3d.dentro .strati3d-gira { display: none; } /* su telefono la barra da dentro non ci starebbe: si gira trascinando */
-  .strati3d-aiuto { display: none; }
-  .strati3d-nav { left: auto; right: 8px; bottom: auto; top: 104px; flex-direction: column; gap: 6px; padding: 6px; border-radius: 44px 44px 14px 14px; }
-  .strati3d-bussola { width: 84px; height: 84px; }
-  .strati3d-manopola { width: 34px; height: 34px; margin: -17px; }
-  .strati3d-manopola::after { inset: 10px; }
-  .strati3d-nav-colonna { grid-template-columns: repeat(3, 26px); gap: 3px; }
-  .strati3d-nav-colonna button { width: 26px; height: 26px; }
-}
 .interruttore-tip { margin: 0 0 8px; }
 /* legende del PRG 2004: simbolo 16×16 e testo che va a capo */
 .legenda-prg strong { display: block; margin-bottom: 4px; font-size: var(--fs-xs); }
