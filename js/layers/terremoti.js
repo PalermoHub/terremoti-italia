@@ -343,6 +343,8 @@ export default {
     // HIT: i cerchi degli eventi; HIT_COMUNI: il confine comunale sotto il clic (lo aggiunge js/core/ricerca.js)
     layers: [HIT, HIT_COMUNI],
     // «Cerca eventi attorno a un punto» (core/raggio-vicini.js): gli eventi in mappa entro il raggio, dal più vicino
+    // periodo scelto nel filtro, scritto sopra la lista in scheda
+    periodoVicini: () => (acceso ? testoPeriodo() : null),
     eventiVicini(lngLat, raggioM) {
       if (!acceso) return [];
       const raggioKm = raggioM / 1000;

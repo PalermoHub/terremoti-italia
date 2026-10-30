@@ -477,7 +477,8 @@ export function collegaScheda(map, moduli, contenitore, opzioni = {}) {
       totaleVicini = vicini.totale;
       impostaAreaRaggio(lngLat, raggio); // la Lista Terremoti si restringe al cerchio
       document.dispatchEvent(new Event(EVENTO_TABELLA));
-      const voce = voceEventiVicini(vicini, raggio);
+      const periodo = [...new Set(conScheda.map(m => m.scheda.periodoVicini?.()).filter(Boolean))].join(' · '); // il periodo scelto dagli strati con eventi in lista
+      const voce = voceEventiVicini(vicini, raggio, periodo);
       const iEvento = voci.findIndex(v => v.evento);
       voci.splice(iEvento >= 0 ? iEvento + 1 : 0, 0, voce);
     }

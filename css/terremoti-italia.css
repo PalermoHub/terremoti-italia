@@ -98,6 +98,7 @@
 .raggio-luogo { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .raggio-quando { color: var(--accent-strong); font-weight: 700; font-size: var(--fs-xs); white-space: nowrap; }
 .raggio-nota { margin: 6px 0 0; }
+.raggio-periodo { margin: 0 0 6px; font-weight: 600; font-size: 0.9em; }
 /* Il riquadro con Live Zoom e ricerca nel raggio sta sopra la barra di ricerca: altrimenti la coprirebbe (e la
    barra coprirebbe cursore e interruttore del cerchio). */
 @media (min-width: 721px) and (max-width: 1099px) {

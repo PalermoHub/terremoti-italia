@@ -1505,6 +1505,7 @@
   "raggio.dentro.uno": "1 evento",
   "raggio.dentro.altri": "{n} eventi",
   "raggio.dentro.zero": "Nessun evento",
+  "raggio.periodo": "Periodo: {p}",
   "raggio.vuoto": "Nessun evento entro {r} dal punto cliccato. Prova ad allargare il raggio o il periodo.",
   "raggio.apri": "Apri l'evento: {luogo}",
   "raggio.mag": "M {m}",

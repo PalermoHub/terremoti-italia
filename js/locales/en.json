@@ -1505,6 +1505,7 @@
   "raggio.dentro.uno": "1 event",
   "raggio.dentro.altri": "{n} events",
   "raggio.dentro.zero": "No events",
+  "raggio.periodo": "Period: {p}",
   "raggio.vuoto": "No events within {r} of the clicked point. Try a wider radius or period.",
   "raggio.apri": "Open event: {luogo}",
   "raggio.mag": "M {m}",

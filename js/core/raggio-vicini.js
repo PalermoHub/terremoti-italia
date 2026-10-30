@@ -172,11 +172,11 @@ export function eventiVicini(moduli, lngLat, raggioM) {
 }
 
 // Voce della scheda con la lista degli eventi nel raggio (vedi scheda-disegno.js): `dinamico` perché ogni riga è un pulsante.
-export function voceEventiVicini({ eventi, totale }, raggioM) {
+export function voceEventiVicini({ eventi, totale }, raggioM, periodo = '') {
   return {
     chiave: 'raggio:eventi', tipo: 'terremoto', peso: 8, titolo: t('raggio.titolo', { r: formattaRaggio(raggioM) }), icona: 'terremoto', sempre: true,
     ...(totale ? { badge: String(totale) } : {}),
-    gruppi: [], dinamico: () => elencoVicini(eventi, totale, raggioM),
+    gruppi: [], dinamico: () => elencoVicini(eventi, totale, raggioM, periodo),
   };
 }
 
@@ -189,9 +189,15 @@ function nota(testo) {
   return p;
 }
 
-function elencoVicini(eventi, totale, raggioM) {
+function elencoVicini(eventi, totale, raggioM, periodo = '') {
   const box = document.createElement('div');
   box.className = 'raggio-elenco';
+  if (periodo) {
+    const titolo = document.createElement('p');
+    titolo.className = 'raggio-periodo';
+    titolo.textContent = t('raggio.periodo', { p: periodo });
+    box.append(titolo);
+  }
   if (!eventi.length) {
     box.append(nota(t('raggio.vuoto', { r: formattaRaggio(raggioM) })));
     return box;
