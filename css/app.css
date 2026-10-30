@@ -2822,7 +2822,7 @@ details.scheda-sez-evento .scheda-sez-testo { display: contents; }
 
 /* Legenda terremoti: `.legenda div` impone il flex, il filtro si adatta alle colonne (due nella legenda, dove la
    magnitudo ha lo slider a due maniglie, tre nella scheda) e l'etichetta non sborda in quella accanto */
-.legenda .terremoti-filtri { display: grid; grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); align-items: start; gap: 8px; }
+.legenda .terremoti-filtri { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); align-items: start; gap: 8px; }
 .legenda .terremoti-filtro > span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .terremoti-serie.con-mappa > .terremoti-testa { grid-column: 1 / -1; grid-row: 1; }
 
