@@ -231,3 +231,6 @@ input, textarea, [contenteditable] { caret-color: var(--accent-strong); }
 /* Legenda dei terremoti: il titolo del gruppo si stacca dal blocco della magnitudo con un filetto e più aria sopra che sotto */
 .lg-terremoti { margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border-ui); }
 .lg-terremoti > strong { display: block; margin-bottom: 6px; font-size: var(--fs-sm); font-weight: 700; }
+
+/* La minimappa sta sotto i popup degli eventi (z-index 1): il popup non ne viene coperto. Resta sopra la mappa e sotto legenda e scheda come prima. */
+#minimappa-panoramica { z-index: 0; }
