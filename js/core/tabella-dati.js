@@ -393,6 +393,12 @@ export function collegaTabellaDati({ bottone: comando, fornitori = [] } = {}) {
       tr.addEventListener('keydown', e => {
         if (e.key === 'Enter') { e.preventDefault(); apri(); }
       });
+      if (f.evidenzia) { // passaggio del mouse o focus: l'evento si accende in mappa
+        tr.addEventListener('pointerenter', () => f.evidenzia(riga));
+        tr.addEventListener('pointerleave', () => f.nascondi?.());
+        tr.addEventListener('focus', () => f.evidenzia(riga));
+        tr.addEventListener('blur', () => f.nascondi?.());
+      }
       frammento.append(tr);
     }
     tbody.append(frammento);

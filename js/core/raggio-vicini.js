@@ -220,6 +220,10 @@ function elencoVicini(eventi, totale, raggioM) {
     bottone.title = t('raggio.apri', { luogo: luogo.textContent });
     bottone.append(punto, magnitudo, distanza, luogo, quando);
     bottone.addEventListener('click', () => e.apri?.());
+    bottone.addEventListener('pointerenter', () => e.evidenzia?.()); // l'evento si accende in mappa, senza spostare la vista
+    bottone.addEventListener('pointerleave', () => e.nascondi?.());
+    bottone.addEventListener('focus', () => e.evidenzia?.());
+    bottone.addEventListener('blur', () => e.nascondi?.());
     voce.append(bottone);
     lista.append(voce);
   }

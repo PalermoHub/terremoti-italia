@@ -18,7 +18,7 @@ import { legendaMagnitudo } from './legenda-magnitudo.js';
 import { creaPopupTerremoti, righeTooltip } from './terremoti-popup.js';
 import { EVENTO_TABELLA } from '../core/tabella-dati.js';
 import { raggioAttivo, EVENTO_RAGGIO, filtraArea, areaRaggio } from '../core/raggio-vicini.js';
-import { creaEvidenzaMappa } from '../core/evidenza-eventi.js';
+import { creaEvidenzaMappa, evidenziaEventi, nascondiEvidenzaEventi } from '../core/evidenza-eventi.js';
 
 // Terremoti in tempo reale in Italia: gli eventi degli ultimi 30 giorni dal nostro archivio (GET /terremoti), che il server tiene allineato al servizio FDSN dell'INGV.
 // Cerchio = un evento: più grande è la magnitudo, più grande il cerchio; il colore dice da quanto è successo. Si rinnova ogni 2 minuti finché lo strato è acceso.
@@ -349,7 +349,7 @@ export default {
       return visibili()
         .map(p => ({ p, km: distanzaKm([lngLat.lng, lngLat.lat], [p.lon, p.lat]) }))
         .filter(({ km: d }) => d <= raggioKm)
-        .map(({ p, km: d }) => ({ id: p.id, mag: p.mag, luogo: p.luogo, colore: p.colore, quando: quantoTempoFa(p.ts), distanzaM: d * 1000, apri: () => vaiAEvento(p) }));
+        .map(({ p, km: d }) => ({ id: p.id, mag: p.mag, luogo: p.luogo, colore: p.colore, quando: quantoTempoFa(p.ts), distanzaM: d * 1000, apri: () => vaiAEvento(p), evidenzia: () => evidenziaEventi(mappa, [p], { inquadra: false }), nascondi: () => nascondiEvidenzaEventi(mappa) }));
     },
     // prima l'evento cliccato (il più forte sotto il cerchio, in evidenza), poi tutti gli altri che passano il filtro, anche quelli sovrapposti;
     // senza un evento sotto il dito, la card dei terremoti del comune (se il clic è caduto su un comune)
@@ -416,6 +416,8 @@ export default {
     area: areaRaggio,
     attivo: () => acceso,
     apri: p => vaiAEvento(p),
+    evidenzia: p => evidenziaEventi(mappa, [p], { inquadra: false }), // passando sulla riga si vede l'evento in mappa, senza spostare la vista
+    nascondi: () => nascondiEvidenzaEventi(mappa),
   },
   pannello: creaLegenda,
 };
