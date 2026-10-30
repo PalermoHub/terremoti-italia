@@ -103,8 +103,11 @@ function maiuscoleItaliane(testo) {
     (i > 0 && PARTICELLE.has(w)) ? w : w.replace(/(^|['’-])(\p{L})/gu, (_, sep, c) => sep + c.toUpperCase())).join(' ');
 }
 
-// Titolo della scheda: l'indirizzo se c'è (via e civico), altrimenti un titolo generico.
+// Titolo della scheda: evento o comune se è stato cliccato uno dei due, poi l'indirizzo (via e civico), altrimenti un titolo generico.
 export function titoloScheda(sezioni) {
+  if (sezioni.some(s => /^terremoto-/.test(String(s.chiave)))) return t('scheda.titoloEvento');
+  const comune = sezioni.find(s => s.tipo === 'comune')?.gruppi.flatMap(g => g.righe).find(r => r.etichetta === t('comune.sismico.comune'))?.valore;
+  if (pieno(comune)) return t('scheda.titoloComune', { nome: comune });
   const righe = sezioni.find(s => s.chiave === 'indirizzo')?.gruppi.flatMap(g => g.righe) ?? [];
   const valore = nome => righe.find(r => r.etichetta === nome)?.valore;
   const via = valore('Via');

@@ -1579,6 +1579,8 @@
   "scheda.tab.strumenti": "Planning tools",
   "scheda.tab.terreno": "Terrain",
   "scheda.titoloGenerico": "Place profile",
+  "scheda.titoloEvento": "Event profile",
+  "scheda.titoloComune": "Municipality profile: {nome}",
   "scheda.tuttoNascosto": "All the information in this profile is hidden.",
   "scuole.sezioniN": "Sections ({n})",
   "sicurezza.chip.anno": "Accidents {anno}",

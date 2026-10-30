@@ -1579,6 +1579,8 @@
   "scheda.tab.strumenti": "Strumenti urbanistici",
   "scheda.tab.terreno": "Terreno",
   "scheda.titoloGenerico": "Scheda del luogo",
+  "scheda.titoloEvento": "Scheda dell'evento",
+  "scheda.titoloComune": "Scheda del Comune di {nome}",
   "scheda.tuttoNascosto": "Tutte le informazioni di questa scheda sono nascoste.",
   "scuole.sezioniN": "Sezioni ({n})",
   "sicurezza.chip.anno": "Incidenti {anno}",
