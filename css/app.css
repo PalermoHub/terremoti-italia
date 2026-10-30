@@ -2342,6 +2342,18 @@ a.scheda-badge-tinta:hover, a.scheda-badge-tinta:focus-visible { background: col
 .timetile.semplice .tt-azioni { gap: 4px; }
 .timetile.semplice .tt-sposta { width: 24px; }
 .timetile.ridotta .tt-semplifica { display: none; }
+/* versione completa più compatta: su mouse pulsanti e legenda più bassi, sul touch restano da 36 px */
+.cerca-tempo.timetile:not(.semplice) { gap: 6px; padding: 8px 14px 10px; }
+.timetile:not(.semplice) .tt-corpo { gap: 4px; }
+.timetile:not(.semplice) .tt-intervallo { font-size: 1.9rem; }
+.timetile:not(.semplice) .tt-sotto { line-height: 1.2; }
+.timetile:not(.semplice) .tt-grafico { height: 64px; }
+.timetile:not(.semplice) .tt-asse { height: 12px; line-height: 12px; }
+@media (pointer: fine) {
+  .timetile:not(.semplice) .tt-chip, .timetile:not(.semplice) .tt-btn, .timetile:not(.semplice) .tt-riduci, .timetile:not(.semplice) .tt-velocita, .timetile:not(.semplice) .tt-semplifica, .timetile:not(.semplice) .tt-chiudi, .timetile:not(.semplice) .tt-sposta { min-height: 30px; }
+  .timetile:not(.semplice) .tt-semplifica, .timetile:not(.semplice) .tt-chiudi { min-width: 30px; }
+  .timetile:not(.semplice) .tt-voce { min-height: 26px; }
+}
 @media (max-width: 480px) { .timetile .tt-etichetta-vel { flex: 1 1 100%; } .timetile .tt-velocita { flex: 1; } .timetile .tt-intervallo { font-size: 1.7rem; } }
 @media (prefers-reduced-motion: reduce) { .timetile .tt-chip, .timetile .tt-btn { transition: none; } }
 
