@@ -9,6 +9,7 @@ import { fasciaAlPunto } from './pericolosita.js';
 import { EVENTO_FILTRO, menuFiltro, menuMagnitudo, menuProfondita, elencoAltri, graficoSerie, testoPeriodo, barraEventi } from './scheda-terremoti-dom.js';
 import { pannelloFiltro } from './terremoti-pannello.js';
 import { registraTooltipStrati } from '../core/tooltip.js';
+import { intercettaClic } from '../core/cattura-clic.js';
 import { clicSu } from '../core/scheda-navigazione.js';
 import { coloreMagnitudo, espressioneColoreMagnitudo } from '../core/magnitudo.js';
 import { aggiornaLegendaInMappa, EVENTO_TEMA_MAGNITUDO, temaMagnitudoAttivo } from '../core/tema-magnitudo.js';
@@ -296,6 +297,9 @@ export default {
       if (!f) return;
       popup.apri(map, proprieta(f), e.point);
     });
+    // sul telefono il primo tocco su un evento apre il suo popup (da lì il pulsante «Scheda»): la scheda del luogo non si apre
+    intercettaClic(e => matchMedia('(hover: none)').matches && !raggioAttivo()
+      && map.getLayoutProperty(PUNTI, 'visibility') !== 'none' && !!evento(map.queryRenderedFeatures(e.point, { layers: [PUNTI] })));
     registraTooltipStrati(map, [{
       layers: [PUNTI], icona: 'terremoto', sezione: 'Terremoti', colore: p => (temaMagnitudoAttivo() ? coloreMagnitudo(p.mag) : p.colore),
       modello: p => {

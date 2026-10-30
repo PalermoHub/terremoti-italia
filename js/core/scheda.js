@@ -63,7 +63,7 @@ function mostra(contenitore, lngLat, dati, chiusura, adattaVista, pref, tabInizi
   maniglia.setAttribute('aria-label', tr('scheda.altezza'));
   maniglia.append(el('i'));
   const imposta = alt => { contenitore.dataset.altezza = alt; contenitore.classList.toggle('scheda-piena', alt === 'pieno'); };
-  imposta(inModoEmergenza() ? 'pieno' : 'meta'); // in modalità emergenza (telefono) la scheda dell'area si apre a tutta altezza
+  imposta(inModoEmergenza() || window.matchMedia?.('(max-width: 720px)').matches ? 'pieno' : 'meta'); // su telefono (anche in modalità emergenza) la scheda si apre a tutta altezza
   let y0 = 0, mosso = false;
   maniglia.addEventListener('pointerdown', e => { y0 = e.clientY; mosso = false; });
   maniglia.addEventListener('pointerup', e => {
