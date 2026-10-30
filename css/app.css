@@ -3,8 +3,6 @@
    Interfaccia chiara di default; il tema scuro sostituisce solo i token (vedi [data-tema="scuro"]).
    ========================================================================== */
 :root {
-  --tre-d: #4f46e5;        /* pulsante «Strati in 3D»: indaco, distinto dai pulsanti grigi e dall'ambra degli stati attivi */
-  --tre-d-ink: #fff;
   color-scheme: light;
 
   /* superfici, testo, bordi */
@@ -97,8 +95,6 @@
 
 /* tema scuro: sostituisce solo i token; il chiaro resta il predefinito. La base cartografica si sceglie a parte. */
 :root[data-tema="scuro"] {
-  --tre-d: #818cf8;
-  --tre-d-ink: #12152b;
   color-scheme: dark;
   --surface: #1c2128;
   --surface-alt: #232a33;
@@ -756,19 +752,14 @@ body:has(#scheda:not([hidden])) .traffico-popup-box { z-index: 1; } /* ma sotto 
 .legenda-pnrr .pnrr-soggetti > label:has(input:not(:checked)) > :not(input) { filter: none; }
 .legenda-pnrr .pnrr-soggetti > label i.monumenti-pallino { background: transparent; border: 2px solid #868e96; flex: none; }
 .legenda-pnrr .pnrr-soggetti > label:has(input:checked) { font-weight: 700; }
-.legenda-pnrr .pnrr-soggetti > label:has(input:checked) i.monumenti-pallino { background: #7048e8; border-color: #7048e8; }
 .tooltip-elenco { margin-top: 4px; font-size: var(--fs-xs); font-weight: 400; }
 .tooltip-suggerimento { margin-top: 6px; font-size: var(--fs-xs); font-weight: 400; font-style: italic; color: var(--text-muted); }
 .tooltip-elenco > div { max-width: 300px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 /* cerchietto che gira per le attese (tooltip dei comuni, scheda): la stessa animazione degli avvisi di attesa */
 .gira-attesa { display: inline-block; flex: none; width: 10px; height: 10px; margin-left: 5px; border: 2px solid color-mix(in srgb, currentColor 25%, transparent); border-top-color: currentColor; border-radius: 50%; vertical-align: -1px; animation: giro-attesa .8s linear infinite; }
 .comuni-gira { color: #c27c0e; }
-.pnrr-copertura { margin: 6px 0 8px; padding: 6px 8px; border-left: 3px solid #7048e8; border-radius: 0 var(--r-sm) var(--r-sm) 0; background: var(--accent-soft); font-size: var(--fs-xs); font-weight: 600; line-height: 1.35; }
 /* menu a tendina ben riconoscibili (scheda e legenda): bordo e fondo colorati, testo in grassetto, etichetta sopra */
 .pnrr-scelta { display: block; margin-top: 10px; }
-.pnrr-scelta-et { display: block; margin-bottom: 3px; font-size: var(--fs-xs); font-weight: 700; letter-spacing: .03em; color: #7048e8; }
-.pnrr-tendina select, .legenda-pnrr .pnrr-soggetti select { display: block; width: 100%; padding: 8px 10px; border: 2px solid #7048e8; border-radius: var(--r-sm); background-color: var(--accent-soft); color: inherit; font: inherit; font-size: var(--fs-sm); font-weight: 600; cursor: pointer; }
-.pnrr-tendina select:hover:not(:disabled), .legenda-pnrr .pnrr-soggetti select:hover { background-color: color-mix(in srgb, #7048e8 14%, var(--accent-soft)); }
 .pnrr-tendina select:focus-visible, .legenda-pnrr .pnrr-soggetti select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .pnrr-tendina select:disabled { opacity: .55; cursor: not-allowed; border-style: dashed; }
 .pnrr-tendina-carta { margin-top: 10px; }
@@ -2249,12 +2240,6 @@ body.strati3d-attiva :is(#scheda, #rail-pannelli) { z-index: calc(var(--z-viewer
 /* «in sviluppo»: targhetta nella scena, bollino β sul pulsante */
 .strati3d-beta { padding: 3px 9px; border-radius: var(--r-pill); border: 1px solid var(--accent); color: var(--accent); font-size: var(--fs-3xs); font-weight: 700; letter-spacing: .04em; text-transform: uppercase; pointer-events: auto; cursor: help; }
 .strati3d-beta--mini { padding: 0 5px; text-transform: none; font-size: var(--fs-3xs); line-height: 1.4; cursor: inherit; }
-#barra-strumenti #btn-strati3d .strati3d-bollino { position: absolute; top: -5px; right: -6px; min-width: 15px; height: 15px; padding: 0 3px; border-radius: 8px; background: var(--accent); color: var(--accent-ink); font-size: 10px; font-weight: 700; line-height: 15px; text-align: center; }
-#barra-strumenti #btn-strati3d { background: var(--tre-d); border-color: var(--tre-d); color: var(--tre-d-ink); }
-#barra-strumenti #btn-strati3d:hover:not(:disabled) { background: color-mix(in srgb, var(--tre-d) 85%, #000); color: var(--tre-d-ink); }
-#barra-strumenti #btn-strati3d[aria-pressed="true"] { box-shadow: 0 0 0 3px color-mix(in srgb, var(--tre-d) 35%, transparent); }
-#btn-strati3d-m svg { color: var(--tre-d); }
-#btn-strati3d:disabled, #btn-strati3d-m:disabled { opacity: .45; cursor: not-allowed; }
 @media (max-width: 720px) {
   .strati3d-testata h2 { display: none; }
   .strati3d-elenco { left: 8px; right: 8px; top: 58px; flex-wrap: nowrap; overflow-x: auto; max-height: none; }

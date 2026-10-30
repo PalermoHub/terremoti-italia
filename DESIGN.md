@@ -221,5 +221,5 @@ Forme morbide ma ordinate: pillola (999px) per ricerca, Filtri, badge e interrut
 - **Don't** usare l'ambra come colore di un dato o come decorazione.
 - **Don't** aggiungere ombre dentro i pannelli: separare con bordi e superfici alternate.
 - **Don't** usare testo ambra chiaro su fondo bianco (contrasto insufficiente).
-- **Don't** introdurre colori fuori dalla palette (viola, magenta, indaco) senza un ruolo semantico: l'evidenza è magenta, il pulsante 3D è indaco, e basta.
+- **Don't** introdurre colori fuori dalla palette (viola, indaco, nuovi blu) senza un ruolo semantico: l'unico colore extra è il magenta dell'evidenza.
 - **Don't** usare toni sensazionalistici o rossi di allarme per dati ordinari: l'app informa, non allerta.
