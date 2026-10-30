@@ -9,6 +9,7 @@ import { iconaAttesa } from '../core/scheda-util.js';
 import { SCELTE_GIORNI, SCELTE_MAGNITUDO, PROFONDITA, UNITA, MAG_STORICO, ANNI_STORICO, filtro, chiaveProfondita, altriTerremoti, accordionTerremoti, posizioneEvento, urlStorico, rispostaDaArchivio, scaricaEventiTutti, eventiDaTesto, eventiDaFeatures, serieEventi, puntiMagnitudo, curvaCumulativa, omori, rilascioCumulativo, tempiTraEventi, spazioTempo, finestraTempo, proprietaStorico, voceTerremoto, inquadra, proiettaMiniatura, miniatura, etichettaBarra, periodoSequenza, statisticheEvento, sintesiSerie, quoteClassi, SOGLIA_BASSA } from './scheda-terremoti.js';
 import { coloreMagnitudo, raggioMagnitudo } from '../core/magnitudo.js';
 import { badgeMagnitudo } from '../core/badge-magnitudo.js';
+import { testoAreaRaggio } from '../core/raggio-vicini.js';
 
 export const EVENTO_FILTRO = 'terremoti:filtro';
 
@@ -71,6 +72,15 @@ export const testoPeriodoBreve = p => (stessoGiorno(p.da, p.a)
   : t('terremoti.periodoNota', { da: dataPeriodo(p.da), a: dataPeriodo(p.a) }));
 // Frase del periodo per la nota della legenda: «Ultimi 7 giorni» o il periodo scelto
 export const testoPeriodo = (f = filtro) => (f.periodo ? testoPeriodoBreve(f.periodo) : testoGiorni(f.giorni));
+
+// I filtri che hanno prodotto la Lista Terremoti, scritti in chiaro dopo il titolo: periodo, magnitudo, profondità, territorio
+// scelto (`territorio` = { tipo, nome } dalla ricerca) e cerchio o poligono della ricerca attorno a un punto.
+export function filtriLista(periodo, territorio = null, f = filtro) {
+  const mag = f.magMax != null ? t('tabella.filtro.magTra', { a: f.magMin, b: f.magMax }) : f.magMin > 1 ? t('tabella.filtro.magMin', { m: f.magMin }) : null;
+  const prof = chiaveProfondita(f) === 'tutte' ? null : t(`tabella.filtro.prof.${chiaveProfondita(f)}`);
+  const luogo = territorio ? t(`tabella.filtro.${territorio.tipo}`, { n: territorio.nome }) : null;
+  return [periodo, mag, prof, luogo, testoAreaRaggio()].filter(Boolean);
+}
 
 // data «YYYY-MM-DD» nei campi del calendario, e ritorno ai millisecondi locali
 const valoreData = (ts, utc = false) => {

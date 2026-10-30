@@ -1,7 +1,7 @@
 import { tl, t } from '../core/i18n.js';
 import { AREA_EVENTI } from '../core/config.js';
 import { scaricaEventi, scaricaEventiTutti, eventoDaIngv, quantoTempoFa, distanzaKm, modelloPopupTerremoto, voceTerremoto, voceSerie, voceAltri, filtro, profonditaDaFiltro, colonneTabellaTerremoti, espressioneMagnitudo, passaMagnitudo } from './scheda-terremoti.js';
-import { EVENTO_FILTRO, apriDialogoPeriodo, barraEventi, graficoSerie, elencoAltri } from './scheda-terremoti-dom.js';
+import { EVENTO_FILTRO, apriDialogoPeriodo, barraEventi, graficoSerie, elencoAltri, filtriLista, testoPeriodoBreve } from './scheda-terremoti-dom.js';
 import { ANNO_INIZIO, periodoAnno } from './scheda-archivio.js';
 import { pannelloArchivio } from './terremoti-archivio.js';
 import { creaPopupTerremoti, righeTooltip } from './terremoti-popup.js';
@@ -32,6 +32,7 @@ let mappa = null;
 let legenda = null;
 let acceso = false;
 let periodoMostrato = null;
+let territorioScelto = null; // { tipo, nome } dell'area scelta dalla ricerca, per il titolo della lista
 let eventi = []; // proprietà degli eventi in mappa
 let primaVolta = true;
 let pannello = null;
@@ -143,6 +144,12 @@ function creaLegenda() {
   applicaTema();
 }
 
+// «Anno 2025» se il periodo è un anno intero, altrimenti le date
+const testoPeriodoAnno = p => {
+  const da = new Date(p.da), a = new Date(p.a);
+  return da.getMonth() === 0 && da.getDate() === 1 && a.getMonth() === 11 && a.getDate() === 31 && da.getFullYear() === a.getFullYear()
+    ? t('tabella.filtro.anno', { anno: da.getFullYear() }) : testoPeriodoBreve(p);
+};
 // eventi dell'anno che passano i filtri in mappa
 const filtrati = () => eventi.filter(p => passaMagnitudo(p) && (!filtro.classi || filtro.classi.has(p.classeMag)));
 // riga della lista «eventi vicini» in scheda; `distanzaM` manca per la ricerca a poligono
@@ -239,7 +246,8 @@ export default {
   legendaPannello: '.lg-terremoti-storico',
   // Dalla ricerca: accende lo strato (se spento) e mostra l'anno scelto con magnitudo ≥ magMin; anno null spegne lo strato
   // Restringe gli eventi dell'anno a un'area (funzione sulle proprietà dell'evento) o toglie la restrizione (null)
-  impostaArea(fn, riquadro = null) {
+  impostaArea(fn, riquadro = null, territorio = null) {
+    territorioScelto = fn ? territorio : null;
     const cambiata = Boolean(riquadro) !== Boolean(riquadroScelto) || (riquadro && riquadroScelto && riquadro.join() !== riquadroScelto.join());
     inAreaScelta = fn;
     riquadroScelto = riquadro;
@@ -286,6 +294,7 @@ export default {
     licenza: 'CC BY 4.0',
     colonne: () => colonneTabellaTerremoti({ anno: true }),
     righe: () => filtraArea(filtrati(), distanzaKm),
+    filtri: () => filtriLista(periodoMostrato ? testoPeriodoAnno(periodoMostrato) : null, territorioScelto), // il titolo della lista dice con quali filtri è stata fatta
     area: areaRaggio,
     attivo: () => acceso,
     apri: p => vaiAEvento(p),

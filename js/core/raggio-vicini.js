@@ -73,6 +73,13 @@ export function filtraArea(eventi, distanza) {
   return eventi.filter(p => distanza([a.lng, a.lat], [p.lon, p.lat]) <= a.raggioM / 1000);
 }
 
+// L'area della ricerca come filtro scritto in chiaro («Cerchio di 30 km», «Poligono»); null senza ricerca attiva
+export function testoAreaRaggio() {
+  const a = areaRaggio();
+  if (!a) return null;
+  return a.anello ? t('tabella.filtro.poligono') : t('tabella.filtro.cerchio', { r: formattaDistanza(a.raggioM) });
+}
+
 export function caricaRaggio(storage) {
   try {
     corrente = normalizzaRaggio(storage?.getItem(CHIAVE_RAGGIO));

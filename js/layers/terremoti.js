@@ -7,7 +7,7 @@ import { voceComune } from './scheda-comune.js';
 import { zonaComune } from './classificazione.js';
 import { fasciaAlPunto } from './pericolosita.js';
 import { badgeMagnitudo } from '../core/badge-magnitudo.js';
-import { EVENTO_FILTRO, menuFiltro, menuMagnitudo, menuProfondita, elencoAltri, graficoSerie, testoPeriodo, barraEventi } from './scheda-terremoti-dom.js';
+import { EVENTO_FILTRO, menuFiltro, menuMagnitudo, menuProfondita, elencoAltri, graficoSerie, testoPeriodo, barraEventi, filtriLista } from './scheda-terremoti-dom.js';
 import { pannelloFiltro } from './terremoti-pannello.js';
 import { registraTooltipStrati } from '../core/tooltip.js';
 import { intercettaClic } from '../core/cattura-clic.js';
@@ -49,6 +49,7 @@ let aggiornamento = false; // una sola rilettura manuale alla volta
 const ATTESA_INGV_MS = 20000; // il clic aspetta il server che rilegge l'INGV, poi ricarica comunque gli eventi
 let titolo = null; // intestazione della legenda: cambia col tema magnitudo
 let bloccoFasce = null; // filtri per età (colore del cerchio): con il tema magnitudo non descrivono più la mappa
+let territorioScelto = null; // { tipo, nome } dell'area scelta dalla ricerca, per il titolo della lista
 let inAreaScelta = null; // (proprietà) => bool, dalla ricerca per area; null = nessuna area che restringa
 const inArea = p => !inAreaScelta || inAreaScelta(p);
 let richiesta = 0; // una risposta in ritardo di una richiesta precedente si scarta
@@ -385,8 +386,9 @@ export default {
   },
   legendaPannello: '.lg-terremoti',
   // Restringe gli eventi a un'area (funzione sulle proprietà dell'evento) o toglie la restrizione (null); restituisce gli eventi che restano in mappa
-  impostaArea(fn) {
+  impostaArea(fn, territorio = null) {
     inAreaScelta = fn;
+    territorioScelto = fn ? territorio : null;
     applicaFiltro();
     return visibili();
   },
@@ -424,6 +426,7 @@ export default {
     licenza: 'CC BY 4.0',
     colonne: () => colonneTabellaTerremoti(),
     righe: () => filtraArea(visibili(), distanzaKm),
+    filtri: () => filtriLista(testoPeriodo(), territorioScelto), // il titolo della lista dice con quali filtri è stata fatta
     area: areaRaggio,
     attivo: () => acceso,
     apri: p => vaiAEvento(p),

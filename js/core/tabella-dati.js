@@ -519,7 +519,9 @@ export function collegaTabellaDati({ bottone: comando, fornitori = [] } = {}) {
     if (!s.esporta.size) s.esporta.add(s.ordine[0]);
 
     disegnaSchede(attive, f);
-    titolo.textContent = attive.length > 1 ? t('tabella.titolo') : `${t('tabella.titolo')} · ${etichettaDi(f)}`;
+    // dopo il titolo, i filtri con cui è fatta la lista (se il layer li sa dire); altrimenti, con un solo layer, il suo nome
+    const filtri = f.filtri?.() ?? [];
+    titolo.textContent = filtri.length ? `${t('tabella.titolo')} · ${filtri.join(' · ')}` : attive.length > 1 ? t('tabella.titolo') : `${t('tabella.titolo')} · ${etichettaDi(f)}`;
     filtro.disabled = false;
     filtro.value = s.filtro;
     bottoneColonne.disabled = false;

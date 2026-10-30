@@ -236,8 +236,10 @@ export function collegaRicerca(map, { terremoti = null, storico = null, comuni =
       const dentro = geometrie.length
         ? p => p.lon >= o && p.lon <= e && p.lat >= s && p.lat <= n && puntoInGeometrie(p.lon, p.lat, geometrie)
         : p => p.lon >= o && p.lon <= e && p.lat >= s && p.lat <= n; // tile non ancora pronti: vale il riquadro
-      storico?.impostaArea(dentro, [o, s, e, n]);
-      const rimasti = terremoti?.impostaArea(dentro) ?? [];
+      const voce = voceScelta(indice, scelta);
+      const territorio = { tipo: voce.tipo, nome: voce.nome };
+      storico?.impostaArea(dentro, [o, s, e, n], territorio);
+      const rimasti = terremoti?.impostaArea(dentro, territorio) ?? [];
       if (liveZoomAttivo() && rimasti.length) {
         const r = riquadroDa(rimasti.map(p => ({ geometry: { coordinates: [p.lon, p.lat] } })));
         if (r) inquadra(r, { maxZoom: 11 });
