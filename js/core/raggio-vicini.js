@@ -39,6 +39,8 @@ let attivo = false; // la ricerca parte spenta: un clic continua ad aprire la sc
 let cerchio = true; // il cerchio in mappa, quando la ricerca è accesa
 export const raggioVicini = () => corrente;
 export const raggioAttivo = () => attivo;
+// Con la ricerca accesa il puntatore sulla mappa diventa un crocicchio (classe sul body, vedi css/app.css)
+const segnaAttivo = () => document.body?.classList.toggle('raggio-attivo', attivo);
 export const cerchioVisibile = () => cerchio;
 
 export function caricaRaggio(storage) {
@@ -51,6 +53,7 @@ export function caricaRaggio(storage) {
     attivo = false;
     cerchio = true;
   }
+  segnaAttivo();
   return corrente;
 }
 
@@ -73,6 +76,7 @@ export function impostaRaggio(v, storage = null) {
 
 export function impostaAttivo(v, storage = null) {
   attivo = Boolean(v);
+  segnaAttivo();
   try { storage?.setItem(CHIAVE_ATTIVO, attivo ? '1' : '0'); } catch { /* storage bloccato: vale la sessione */ }
   return attivo;
 }
