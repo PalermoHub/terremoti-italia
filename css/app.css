@@ -658,8 +658,10 @@ body:has(#scheda:not([hidden])) .traffico-popup-box { z-index: 1; } /* ma sotto 
 .peba-foto { display: block; aspect-ratio: 1; overflow: hidden; border-radius: var(--r-sm); background: var(--accent-soft); }
 .peba-foto:first-child { grid-column: span 3; aspect-ratio: 16 / 10; }
 .peba-foto img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.scheda-link { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 8px; padding: 7px 10px; border-radius: var(--r-sm); background: var(--link); color: var(--bianco); text-decoration: none; font-weight: 600; }
-.scheda-link-et { padding: 1px 8px; border-radius: var(--r-sm); background: color-mix(in srgb, var(--bianco) 20%, transparent); font-size: var(--fs-xs); }
+.scheda-link { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-top: 8px; padding: 7px 10px; border: 1px solid var(--border-ui); border-radius: var(--r-sm); background: var(--surface); color: var(--link); text-decoration: none; font-weight: 600; transition: background var(--t-rapida), border-color var(--t-rapida); }
+.scheda-link:hover { border-color: var(--accent); background: var(--accent-soft); }
+.scheda-link:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.scheda-link-et { padding: 1px 8px; border-radius: var(--r-sm); background: color-mix(in srgb, var(--link) 12%, transparent); font-size: var(--fs-xs); }
 .scheda-link[hidden] { display: none; }
 .scheda-acc { margin-top: 6px; }
 .scheda-acc > summary { padding: 6px 8px; background: var(--avviso); font-weight: 600; }
