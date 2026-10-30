@@ -1755,6 +1755,7 @@
   "tabella.nessunRisultato": "No rows match the current filters.",
   "tabella.nessunaColonna": "No column chosen: open one from the “Columns” menu.",
   "tabella.nota": "Events that pass the map filters.",
+  "tabella.nota.clic": "Click an event to see its position on the map. Click a column header to sort.",
   "tabella.apri": "Open the event profile",
   "tabella.licenza": "Licence",
   "tabella.meta.fonte": "Source",

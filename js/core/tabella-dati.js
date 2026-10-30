@@ -273,7 +273,8 @@ export function collegaTabellaDati({ bottone: comando, fornitori = [] } = {}) {
       b.querySelector('.tabella-esporta-n').textContent = `${righe.length} × ${colonne.length}`;
       b.disabled = righe.length === 0 || colonne.length === 0;
     }
-    nota.textContent = [t('tabella.nota'), t('tabella.nota.territorio'), nRighe > MAX_RIGHE ? t('tabella.mostrate', { n: MAX_RIGHE }) : ''].filter(Boolean).join(' · ');
+    const resto = [t('tabella.nota.territorio'), nRighe > MAX_RIGHE ? t('tabella.mostrate', { n: MAX_RIGHE }) : ''].filter(Boolean).join(' · ');
+    nota.replaceChildren(`${t('tabella.nota')} `, el('strong', null, t('tabella.nota.clic')), ` · ${resto}`);
     nota.title = nota.textContent;
     return { righe, colonne };
   }
