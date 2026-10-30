@@ -4,7 +4,8 @@ import { scaricaEventiTutti, eventoDaIngv, colonneTabellaTerremoti } from './sch
 import { EVENTO_TABELLA } from '../core/tabella-dati.js';
 import { ANNO_INIZIO, periodoAnno, periodoValido } from './scheda-archivio.js';
 import { scelta, sceltaPeriodo, stato } from './terremoti-archivio.js';
-import { CLASSI_PROFONDITA, SEMILARGHEZZE_KM, SEZIONI_PREDEFINITE, coloreProfondita, fascia, riquadroFascia, lunghezzaKm, proiettaEventi } from './scheda-sezione.js';
+import { espressioneColoreProfondita } from '../core/profondita.js';
+import { SEMILARGHEZZE_KM, SEZIONI_PREDEFINITE, coloreProfondita, fascia, riquadroFascia, lunghezzaKm, proiettaEventi } from './scheda-sezione.js';
 import { graficoSezione } from './grafico-sezione.js';
 import { creaInterazione } from './scheda-terremoti-dom.js';
 import { creaEvidenzaMappa } from '../core/evidenza-eventi.js';
@@ -50,7 +51,7 @@ const memoria = () => { try { return window.localStorage; } catch { return null;
 const numero = (n, d = 0) => n.toLocaleString(localeIntl(), { minimumFractionDigits: d, maximumFractionDigits: d });
 const raggio = mag => Math.max(1.2, 1.4 + (mag - 2) * 1.5);
 
-const coloreMappa = ['step', ['get', 'prof'], CLASSI_PROFONDITA[0].colore, ...CLASSI_PROFONDITA.slice(0, -1).flatMap((c, i) => [c.fino, CLASSI_PROFONDITA[i + 1].colore])];
+const coloreMappa = espressioneColoreProfondita();
 
 // Linea, fascia ed estremi A e B in mappa (o niente, se la linea non c'è)
 function disegnaLinea(a, b, semilarghezza) {

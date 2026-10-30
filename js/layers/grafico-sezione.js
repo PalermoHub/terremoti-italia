@@ -3,7 +3,8 @@ import { titoloConInfo, apriGrande } from '../core/info-grafico.js';
 import { zoomGrafico } from '../core/zoom-grafico.js';
 import { rendiGruppo, rendiApribile, creaSync, aggiungiMappa, adattaDimensioni, azzeraSelezione, dimensioniPopup } from './scheda-terremoti-dom.js';
 import { nodoSvg, testoSvg, titoloAsse, collegaTooltip } from './terremoti-archivio.js';
-import { CLASSI_PROFONDITA, coloreProfondita, estremoAsse } from './scheda-sezione.js';
+import { CLASSI_PROFONDITA, coloreProfondita, etichettaClasseProfondita } from '../core/profondita.js';
+import { estremoAsse } from './scheda-sezione.js';
 import { raggioMagnitudo } from './scheda-terremoti.js';
 import { vista3d } from './grafico-sezione-3d.js';
 
@@ -94,8 +95,7 @@ export function graficoSezione(eventi, lunghezza, { grande = false, dominio = nu
     const voce = el('span');
     const pallino = el('i');
     pallino.style.background = c.colore;
-    const inizio = i ? CLASSI_PROFONDITA[i - 1].fino : 0;
-    voce.append(pallino, el('span', null, c.fino === Infinity ? `≥ ${inizio}` : i ? `${inizio}–${c.fino}` : `< ${c.fino}`));
+    voce.append(pallino, el('span', null, etichettaClasseProfondita(i)));
     chiave.append(voce);
   });
   blocco.append(chiave, svg, el('p', 'scheda-nota', t('terremoti.sez.graficoNota')));

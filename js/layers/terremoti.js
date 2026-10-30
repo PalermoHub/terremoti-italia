@@ -12,8 +12,9 @@ import { pannelloFiltro } from './terremoti-pannello.js';
 import { registraTooltipStrati } from '../core/tooltip.js';
 import { intercettaClic } from '../core/cattura-clic.js';
 import { clicSu } from '../core/scheda-navigazione.js';
-import { coloreMagnitudo, espressioneColoreMagnitudo } from '../core/magnitudo.js';
-import { aggiornaLegendaInMappa, EVENTO_TEMA_MAGNITUDO, temaMagnitudoAttivo } from '../core/tema-magnitudo.js';
+import { coloreMagnitudo } from '../core/magnitudo.js';
+import { aggiornaLegendaInMappa, bordoTema, espressioneColoreTema, EVENTO_TEMA_MAGNITUDO, temaAttivo, temaProfonditaAttivo, titoloTema } from '../core/tema-magnitudo.js';
+import { coloreProfondita } from '../core/profondita.js';
 import { legendaMagnitudo } from './legenda-magnitudo.js';
 import { creaPopupTerremoti, righeTooltip } from './terremoti-popup.js';
 import { EVENTO_TABELLA } from '../core/tabella-dati.js';
@@ -178,14 +179,14 @@ function applicaFiltro() {
 // condiviso, legenda-magnitudo.js) prendono il posto delle fasce e filtrano la mappa. La legenda passa in mappa, al
 // posto di quella dell'età; con il tema spento tornano i colori dell'età e la legenda se ne va dove dice «Legende sulla mappa».
 function applicaTema() {
-  const tema = temaMagnitudoAttivo();
+  const tema = temaAttivo();
   if (mappa?.getLayer(PUNTI)) {
-    const colore = tema ? espressioneColoreMagnitudo() : ['get', 'colore'];
+    const colore = espressioneColoreTema() ?? ['get', 'colore'];
     mappa.setPaintProperty(PUNTI, 'circle-color', colore);
-    mappa.setPaintProperty(PUNTI, 'circle-stroke-color', colore);
+    mappa.setPaintProperty(PUNTI, 'circle-stroke-color', bordoTema(colore));
   }
   if (!legenda) return;
-  titolo.textContent = tema ? t('tema.magnitudo.titoloStrato', { nome: tl('Terremoti in tempo reale') }) : tl('Terremoti in tempo reale');
+  titolo.textContent = titoloTema(tl('Terremoti in tempo reale'));
   bloccoFasce.hidden = tema;
   if (tema) accendiTutteLeFasce(); // senza il comando in vista un filtro per età resterebbe invisibile
   aggiornaLegendaInMappa();
@@ -326,7 +327,7 @@ export default {
     intercettaClic(e => matchMedia('(hover: none)').matches && !raggioAttivo()
       && map.getLayoutProperty(PUNTI, 'visibility') !== 'none' && !!evento(map.queryRenderedFeatures(e.point, { layers: [PUNTI] })));
     registraTooltipStrati(map, [{
-      layers: [PUNTI], icona: 'terremoto', sezione: 'Terremoti', colore: p => (temaMagnitudoAttivo() ? coloreMagnitudo(p.mag) : p.colore),
+      layers: [PUNTI], icona: 'terremoto', sezione: 'Terremoti', colore: p => (temaProfonditaAttivo() ? coloreProfondita(p.prof) : temaAttivo() ? coloreMagnitudo(p.mag) : p.colore),
       modello: p => {
         const m = modelloPopupTerremoto(p);
         return { titolo: m.titolo, badge: { testo: tl(m.sottotitolo), colore: p.colore }, elenco: righeTooltip(m, p) };

@@ -10,8 +10,9 @@ import { creaEvidenzaMappa } from '../core/evidenza-eventi.js';
 import { registraTooltipStrati } from '../core/tooltip.js';
 import { clicSu } from '../core/scheda-navigazione.js';
 import { creaFiltroTerritorio } from '../core/filtro-territorio.js';
-import { espressioneClassiMagnitudo, espressioneColoreMagnitudo } from '../core/magnitudo.js';
-import { aggiornaLegendaInMappa, EVENTO_TEMA_MAGNITUDO, temaMagnitudoAttivo } from '../core/tema-magnitudo.js';
+import { espressioneClassiMagnitudo } from '../core/magnitudo.js';
+import { espressioneClassiProfondita, passaFasce } from '../core/profondita.js';
+import { aggiornaLegendaInMappa, espressioneColoreTema, EVENTO_TEMA_MAGNITUDO, temaAttivo, titoloTema } from '../core/tema-magnitudo.js';
 import { legendaMagnitudo } from './legenda-magnitudo.js';
 
 // Confronto tra due anni: gli eventi dei due anni insieme in mappa, a parte dai terremoti storici. Spento all'avvio; si accende dal pannello Strati.
@@ -141,8 +142,7 @@ function creaChiave() {
 // Magnitudo minima e massima dello slider (più le classi del tema magnitudo) filtrano cerchi ed etichette dei due anni
 // senza ripassare dal server: cambia quello che si vede, non gli eventi già scaricati.
 function applicaFiltroMappa() {
-  const classi = espressioneClassiMagnitudo(filtro.classi);
-  const espr = classi ? ['all', espressioneMagnitudo(), classi] : espressioneMagnitudo();
+  const espr = ['all', espressioneMagnitudo(), ...[espressioneClassiMagnitudo(filtro.classi), espressioneClassiProfondita(filtro.fasce)].filter(Boolean)];
   for (const id of [PUNTI, ANNI, HIT]) if (mappa?.getLayer(id)) mappa.setFilter(id, espr);
   document.dispatchEvent(new Event(EVENTO_TABELLA));
 }
@@ -150,15 +150,15 @@ function applicaFiltroMappa() {
 // Tema magnitudo: il colore del cerchio diventa la classe di magnitudo e l'anno resta il bordo (più spesso, per
 // leggersi); le classi del blocco condiviso filtrano la mappa e la chiave degli anni diventa di anelli.
 function applicaTema() {
-  const tema = temaMagnitudoAttivo();
+  const tema = temaAttivo();
   if (mappa?.getLayer(PUNTI)) {
-    mappa.setPaintProperty(PUNTI, 'circle-color', tema ? espressioneColoreMagnitudo() : ['get', 'colore']);
+    mappa.setPaintProperty(PUNTI, 'circle-color', espressioneColoreTema() ?? ['get', 'colore']);
     mappa.setPaintProperty(PUNTI, 'circle-stroke-color', ['get', 'colore']);
     mappa.setPaintProperty(PUNTI, 'circle-stroke-width', tema ? 2.5 : 1.5);
   }
   applicaFiltroMappa();
   if (legenda) {
-    titolo.textContent = tema ? t('tema.magnitudo.titoloStrato', { nome: t('terremoti.arc.titoloConfronto') }) : t('terremoti.arc.titoloConfronto');
+    titolo.textContent = titoloTema(t('terremoti.arc.titoloConfronto'));
     notaAnno.hidden = !tema;
     chiave?.stileTema(tema);
   }
@@ -279,7 +279,7 @@ export default {
     fonte: t('tabella.fonte.ingvLocale'),
     licenza: 'CC BY 4.0',
     colonne: () => colonneTabellaTerremoti({ anno: true }),
-    righe: () => eventi.filter(p => passaMagnitudo(p) && (!filtro.classi || filtro.classi.has(p.classeMag))),
+    righe: () => eventi.filter(p => passaMagnitudo(p) && (!filtro.classi || filtro.classi.has(p.classeMag)) && passaFasce(p.prof, filtro.fasce)),
     attivo: () => acceso,
     apri: p => vaiAEvento(p),
   },

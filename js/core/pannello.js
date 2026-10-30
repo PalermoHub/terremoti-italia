@@ -13,7 +13,7 @@ import { t } from './i18n.js';
 import { EVENTO_SHAKEMAP } from './shakemap-mappa.js';
 import { tooltipAttivi, impostaTooltipAttivi } from './tooltip.js';
 import { creaInterruttorePannello as interruttoreLiveZoom } from './live-zoom.js';
-import { creaInterruttorePannello as interruttoreTemaMagnitudo } from './tema-magnitudo.js';
+import { creaRigaColore, STRATI_TERREMOTI } from './tema-magnitudo.js';
 
 
 const mostrati = new Set();
@@ -165,6 +165,11 @@ export function sliderOpacita(map, strato, cb, stato = { originali: new Map(), v
     else map.fitBounds(riquadro, opzioni);
   });
   const tema = creaPannelloTema(map, strato, stato);
+  if (STRATI_TERREMOTI.includes(strato.id)) {
+    let storageColore = null;
+    try { storageColore = window.localStorage; } catch { /* storage bloccato: il modo vale per la sessione */ }
+    tema.pannello.prepend(creaRigaColore(storageColore));
+  }
   riga.append(etichettaEl, r, v, z, tema.bottone, tema.pannello);
   cb.addEventListener('change', tema.aggiorna);
   const mostra = () => { riga.hidden = !cb.checked; };
@@ -370,7 +375,7 @@ export function costruisciPannello(map, moduli, contenitore, barra) {
     const titoloOpz = document.createElement('h2');
     titoloOpz.textContent = t('pannello.overlay.titolo');
     sommarioOpz.append(titoloOpz);
-    opzioni.append(sommarioOpz, interruttore, ...(legendeUi ? [legendeUi.interruttore] : []), interruttoreTemaMagnitudo(occhio, storage), interruttoreLiveZoom(occhio, storage));
+    opzioni.append(sommarioOpz, interruttore, ...(legendeUi ? [legendeUi.interruttore] : []), creaRigaColore(storage), interruttoreLiveZoom(occhio, storage));
     campo.after(opzioni, disegno.el);
     campo.addEventListener('input', () => { disegno.el.hidden = !!cercando; opzioni.hidden = !!cercando; });
     contenitore.addEventListener('change', e => { if (e.target.matches?.('label.strato input[type=checkbox]')) { if (disegno.el.open) disegno.ridisegna(); else disegno.aggiornaTestata(); } });

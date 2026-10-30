@@ -3,7 +3,7 @@ import { AREA_EVENTI } from '../core/config.js';
 import { scaricaEventiTutti, eventoDaIngv, accordionTerremoti, MAX_ELENCO } from './scheda-terremoti.js';
 import { disegnaAccordion } from '../core/scheda-disegno.js';
 import { ANNO_INIZIO, periodoValido } from './scheda-archivio.js';
-import { CLASSI_PROFONDITA } from './scheda-sezione.js';
+import { CLASSI_PROFONDITA, etichettaClasseProfondita } from '../core/profondita.js';
 import { scelta, sceltaPeriodo, stato } from './terremoti-archivio.js';
 import { creaInterazione } from './scheda-terremoti-dom.js';
 import { evidenziaEventi, nascondiEvidenzaEventi } from '../core/evidenza-eventi.js';
@@ -69,8 +69,7 @@ export function legendaProfondita() {
     const riga = el('div');
     const chip = el('i', 'incendi-campione');
     chip.style.background = c.colore;
-    const da = i ? CLASSI_PROFONDITA[i - 1].fino : 0;
-    riga.append(chip, c.fino === Infinity ? `≥ ${da} km` : i ? `${da}–${c.fino} km` : `< ${c.fino} km`);
+    riga.append(chip, `${etichettaClasseProfondita(i)} km`);
     blocco.append(riga);
   });
   return blocco;

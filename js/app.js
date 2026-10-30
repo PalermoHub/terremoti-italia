@@ -20,7 +20,7 @@ import { collegaPoligono } from './core/poligono-ricerca.js';
 import { creaRegolatoreRaggio, raggioAttivo, EVENTO_RAGGIO } from './core/raggio-vicini.js';
 import { EVENTO_FILTRO } from './layers/scheda-terremoti-dom.js';
 import { collegaMinimappa } from './core/minimappa.js';
-import { caricaTemaMagnitudo } from './core/tema-magnitudo.js';
+import { caricaTema } from './core/tema-magnitudo.js';
 import { t } from './core/i18n.js';
 import { collegaCondividi, applicaStatoDaUrl, tieniAggiornatoIndirizzo } from './core/condividi.js';
 import protezioneCivile from './layers/protezione-civile.js';
@@ -55,7 +55,7 @@ const tab = collegaTabMobile(document, { barraTitolo: document.querySelector('#b
 document.getElementById('corpo').append(tab.barra);
 document.getElementById('chiudi-strati').addEventListener('click', () => tab.imposta(null));
 caricaLiveZoom(localStorage);
-caricaTemaMagnitudo(localStorage);
+caricaTema(localStorage);
 // riquadro in fondo alla legenda in mappa: Live Zoom e «Cerca eventi attorno a un punto» (si nasconde con la legenda ridotta)
 // cambiando un filtro con la ricerca accesa, la scheda aperta rifà la lista sullo stesso punto
 // i filtri sono quelli in cima alla legenda dei terremoti (periodo, magnitudo, profondità): qui non si ripetono

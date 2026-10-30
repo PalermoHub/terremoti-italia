@@ -3,6 +3,7 @@ import { t, tl, tn, localeIntl } from '../core/i18n.js';
 import { amministrazioneDi } from '../core/territorio.js';
 import { posizioneIn } from '../core/scheda-navigazione.js';
 import { CLASSI_MAGNITUDO, classeMagnitudo, raggioMagnitudo } from '../core/magnitudo.js';
+import { espressioneClassiProfondita, passaFasce } from '../core/profondita.js';
 export { classeMagnitudo, raggioMagnitudo }; // API pubblica del modulo: grafici, popup e scheda li importano da qui
 
 // Modello puro dei terremoti in tempo reale (INGV, servizio FDSN event): stesse righe per il popup e per la scheda di destra (tab «Luogo»).
@@ -42,9 +43,10 @@ export const PROFONDITA = [
 ];
 // Oltre a questi, il pannello con slider e istogramma imposta `finestra` ([da, a] in giorni interi dall'inizio dei
 // GIORNI_MAX, null = tutto) e `classi` (indici di CLASSI_MAG accesi, null = tutte); lo slider delle legende imposta
-// `magMax` (null = nessun massimo, con la maniglia a fondo scala). Magnitudo minima e massima valgono per tutti gli
+// `magMax` (null = nessun massimo, con la maniglia a fondo scala). `fasce` = indici di CLASSI_PROFONDITA accesi nella
+// legenda del tema profondità (null = tutte): si somma a profMin/profMax, che scrive il menu «Profondità». Magnitudo minima e massima valgono per tutti gli
 // strati dei terremoti: mappa, elenco, tabella e schede.
-export const FILTRO_INIZIALE = Object.freeze({ giorni: 7, magMin: 1, magMax: null, profMin: null, profMax: null, finestra: null, classi: null, periodo: null });
+export const FILTRO_INIZIALE = Object.freeze({ giorni: 7, magMin: 1, magMax: null, profMin: null, profMax: null, finestra: null, classi: null, fasce: null, periodo: null });
 export const filtro = { ...FILTRO_INIZIALE };
 const GIORNO_MS = 24 * ORA_MS;
 
@@ -82,7 +84,8 @@ export const passaFiltro = (p, f = filtro, adesso = Date.now()) => {
   const [da, a] = intervallo(f, adesso);
   return passaMagnitudo(p, f) && p.ts >= da && p.ts <= a
     && (f.profMin == null || p.prof >= f.profMin) && (f.profMax == null || p.prof <= f.profMax)
-    && (!f.classi || f.classi.has(classeMagnitudo(p.mag)));
+    && (!f.classi || f.classi.has(classeMagnitudo(p.mag)))
+    && passaFasce(p.prof, f.fasce);
 };
 // Stesso filtro come espressione MapLibre (per cerchi e strato di interrogazione)
 export function espressioneFiltro(f = filtro, adesso = Date.now()) {
@@ -90,7 +93,8 @@ export function espressioneFiltro(f = filtro, adesso = Date.now()) {
   return ['all', ['>=', ['get', 'mag'], f.magMin], ...(f.magMax == null ? [] : [['<=', ['get', 'mag'], f.magMax]]), ['>=', ['get', 'ts'], da], ...(a === Infinity ? [] : [['<=', ['get', 'ts'], a]]),
     ...(f.profMin == null ? [] : [['>=', ['get', 'prof'], f.profMin]]),
     ...(f.profMax == null ? [] : [['<=', ['get', 'prof'], f.profMax]]),
-    ...(f.classi ? [['any', ...[...f.classi].map(i => ['all', ['>=', ['get', 'mag'], CLASSI_MAG[i].da], ...(CLASSI_MAG[i].a === Infinity ? [] : [['<', ['get', 'mag'], CLASSI_MAG[i].a]])])]] : [])];
+    ...(f.classi ? [['any', ...[...f.classi].map(i => ['all', ['>=', ['get', 'mag'], CLASSI_MAG[i].da], ...(CLASSI_MAG[i].a === Infinity ? [] : [['<', ['get', 'mag'], CLASSI_MAG[i].a]])])]] : []),
+    ...(espressioneClassiProfondita(f.fasce) ? [espressioneClassiProfondita(f.fasce)] : [])];
 }
 
 // Barre della serie temporale: eventi per giorno negli ultimi GIORNI_MAX giorni (la più a destra è l'ultima), con magnitudo minima e classi ma senza la finestra
@@ -98,7 +102,7 @@ export function eventiPerGiorno(eventi, f = filtro, adesso = Date.now()) {
   const n = Array(GIORNI_MAX).fill(0);
   for (const p of eventi) {
     const i = GIORNI_MAX - 1 - Math.floor((adesso - p.ts) / GIORNO_MS);
-    if (passaMagnitudo(p, f) && (f.profMin == null || p.prof >= f.profMin) && (f.profMax == null || p.prof <= f.profMax) && i >= 0 && i < GIORNI_MAX && (!f.classi || f.classi.has(classeMagnitudo(p.mag)))) n[i]++;
+    if (passaMagnitudo(p, f) && (f.profMin == null || p.prof >= f.profMin) && (f.profMax == null || p.prof <= f.profMax) && i >= 0 && i < GIORNI_MAX && (!f.classi || f.classi.has(classeMagnitudo(p.mag))) && passaFasce(p.prof, f.fasce)) n[i]++;
   }
   return n;
 }

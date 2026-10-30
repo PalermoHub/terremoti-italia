@@ -846,6 +846,7 @@ body.raggio-attivo .maplibregl-canvas, body.raggio-attivo .maplibregl-canvas:act
 .legenda-magnitudo-riga:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: 1px; border-radius: var(--r-sm); }
 .legenda-magnitudo-casella { flex: none; display: flex; align-items: center; justify-content: center; width: 30px; }
 .legenda-magnitudo-cerchio { display: block; box-sizing: border-box; border: 1.5px solid currentColor; border-radius: 50%; background: color-mix(in srgb, currentColor 55%, transparent); }
+.legenda-magnitudo-cerchio-pieno { background: currentColor; border-color: rgba(255, 255, 255, 0.8); }
 .legenda-magnitudo-nota { margin: 2px 0 0; color: var(--text-muted); font-size: var(--fs-3xs); line-height: 1.35; }
 
 /* Slider della magnitudo (js/layers/slider-magnitudo.js): due maniglie sullo stesso binario, i numeri a fianco e le
@@ -2804,3 +2805,5 @@ canvas.grafico-3d.trascina { cursor: grabbing; }
 .ultimo-evento-quando { color: var(--text-muted); }
 /* telefono: la legenda ridotta è solo la barra «Legenda», stretta così non tocca il riquadro titolo/coordinate a destra */
 @media (max-width: 720px) { #legende-box.ridotta { width: 128px; } }
+.opzioni-overlay .tema-colora-per { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 0 0 2px; padding: 4px 8px; font-size: var(--fs-sm); }
+.opzioni-overlay .tema-colora-per select { max-width: 55%; font: inherit; font-size: var(--fs-xs); }

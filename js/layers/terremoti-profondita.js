@@ -2,7 +2,7 @@ import { t, tl } from '../core/i18n.js';
 import { EVENTO_TABELLA } from '../core/tabella-dati.js';
 import { registraTooltipStrati } from '../core/tooltip.js';
 import { colonneTabellaTerremoti, modelloPopupTerremoto } from './scheda-terremoti.js';
-import { CLASSI_PROFONDITA, coloreProfondita } from './scheda-sezione.js';
+import { coloreProfondita, espressioneColoreProfondita } from '../core/profondita.js';
 import { creaPopupTerremoti, righeTooltip } from './terremoti-popup.js';
 import { eventiPeriodo, pannelloPeriodo, elencoEventi, legendaProfondita, legendaMappa } from './terremoti-periodo.js';
 
@@ -11,7 +11,7 @@ import { eventiPeriodo, pannelloPeriodo, elencoEventi, legendaProfondita, legend
 const SRC = 'terremoti-profondita';
 const PUNTI = 'terremoti-profondita-punti';
 const VUOTO = { type: 'FeatureCollection', features: [] };
-const coloreMappa = ['step', ['get', 'prof'], CLASSI_PROFONDITA[0].colore, ...CLASSI_PROFONDITA.slice(0, -1).flatMap((c, i) => [c.fino, CLASSI_PROFONDITA[i + 1].colore])];
+const coloreMappa = espressioneColoreProfondita();
 
 let mappa = null;
 let acceso = false;

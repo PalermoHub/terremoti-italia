@@ -1,10 +1,11 @@
-// Un solo blocco per la magnitudo di tutti gli strati dei terremoti: slider minima/massima, classi del tema e nota.
+// Un solo blocco per magnitudo e colore di tutti gli strati dei terremoti: slider minima/massima, classi del tema magnitudo
+// o fasce del tema profondità (una delle due, secondo il modo scelto) e nota.
 // Prima ogni legenda (tempo reale, storico, confronto) ne aveva una copia: il filtro era già lo stesso, il comando no.
 // Compare una volta sola, sotto il primo strato dei terremoti acceso; con «Legende sulla mappa» (o con il tema acceso,
 // che la forza) resta in mappa come le altre legende.
 import { t } from '../core/i18n.js';
 import { EVENTO_LEGENDE } from '../core/legenda-pannello.js';
-import { creaClassiFiltro, EVENTO_TEMA_MAGNITUDO, STRATI_TERREMOTI, temaMagnitudoAttivo } from '../core/tema-magnitudo.js';
+import { creaClassiFiltro, EVENTO_TEMA_MAGNITUDO, STRATI_TERREMOTI, temaMagnitudoAttivo, temaProfonditaAttivo, VOCI_TEMA } from '../core/tema-magnitudo.js';
 import { filtro } from './scheda-terremoti.js';
 import { EVENTO_FILTRO } from './scheda-terremoti-dom.js';
 import { creaSliderMagnitudo } from './slider-magnitudo.js';
@@ -28,12 +29,26 @@ function creaBlocco() {
   nota.className = 'legenda-magnitudo-nota';
   nota.textContent = t('tema.magnitudo.filtro');
   classi.nodo.append(nota);
-  nodo.append(slider.nodo, classi.nodo);
+  const fasce = creaClassiFiltro({
+    accese: () => filtro.fasce,
+    suCambio: insieme => { filtro.fasce = insieme; document.dispatchEvent(new Event(EVENTO_FILTRO)); },
+    voci: VOCI_TEMA.profondita(),
+    titolo: t('tema.profondita.scala'),
+  });
+  const notaFasce = document.createElement('p');
+  notaFasce.className = 'legenda-magnitudo-nota';
+  notaFasce.textContent = t('tema.profondita.filtro');
+  fasce.nodo.append(notaFasce);
+  nodo.append(slider.nodo, classi.nodo, fasce.nodo);
 
   // Le classi descrivono i colori del tema: senza tema i cerchi hanno i colori dell'età o dell'anno e la scala sparirebbe.
   const applicaTema = () => {
     classi.nodo.hidden = !temaMagnitudoAttivo();
+    fasce.nodo.hidden = !temaProfonditaAttivo();
     classi.sincronizza();
+    // Fuori dal tema profondità le fasce non hanno un comando in vista: un filtro per fascia resterebbe invisibile
+    if (!temaProfonditaAttivo() && filtro.fasce) { filtro.fasce = null; document.dispatchEvent(new Event(EVENTO_FILTRO)); }
+    fasce.sincronizza();
   };
   // Il blocco vale per tutti gli strati: segue il primo acceso, come la legenda che il tema forza in mappa.
   const aggiorna = () => {
@@ -46,7 +61,7 @@ function creaBlocco() {
   document.addEventListener(EVENTO_TEMA_MAGNITUDO, applicaTema);
   document.addEventListener(EVENTO_LEGENDE, aggiorna);
   document.addEventListener('change', aggiorna); // accensione e spegnimento degli strati
-  document.addEventListener(EVENTO_FILTRO, () => classi.sincronizza()); // istogramma, «Azzera», ricerca
+  document.addEventListener(EVENTO_FILTRO, () => { classi.sincronizza(); fasce.sincronizza(); }); // istogramma, «Azzera», ricerca
   applicaTema();
   aggiorna();
   return nodo;

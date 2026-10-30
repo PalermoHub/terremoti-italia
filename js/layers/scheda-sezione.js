@@ -3,15 +3,8 @@
 const KM_LAT = 110.574; // km per grado di latitudine
 const KM_LON = 111.320; // km per grado di longitudine all'equatore
 
-// Classi di profondità del grafico e della mappa (km): il colore dice a che profondità sta l'ipocentro
-export const CLASSI_PROFONDITA = [
-  { fino: 10, colore: '#facc15' },
-  { fino: 30, colore: '#f97316' },
-  { fino: 70, colore: '#dc2626' },
-  { fino: 150, colore: '#7c3aed' },
-  { fino: Infinity, colore: '#1e3a8a' },
-];
-export const coloreProfondita = prof => (CLASSI_PROFONDITA.find(c => prof < c.fino) ?? CLASSI_PROFONDITA.at(-1)).colore;
+// Classi di profondità, colore e filtro per fascia: una sola scala in core/profondita.js (qui ri-esportata per sezione e grafici)
+export { CLASSI_PROFONDITA, coloreProfondita } from '../core/profondita.js';
 
 export const SEMILARGHEZZE_KM = [10, 25, 50, 100];
 
