@@ -16,7 +16,8 @@ import { collegaTabMobile } from './core/tab-mobile.js';
 import { traduciModuli } from './core/traduci-moduli.js';
 import { collegaShakeMap } from './core/shakemap-mappa.js';
 import { caricaLiveZoom, collegaLiveZoom, creaInterruttoreLegenda as interruttoreLiveZoomLegenda } from './core/live-zoom.js';
-import { creaRegolatoreRaggio } from './core/raggio-vicini.js';
+import { creaRegolatoreRaggio, raggioAttivo, EVENTO_RAGGIO } from './core/raggio-vicini.js';
+import { EVENTO_FILTRO, menuFiltro } from './layers/scheda-terremoti-dom.js';
 import { collegaMinimappa } from './core/minimappa.js';
 import { caricaTemaMagnitudo } from './core/tema-magnitudo.js';
 import { t } from './core/i18n.js';
@@ -55,7 +56,12 @@ document.getElementById('chiudi-strati').addEventListener('click', () => tab.imp
 caricaLiveZoom(localStorage);
 caricaTemaMagnitudo(localStorage);
 // riquadro in fondo alla legenda in mappa: Live Zoom e «Cerca eventi attorno a un punto» (si nasconde con la legenda ridotta)
-document.getElementById('legende-raggio').append(interruttoreLiveZoomLegenda(localStorage), creaRegolatoreRaggio(localStorage));
+// cambiando un filtro con la ricerca accesa, la scheda aperta rifà la lista sullo stesso punto
+const filtriRaggio = () => {
+  document.addEventListener(EVENTO_FILTRO, () => { if (raggioAttivo()) document.dispatchEvent(new Event(EVENTO_RAGGIO)); });
+  return menuFiltro();
+};
+document.getElementById('legende-raggio').append(interruttoreLiveZoomLegenda(localStorage), creaRegolatoreRaggio(localStorage, { filtri: filtriRaggio }));
 const riduciLegenda = document.getElementById('legende-riduci');
 const mostraLegendaRidotta = ridotta => {
   document.getElementById('legende-box').classList.toggle('ridotta', ridotta);

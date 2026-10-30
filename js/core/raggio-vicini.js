@@ -78,8 +78,9 @@ export function impostaAttivo(v, storage = null) {
 }
 
 // Interruttore + cursore + interruttore del cerchio da mettere nel riquadro della legenda; restituisce il nodo.
-// Con la ricerca spenta restano visibili solo l'interruttore e la sua spiegazione.
-export function creaRegolatoreRaggio(storage = null) {
+// Con la ricerca spenta restano visibili solo l'interruttore e la sua spiegazione; accesa, mostra anche i filtri
+// (`filtri()` restituisce il nodo con periodo, magnitudo e profondità: sono quelli condivisi con la mappa).
+export function creaRegolatoreRaggio(storage = null, { filtri = null } = {}) {
   caricaRaggio(storage);
   const box = document.createElement('div');
   box.className = 'legende-raggio';
@@ -123,6 +124,7 @@ export function creaRegolatoreRaggio(storage = null) {
 
   function aggiorna() {
     opzioni.hidden = !attivo;
+    if (attivo && filtri && !nodoFiltri) { nodoFiltri = filtri(); nodoFiltri.classList.add('legende-raggio-filtri'); opzioni.append(nodoFiltri); }
     casellaAttivo.checked = attivo;
     casella.checked = cerchio;
     cursore.value = corrente;
@@ -131,6 +133,7 @@ export function creaRegolatoreRaggio(storage = null) {
 
   testa.append(t('raggio.attivo'), casellaAttivo);
   opzioni.append(testo, cursore, interruttore);
+  let nodoFiltri = null; // creato alla prima accensione: i menu seguono già il filtro condiviso, non serve prima
   box.append(testa, opzioni);
   aggiorna();
   return box;

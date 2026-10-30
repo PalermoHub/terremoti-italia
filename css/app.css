@@ -833,6 +833,12 @@ body:has(#scheda:not([hidden])) .traffico-popup-box { z-index: 1; } /* ma sotto 
 .legende-raggio-cerchio input:checked::after { transform: translateX(16px); }
 .live-zoom-legenda { margin: 0 0 6px; padding-bottom: 6px; border-bottom: 1px solid var(--border-ui); }
 .legende-raggio-cerchio input:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+/* in evidenza: la ricerca attorno a un punto è un percorso principale; spento, la riga si fa notare, acceso torna quieta */
+.legende-raggio-attivo { margin-top: 2px; padding: 6px 8px; border: 1px solid var(--accent); border-radius: var(--r-md); background: var(--accent-soft); font-weight: 700; color: var(--accent-strong); }
+.legende-raggio-attivo:has(input:not(:checked)) { box-shadow: 0 0 0 3px var(--accent-soft); animation: tabella-pulsa 2.4s ease-in-out infinite; }
+.legende-raggio-attivo:has(input:checked) { animation: none; }
+#legende-raggio .legende-raggio-filtri { grid-template-columns: 1fr; gap: 6px; margin: 4px 0 0; padding-top: 6px; border-top: 1px solid var(--border-ui); }
+@media (prefers-reduced-motion: reduce) { .legende-raggio-attivo { animation: none !important; } }
 #legende { position: static; max-width: none; padding: 0 10px 8px; overflow-y: auto; min-height: 0; }
 #legende-box { --legende-bottom: 28px; --legende-alto: 172px; display: flex; flex-direction: column; max-height: calc(100dvh - var(--legende-bottom) - var(--legende-alto)); }
 #legende .legenda { padding: 0; border: 0; box-shadow: none; background: none; }
