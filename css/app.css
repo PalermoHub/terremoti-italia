@@ -1719,9 +1719,16 @@ body { grid-auto-rows: 0; } /* righe in più, se ce ne sono, non rubano spazio *
 #stampa-riquadro { position: fixed; z-index: var(--z-mappa-ui); box-sizing: border-box; border: 2px solid var(--accent); box-shadow: 0 0 0 2px #fff, 0 0 0 3px rgba(0, 0, 0, .5); cursor: move; touch-action: none; }
 #stampa-riquadro[hidden] { display: none; }
 #stampa-riquadro .stampa-maniglia { position: absolute; right: -9px; bottom: -9px; width: 18px; height: 18px; background: var(--accent); border: 2px solid #fff; border-radius: 50%; cursor: nwse-resize; box-shadow: 0 1px 4px rgba(0, 0, 0, .4); }
+#gruppo-stampa .stampa-anteprima { cursor: zoom-in; }
 @media (max-width: 720px) {
   #gruppo-stampa .stampa-anteprima { max-height: 120px; object-fit: contain; }
 }
+/* anteprima ingrandita del pannello «Stampa» */
+.stampa-anteprima-grande { padding: 0; border: 0; background: transparent; max-width: 96vw; max-height: 94vh; overflow: visible; }
+.stampa-anteprima-grande::backdrop { background: rgb(0 0 0 / .72); }
+.stampa-anteprima-tela { display: block; max-width: 96vw; max-height: 94vh; width: auto; height: auto; object-fit: contain; border-radius: var(--r-sm, 4px); background: #fff; box-shadow: 0 10px 40px rgb(0 0 0 / .5); cursor: zoom-out; }
+.stampa-anteprima-chiudi { position: absolute; top: 8px; right: 8px; width: 34px; height: 34px; border: 0; border-radius: 50%; background: rgb(15 23 42 / .75); color: #fff; font-size: 22px; line-height: 1; cursor: pointer; }
+
 #condividi-menu { position: fixed; z-index: var(--z-barra); top: 70px; right: calc(var(--scheda-l) + 12px); width: min(360px, calc(100vw - 24px)); display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border-ui); border-radius: var(--r-lg); box-shadow: var(--ombra); font-size: var(--fs-sm); color: var(--text); }
 #condividi-menu[hidden] { display: none; }
 #condividi-menu h2 { margin: 0; font-size: var(--fs-sm); font-weight: 700; }

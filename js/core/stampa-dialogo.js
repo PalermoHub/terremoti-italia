@@ -11,6 +11,7 @@ import { EVENTO_SHAKEMAP, contorniAttivi } from './shakemap-mappa.js';
 import { PRODOTTI_SHAKEMAP, fasciaEta, haShakeMap, modelloPopupTerremoto, raggioMagnitudo } from '../layers/scheda-terremoti.js';
 import { areaMappaPoster, caricaLogo, disegnaPoster, paginaMm, sottotitoloPredefinito, zoomPerPagina } from './stampa-poster.js';
 
+const LARGHEZZA_GRANDE = 2000; // px del canvas dell'anteprima ingrandita
 const LARGHEZZA_ANTEPRIMA = 640; // px del canvas dell'anteprima (CSS lo adatta al pannello)
 const LARGHEZZA_MIN_RIQUADRO = 80;
 const MARGINE_INIZIALE = 0.12;
@@ -158,31 +159,47 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
     const prodotto = tr(`terremoti.ev.cont.${c.prodotto}`);
     return tr('stampa.poster.sottotitoloShakeMap', { prodotto, id: c.id });
   };
-  async function aggiornaAnteprima(nuovoFotogramma = true) {
-    if (!aperto || !stato.riquadro) return;
-    if (nuovoFotogramma) ultimoFotogramma = await fotogramma(map);
-    if (!aperto || !ultimoFotogramma) return;
+  // Disegna l'anteprima su `tela` alla larghezza `larghezza` px: la stessa immagine nel pannello (piccola) e ingrandita (finestra)
+  function disegnaAnteprimaSu(tela, larghezza) {
     const r = stato.riquadro;
     const k = ultimoFotogramma.width / contenitore.clientWidth;
     const ritaglio = { x: r.x * k, y: r.y * k, w: r.w * k, h: r.h * k };
     if (stato.uscita === 'stampa') {
-      anteprima.width = LARGHEZZA_ANTEPRIMA;
-      anteprima.height = Math.round(LARGHEZZA_ANTEPRIMA / proporzione());
-      anteprima.getContext('2d').drawImage(ultimoFotogramma, ritaglio.x, ritaglio.y, ritaglio.w, ritaglio.h, 0, 0, anteprima.width, anteprima.height);
+      tela.width = larghezza;
+      tela.height = Math.round(larghezza / proporzione());
+      tela.getContext('2d').drawImage(ultimoFotogramma, ritaglio.x, ritaglio.y, ritaglio.w, ritaglio.h, 0, 0, tela.width, tela.height);
       return;
     }
     const pagina = paginaMm(stato.formato, stato.direzione);
-    anteprima.width = LARGHEZZA_ANTEPRIMA;
-    anteprima.height = Math.round(LARGHEZZA_ANTEPRIMA * pagina.altezza / pagina.larghezza);
+    tela.width = larghezza;
+    tela.height = Math.round(larghezza * pagina.altezza / pagina.larghezza);
     const data = new Date().toLocaleDateString(localeIntl(), { day: 'numeric', month: 'long', year: 'numeric' });
     const vista = inquadratura();
-    disegnaPoster(anteprima, {
+    disegnaPoster(tela, {
       pagina, formato: stato.formato, direzione: stato.direzione, titolo: stato.titolo || tr('stampa.poster.titoloDefault'),
       sottotitolo: sottotitoloEffettivo() || sottotitoloPredefinito(vista.centro, data),
       attribuzioni: attribuzioniUniche([...document.querySelectorAll('#mappa .maplibregl-ctrl-attrib-inner')].map(a => a.textContent)),
       logo, data, elementi: stato.elementi, evento: eventoScelto(), stelle: stelleDaEventi(), scheda: schedaDaEvento(), mappa: { immagine: ultimoFotogramma, ritaglio }, vista,
     });
   }
+  async function aggiornaAnteprima(nuovoFotogramma = true) {
+    if (!aperto || !stato.riquadro) return;
+    if (nuovoFotogramma) ultimoFotogramma = await fotogramma(map);
+    if (!aperto || !ultimoFotogramma) return;
+    disegnaAnteprimaSu(anteprima, LARGHEZZA_ANTEPRIMA);
+    if (finestraGrande.open) disegnaAnteprimaSu(telaGrande, LARGHEZZA_GRANDE);
+  }
+  // Un clic (o Invio) sull'anteprima la apre grande, a tutto schermo; si chiude con Esc, un clic o la X
+  const telaGrande = el('canvas', { className: 'stampa-anteprima-tela', role: 'img', ariaLabel: tr('stampa.anteprima.alt') });
+  const chiudiGrande = el('button', { type: 'button', className: 'stampa-anteprima-chiudi', textContent: '×', ariaLabel: tr('comune.chiudi') });
+  const finestraGrande = el('dialog', { className: 'stampa-anteprima-grande' }, telaGrande, chiudiGrande);
+  const apriGrande = () => { if (!ultimoFotogramma) return; disegnaAnteprimaSu(telaGrande, LARGHEZZA_GRANDE); if (!finestraGrande.open) finestraGrande.showModal(); };
+  anteprima.tabIndex = 0;
+  anteprima.title = tr('stampa.anteprima.ingrandisci');
+  anteprima.addEventListener('click', apriGrande);
+  anteprima.addEventListener('keydown', ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); apriGrande(); } });
+  finestraGrande.addEventListener('click', () => finestraGrande.close());
+  document.body.append(finestraGrande);
   const sulMovimento = () => { riempiEventi(); aggiornaAnteprima(); };
   const sulRidimensionamento = () => { if (aperto) { stato.riquadro = adattaProporzione(stato.riquadro, proporzione(), vista()); posiziona(); riempiEventi(); aggiornaAnteprima(); } };
 

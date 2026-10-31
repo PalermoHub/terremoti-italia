@@ -279,7 +279,7 @@ function disegnaScheda(ctx, u, m, proj, scheda, corpo, occupati) {
   const { x, y } = proj.verso(scheda.lon, scheda.lat);
   if (x < 0 || y < 0 || x > m.larghezza || y > m.altezza) return; // l'epicentro è fuori dal riquadro
   const ex = m.x + x, ey = m.y + y;
-  const w = corpo * 24, pad = corpo * 1.3, interno = w - 2 * pad;
+  const w = corpo * 24, pad = corpo * 1.3, bordo = corpo * 0.45, interno = w - 2 * pad - bordo * 0.5; // `bordo` = fascia colorata sul lato sinistro, come nel piede
   const riga = corpo * 2.5;
   // misure
   ctx.font = `bold ${corpo * 1.35}px Montserrat, sans-serif`;
@@ -314,7 +314,8 @@ function disegnaScheda(ctx, u, m, proj, scheda, corpo, occupati) {
   ctx.restore();
   // scheda
   carta(ctx, u, r.x, r.y, w, h, corpo * 1.2, 'rgba(255,255,255,.96)');
-  const x0 = r.x + pad;
+  ctx.fillStyle = scheda.colore; ctx.beginPath(); ctx.roundRect(r.x, r.y, bordo, h, [corpo * 1.2, 0, 0, corpo * 1.2]); ctx.fill();
+  const x0 = r.x + pad + bordo * 0.5;
   let yy = r.y + pad * 0.9 + corpo * 1;
   ctx.fillStyle = scheda.colore; ctx.beginPath(); ctx.roundRect(x0, yy - corpo * 1, corpo * 2, corpo * 2, corpo * 0.45); ctx.fill();
   ctx.save(); ctx.translate(x0 + corpo * 0.2, yy - corpo * 0.8); ctx.scale(corpo * 1.6 / 24, corpo * 1.6 / 24); ctx.fillStyle = testoSuColore(scheda.colore) === '#fff' ? '#fff' : '#1f2937'; ctx.fill(new Path2D(ICONE.terremoto)); ctx.restore();
