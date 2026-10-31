@@ -66,7 +66,7 @@ caricaTema(localStorage);
 document.addEventListener(EVENTO_FILTRO, () => { if (raggioAttivo()) document.dispatchEvent(new Event(EVENTO_RAGGIO)); });
 document.getElementById('legende-raggio').append(interruttoreLiveZoomLegenda(localStorage), creaRegolatoreRaggio(localStorage));
 const riduciLegenda = document.getElementById('legende-riduci');
-const miniScala = creaMiniScala(FASCE.map(f => f.colore));
+const miniScala = creaMiniScala(FASCE);
 const mostraLegendaRidotta = ridotta => {
   document.getElementById('legende-box').classList.toggle('ridotta', ridotta);
   riduciLegenda.setAttribute('aria-expanded', String(!ridotta));

@@ -1531,8 +1531,6 @@
   "livezoom.descrizione": "On: the map zooms to the clicked point and fits the results whenever a filter changes. Off: a click only centres the point",
   "legenda.pannello.suMappa": "Legends on the map",
   "legenda.pannello.titolo": "Legend",
-  "tema.mini.etaDa": "Now",
-  "tema.mini.etaA": "72 h+",
   "tema.magnitudo.titoloStrato":"{nome} · magnitude (M)",
   "tema.magnitudo.filtro": "Click a class to show only those earthquakes; click again to show them all.",
   "tema.magnitudo.scala": "Circles drawn at the zoom 7.5 scale",

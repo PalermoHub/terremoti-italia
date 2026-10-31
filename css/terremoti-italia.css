@@ -109,6 +109,11 @@
 /* Mini-scala nella pillola «Legenda» chiusa (js/core/mini-scala.js): segmenti uguali, larghezza fissa */
 #legende-riduci .mini-scala { margin-left: 12px; } /* a tutte le larghezze: il titolo non tocca la scala */
 .mini-scala { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-xs); font-weight: 700; font-variant-numeric: tabular-nums; }
+.mini-scala-corpo { display: inline-flex; flex-direction: column; gap: 3px; }
+.mini-scala-limiti { display: none; }
+.mini-scala-eta .mini-scala-limiti { display: flex; }
+.mini-scala-limiti > span { flex: 1; text-align: center; white-space: nowrap; }
+.mini-scala-eta .mini-scala-barra { width: 160px; }
 .mini-scala-barra { display: inline-flex; width: 56px; height: 8px; border-radius: 4px; overflow: hidden; box-shadow: 0 0 0 1px var(--border-ui); }
 .mini-scala-barra i { flex: 1; }
 
