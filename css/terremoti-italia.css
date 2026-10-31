@@ -98,14 +98,17 @@
 }
 
 /* Scheda «Ultimo evento» (js/layers/terremoti.js). Sul telefono sta sopra la barra a tab (blocco ≤ 720 px); su schermi larghi
-   compare solo a legenda ridotta, sopra la pillola «Legenda» (con la legenda aperta l'ultimo evento è già lì dentro). */
+   compare solo a legenda ridotta, sotto la pillola «Legenda» (con la legenda aperta l'ultimo evento è già lì dentro). */
 #ultimo-peek {
-  position: fixed; z-index: var(--z-mappa-ui); left: calc(var(--sx) + 12px); bottom: 94px; width: 320px; max-width: calc(100% - var(--sx) - 24px); min-height: 72px; box-sizing: border-box;
+  position: fixed; z-index: var(--z-mappa-ui); left: calc(var(--sx) + 12px); bottom: calc(40px + env(safe-area-inset-bottom, 0px)); width: 320px; max-width: calc(100% - var(--sx) - 24px); min-height: 72px; box-sizing: border-box;
   display: none; align-items: center; gap: 12px; padding: 10px 14px; text-align: left; font: inherit; color: var(--text); cursor: pointer;
   background: var(--surface); border: 1px solid var(--border-ui); border-radius: var(--r-lg); box-shadow: var(--ombra);
 }
 @media (min-width: 721px) { body:has(#legende-box.ridotta) #ultimo-peek:not([hidden]) { display: flex; } }
-@media (min-width: 721px) and (max-width: 1099px) { #ultimo-peek { bottom: 154px; } } /* qui la legenda sta più in alto, sopra la ricerca */
+@media (min-width: 721px) and (max-width: 1099px) { #ultimo-peek { bottom: 100px; } } /* qui la legenda sta più in alto, sopra la ricerca */
+/* come sul telefono: prima la pillola «Legenda», sotto la scheda; la pillola sale di una scheda (83 px + 8) */
+@media (min-width: 721px) { body:has(#ultimo-peek:not([hidden])) #legende-box.ridotta { bottom: calc(40px + env(safe-area-inset-bottom, 0px) + 91px); } }
+@media (min-width: 721px) and (max-width: 1099px) { body:has(#ultimo-peek:not([hidden])) #legende-box.ridotta { bottom: 191px; } }
 #ultimo-peek:hover { border-color: var(--accent); }
 #ultimo-peek:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 #ultimo-peek .ultimo-peek-testi { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
