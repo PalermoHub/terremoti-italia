@@ -79,12 +79,12 @@
     border-width: 1px 0 0; border-radius: var(--r-lg) var(--r-lg) 0 0; box-shadow: 0 -8px 32px rgba(0, 0, 0, .2);
   }
   body:has(#legende-box:not(.ridotta)) #mappa-info { display: none; }
-  #legende-box.ridotta { width: auto; } /* la pillola si adatta a titolo + mini-scala */
+  #legende-box.ridotta { left: 8px; right: 8px; width: auto; max-width: none; } /* larga quanto la scheda «Ultimo evento» */
   #legende-box.ridotta #legende-riduci { display: flex; align-items: center; min-height: 44px; white-space: nowrap; }
   /* «Ultimo evento»: scheda sopra la barra a tab; la pillola Legenda sale sopra di lei; con un foglio aperto si ritira */
   body #ultimo-peek { left: 8px; right: 8px; width: auto; max-width: none; bottom: calc(var(--tab-h) + var(--footer-h, 0px) + 8px); }
   #ultimo-peek:not([hidden]) { display: flex; }
-  body:has(#ultimo-peek:not([hidden])) :is(#mappa-info, .maplibregl-ctrl-bottom-right) { transform: translateY(-100px); } /* logo e scala salgono sopra la scheda */
+  body:has(#ultimo-peek:not([hidden])) :is(#mappa-info, .maplibregl-ctrl-bottom-right) { transform: translateY(-154px); } /* logo e scala salgono sopra la scheda */
   body:has(#ultimo-peek:not([hidden])) #legende-box.ridotta { bottom: calc(var(--tab-h) + var(--footer-h, 0px) + 100px); }
   body:is(.strati-aperti, .info-aperto):has(#ultimo-peek) #ultimo-peek,
   body:has(#legende-box:not(.ridotta), #scheda:not([hidden]), #tabella-dati:not([hidden])) #ultimo-peek { display: none; }
@@ -119,28 +119,27 @@
 /* Scala in km di MapLibre: colori del tema (di suo è un rettangolo bianco che a tema scuro spicca troppo) */
 .maplibregl-ctrl-scale { background: color-mix(in srgb, var(--surface) 85%, transparent); color: var(--text); border-color: var(--text-muted); font-size: 12px; }
 
-/* Mini-scala nella pillola «Legenda» chiusa (js/core/mini-scala.js): segmenti uguali, larghezza fissa */
-#legende-riduci .mini-scala { margin-left: 12px; } /* a tutte le larghezze: il titolo non tocca la scala */
-.mini-scala { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
-.mini-scala-corpo { display: inline-flex; flex-direction: column; gap: 3px; }
+/* Mini-scala nella pillola «Legenda» chiusa (js/core/mini-scala.js). La pillola è larga quanto la scheda «Ultimo evento» (320 px su desktop,
+   a tutta larghezza sul telefono) in tutti i modi di colore: i segmenti si dividono lo spazio che resta. */
+#legende-riduci .mini-scala { margin-left: 12px; flex: 1; min-width: 0; }
+.mini-scala { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.mini-scala-corpo { display: flex; flex: 1; min-width: 0; flex-direction: column; gap: 4px; }
 .mini-scala-limiti { display: none; }
-.mini-scala-eta .mini-scala-limiti { display: flex; }
+.mini-scala-eta .mini-scala-limiti { display: flex; gap: 2px; }
 .mini-scala-limiti > span { flex: 1; text-align: center; white-space: nowrap; }
-.mini-scala-eta .mini-scala-barra { width: 160px; }
-.mini-scala-barra { display: inline-flex; width: 56px; height: 8px; border-radius: 4px; overflow: hidden; box-shadow: 0 0 0 1px var(--border-ui); }
-.mini-scala-barra i { flex: 1; }
-/* Pillola «Legenda» chiusa su schermi larghi: una riga sola, con più aria di quanta ne serva sul telefono */
+.mini-scala-barra { display: flex; gap: 2px; height: 10px; }
+.mini-scala-barra i { flex: 1; min-width: 0; border-radius: 3px; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .14); }
+/* Schermi larghi: due righe (titolo, poi la scala a tutta larghezza), segmenti alti e staccati */
 @media (min-width: 721px) {
-  #legende-box.ridotta { width: auto; }
-  #legende-box.ridotta #legende-riduci { display: flex; align-items: center; min-height: 52px; padding: 10px 20px; white-space: nowrap; font-size: var(--fs-sm); }
-  #legende-riduci .mini-scala { margin-left: 20px; gap: 12px; font-size: 13px; }
-  /* i colori respirano: segmenti staccati e larghi, non una striscia compressa */
-  .mini-scala-barra, .mini-scala-eta .mini-scala-barra { width: auto; height: 14px; gap: 3px; border-radius: 0; overflow: visible; box-shadow: none; }
-  .mini-scala-barra i { flex: none; width: 28px; border-radius: 4px; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .14); }
-  .mini-scala[data-modo="profondita"] .mini-scala-barra i { width: 20px; }
-  .mini-scala[data-modo="eta"] .mini-scala-barra i { width: 46px; }
-  .mini-scala-limiti { gap: 3px; }
-  .mini-scala-limiti > span { flex: none; width: 46px; }
+  #legende-box.ridotta { width: 320px; }
+  #legende-box.ridotta #legende-riduci { flex-direction: column; align-items: stretch; gap: 10px; min-height: 0; padding: 12px 16px 14px; font-size: var(--fs-sm); }
+  #legende-riduci .mini-scala { margin-left: 0; flex: none; flex-wrap: wrap; gap: 6px 10px; font-size: 13px; }
+  /* barra a tutta larghezza; gli estremi (magnitudo e profondità) stanno sotto, uno a sinistra e uno a destra, come i limiti dell'età */
+  .mini-scala-corpo { order: 1; flex: 1 0 100%; }
+  .mini-scala > :first-child { order: 2; }
+  .mini-scala > :last-child { order: 3; margin-left: auto; }
+  .mini-scala-barra, .mini-scala-eta .mini-scala-limiti { gap: 3px; }
+  .mini-scala-barra { height: 14px; }
   .mini-scala-corpo { gap: 6px; }
 }
 
