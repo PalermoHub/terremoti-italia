@@ -259,7 +259,7 @@
 .info-fig { margin: 10px 0 14px; }
 .info-fig img { display: block; width: 100%; height: auto; border: 1px solid var(--border-ui); border-radius: var(--r-sm); background: var(--surface-alt); }
 .info-fig figcaption { margin-top: 4px; font-size: var(--fs-xs); color: var(--text-muted); line-height: 1.4; }
-.info-nota { padding: 8px 12px; border-left: 3px solid var(--accent); background: var(--accent-soft); border-radius: var(--r-sm); }
+.info-nota { padding: 8px 12px; border: 1px solid color-mix(in srgb, var(--accent) 35%, transparent); background: var(--accent-soft); border-radius: var(--r-sm); }
 #info-torna-su {
   position: absolute; right: 18px; bottom: 18px; width: 36px; height: 36px; padding: 0; display: flex; align-items: center; justify-content: center;
   border: 1px solid var(--accent); border-radius: 50%; background: var(--surface); color: var(--text); box-shadow: var(--ombra); cursor: pointer;
