@@ -102,8 +102,6 @@ export async function rasterizza(pagina, stili) {
 // Sezione clonata, aperta e senza controlli interattivi
 function pulita(sez) {
   const c = sez.cloneNode(true);
-  c.open = true;
-  c.hidden = false;
   c.querySelectorAll('.scheda-strato, .scheda-azione, .terremoti-filtri').forEach(n => n.remove());
   const sommario = c.querySelector(':scope > summary');
   if (sommario) {
@@ -113,7 +111,12 @@ function pulita(sez) {
     h.append(sez.dataset.titolo || sommario.querySelector('h3')?.textContent?.trim() || '');
     sommario.replaceWith(h);
   }
-  return c;
+  // senza <summary> un <details> mostrerebbe un titolo predefinito («Details»): la sezione diventa un semplice blocco
+  const blocco = el('div', 'scheda-sez pdf-sez');
+  blocco.dataset.chiave = sez.dataset.chiave;
+  blocco.append(...c.childNodes);
+  blocco.querySelectorAll('details').forEach(d => { d.open = true; });
+  return blocco;
 }
 
 // Sezioni → blocchi impaginabili. Le sezioni con grafici `.terremoti-serie` si spezzano: titolo, un blocco per grafico, nota di fonte

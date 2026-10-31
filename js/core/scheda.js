@@ -341,20 +341,51 @@ export function collegaScheda(map, moduli, contenitore, opzioni = {}) {
     contenitore.querySelector('.scheda-stralcio')?.remove();
     contenitore.querySelector('.scheda-indice [aria-selected="true"]')?.click();
   });
-  // stralcio della mappa visualizzata: il canvas WebGL si legge solo subito dopo un render
+  // stampa = PDF A4 scaricato; se la generazione fallisce si ripiega sulla stampa del browser (stralcio della mappa incluso)
+  const stampaBrowser = async stralcio => {
+    try {
+      if (!stralcio) throw new Error('nessuno stralcio'); // i18n-ok: solo per saltare al ripiego senza stralcio
+      const img = el('img', 'scheda-stralcio');
+      img.alt = tr('scheda.stralcio');
+      img.src = stralcio;
+      await img.decode(); // senza, la stampa parte prima che l'immagine sia pronta
+      contenitore.querySelector('.scheda-intestazione')?.after(img);
+    } catch { /* canvas non leggibile: si stampa senza stralcio */ }
+    window.print();
+  };
+  const scaricaPdf = blob => {
+    const url = URL.createObjectURL(blob);
+    const a = Object.assign(document.createElement('a'), { href: url, download: `scheda-${new Date().toISOString().slice(0, 10)}.pdf` });
+    document.body.append(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  };
+  let inGenerazione = false;
+  // il canvas WebGL si legge solo subito dopo un render
   document.addEventListener('scheda:stampa', () => {
+    if (inGenerazione) return; // un solo PDF alla volta
     let fatto = false;
     const stampa = async () => {
       if (fatto) return;
       fatto = true;
+      inGenerazione = true;
+      const bottone = contenitore.querySelector('.scheda-stampa');
+      const titoloBottone = bottone?.title;
+      if (bottone) { bottone.disabled = true; bottone.title = tr('scheda.pdf.generazione'); }
+      let stralcio = null;
+      try { stralcio = stralcioConCerchio(map, contenitore.dataset.punto); } catch { /* canvas non leggibile: PDF senza stralcio */ }
       try {
-        const img = el('img', 'scheda-stralcio');
-        img.alt = tr('scheda.stralcio');
-        img.src = stralcioConCerchio(map, contenitore.dataset.punto);
-        await img.decode(); // senza, la stampa parte prima che l'immagine sia pronta
-        contenitore.querySelector('.scheda-intestazione')?.after(img);
-      } catch { /* canvas non leggibile: si stampa senza stralcio */ }
-      window.print();
+        const { generaPdfScheda } = await import('./scheda-pdf.js'); // caricato solo quando serve
+        const testo = sel => contenitore.querySelector(sel)?.textContent?.trim() ?? '';
+        scaricaPdf(await generaPdfScheda(contenitore, { stralcio, titolo: testo('.scheda-testata h2'), coordinate: testo('.scheda-coordinate'), contesto: testo('.scheda-contesto') })); // i18n-ok: selettori CSS
+      } catch (e) {
+        console.error('Scheda: PDF non riuscito, si ripiega sulla stampa del browser', e); // i18n-ok: messaggio solo per la console
+        const annuncio = contenitore.querySelector('.solo-lettori');
+        if (annuncio) annuncio.textContent = tr('scheda.pdf.errore');
+        await stampaBrowser(stralcio);
+      } finally {
+        inGenerazione = false;
+        if (bottone) { bottone.disabled = false; bottone.title = titoloBottone; }
+      }
     };
     map.once('render', stampa);
     map.triggerRepaint();
