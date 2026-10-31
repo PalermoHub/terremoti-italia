@@ -1,4 +1,4 @@
-// Mini-scala nella pillola «Legenda» chiusa: una barra a segmenti con i colori del modo «Colora per» in corso (età,
+// Mini-scala nella pillola «Legenda» chiusa: una barra a segmenti con i colori del modo «Tematizza per» in corso (età,
 // magnitudo o profondità), così il colore dei cerchi si legge anche a legenda chiusa. Magnitudo e profondità hanno i due
 // estremi scritti ai lati; l'età ha i limiti scritti sotto ogni segmento (fasce di durata molto diversa: 1 h, 23 h, 2 giorni…).
 // Si riallinea al cambio di modo.

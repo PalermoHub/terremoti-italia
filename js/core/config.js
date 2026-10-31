@@ -12,7 +12,7 @@ export const sorgenteComuni = () => ({ type: 'vector', url: URL_COMUNI.startsWit
 export const VISTA_ITALIA = [[6.4, 35.3], [18.9, 47.3]];
 // Margine con cui l'Italia entra in vista. Sul telefono l'Italia sta tra la barra di ricerca in alto e la scheda «Ultimo evento» con la barra a tab in basso:
 // margini laterali stretti (la larghezza decide lo zoom) e più spazio sopra e sotto, dove stanno i comandi.
-export const paddingVistaItalia = () => (window.matchMedia('(max-width: 720px)').matches ? { top: 72, right: 8, bottom: 216, left: 8 } : 24);
+export const paddingVistaItalia = () => (window.matchMedia('(max-width: 720px)').matches ? { top: 72, right: 8, bottom: 260, left: 8 } : 24);
 export const CENTRO = [12.5, 41.3];
 export const ZOOM = window.matchMedia('(max-width: 768px)').matches ? 4.6 : 5.4; // di riserva: la mappa parte da VISTA_ITALIA
 // Limiti di spostamento: l'Italia con un largo margine: il margine fissa anche quanto ci si può allontanare (a mappa larga 1440 px serve circa 32° di longitudine).

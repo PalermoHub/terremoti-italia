@@ -105,7 +105,7 @@ export function aggiornaLegendaInMappa() {
   return primo;
 }
 
-// Riga «Colora per» del pannello Colori (la tavolozza accanto all'opacità) dei tre strati dei terremoti: stessa forma delle
+// Riga «Tematizza per» del pannello Colori (la tavolozza accanto all'opacità) dei tre strati dei terremoti: stessa forma delle
 // altre righe del pannello. Il modo è uno solo per tutti gli strati, quindi le righe si allineano tra loro.
 export function creaRigaColore(storage = null) {
   const riga = document.createElement('label');
