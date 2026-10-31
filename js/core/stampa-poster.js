@@ -451,8 +451,12 @@ export function disegnaPoster(canvas, opzioni) {
   const riga = corpo * 2.2;
   if (el.legenda) {
     const testata = corpo * 2.6;
+    // ogni riga è alta quanto il suo simbolo (più il respiro): i cerchi grandi non toccano quelli vicini
+    const raggioSimbolo = c => { const r = c.raggio * MM_PX_CSS * 1.25; return c.a === Infinity ? Math.min(Math.max(r * 1.3, corpo), riga * 0.66) : r; };
+    const altezzaRiga = c => Math.max(riga, raggioSimbolo(c) * 2 + corpo * 0.9);
+    const hRigheMag = CLASSI_MAGNITUDO.reduce((t, c) => t + altezzaRiga(c), 0);
     const contorni = legendaContorni(opzioni.evento);
-    const hLeg = testata + corpo * 1.2 + CLASSI_MAGNITUDO.length * riga + (tema.voci.length ? corpo * 3 + tema.voci.length * corpo * 1.55 : 0) + (contorni ? corpo * 3 + (contorni.evento.riga2 ? corpo * 3.4 : corpo * 2) + contorni.voci.length * corpo * 1.45 : 0) + corpo * 0.6;
+    const hLeg = testata + corpo * 1.2 + hRigheMag + (tema.voci.length ? corpo * 3 + tema.voci.length * corpo * 1.55 : 0) + (contorni ? corpo * 3 + (contorni.evento.riga2 ? corpo * 3.4 : corpo * 2) + contorni.voci.length * corpo * 1.45 : 0) + corpo * 0.6;
     const wLeg = corpo * 17.5;
     const y0 = fondo - (el.scala ? hScala + corpo * 0.9 : 0) - hLeg;
     carta(ctx, u, sx, y0, wLeg, hLeg, corpo * 0.8);
@@ -462,10 +466,12 @@ export function disegnaPoster(canvas, opzioni) {
     ctx.fillStyle = '#fff'; ctx.textAlign = 'left';
     ctx.font = `bold ${corpo * 1.25}px Montserrat, sans-serif`;
     ctx.fillText(tr('terremoti.ev.magnitudo'), sx + corpo, y0 + testata * 0.46);
-    let y = y0 + testata + corpo * 1.5;
+    let y = y0 + testata + corpo * 0.6; // alto della prima riga
     ctx.font = `${corpo}px Montserrat, sans-serif`;
     CLASSI_MAGNITUDO.forEach(c => {
       const r = c.raggio * MM_PX_CSS * 1.25;
+      const h = altezzaRiga(c);
+      y += h / 2; // centro della riga
       const cx = sx + corpo * 2.4;
       if (c.a === Infinity) {
         stella(ctx, cx, y, Math.min(Math.max(r * 1.3, corpo), riga * 0.66));
@@ -475,8 +481,9 @@ export function disegnaPoster(canvas, opzioni) {
       } else if (tema.modo === 'magnitudo') pallino(ctx, cx, y, r, '#fff', c.colore, '#1e293b');
       else pallino(ctx, cx, y, r, '#f8fafc', '#94a3b8', '#475569');
       ctx.fillStyle = '#1e293b'; ctx.textAlign = 'left'; ctx.fillText(etichettaClasse(c), sx + corpo * 4.8, y);
-      y += riga;
+      y += h / 2;
     });
+    y += corpo * 0.9;
     if (tema.voci.length) {
       y += corpo * 0.1;
       ctx.strokeStyle = 'rgba(15,23,42,.18)'; ctx.lineWidth = 0.12; ctx.beginPath(); ctx.moveTo(sx + corpo, y); ctx.lineTo(sx + wLeg - corpo, y); ctx.stroke();
