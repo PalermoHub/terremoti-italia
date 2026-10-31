@@ -70,13 +70,30 @@ function scriviUltimoEvento(visibiliOra) {
   if (!ultimoEvento) return;
   const p = visibiliOra.reduce((a, b) => (b.ts > (a?.ts ?? -Infinity) ? b : a), null);
   ultimoEvento.hidden = !p;
-  if (!p) return;
+  if (!p) { document.getElementById('ultimo-peek')?.setAttribute('hidden', ''); return; }
   const mag = Number.isFinite(p.mag) ? p.mag.toLocaleString(localeIntl(), { minimumFractionDigits: 1 }) : '–';
   const testi = el('span', 'ultimo-evento-testi');
   testi.append(el('span', 'ultimo-evento-luogo', p.luogo), el('span', 'ultimo-evento-quando', quantoTempoFa(p.ts)));
   ultimoEvento.replaceChildren(badgeMagnitudo(p.mag, mag), testi);
   ultimoEvento.onclick = () => vaiAEvento(p);
   ultimoEvento.title = t('terremoti.apriScheda');
+  scriviPeek(p, mag, visibiliOra.length);
+}
+
+// Scheda «Ultimo evento» sopra la barra a tab (solo telefono, il CSS la nasconde altrove): stessa risposta della legenda, a portata di pollice
+function scriviPeek(p, mag, n) {
+  const peek = document.getElementById('ultimo-peek');
+  if (!peek) return;
+  const testi = el('span', 'ultimo-peek-testi');
+  testi.append(
+    el('span', 'ultimo-peek-quando', `${t('terremoti.ultimoEvento')} · ${quantoTempoFa(p.ts)}`),
+    el('span', 'ultimo-peek-luogo', p.luogo),
+    el('span', 'ultimo-peek-conta', t('terremoti.peekConta', { n })),
+  );
+  peek.replaceChildren(badgeMagnitudo(p.mag, mag), testi);
+  peek.onclick = () => vaiAEvento(p);
+  peek.title = t('terremoti.apriScheda');
+  peek.hidden = !acceso;
 }
 
 function scriviNota(ok) {
@@ -413,6 +430,8 @@ export default {
     suCambio(attivo) {
       acceso = attivo;
       if (legenda) legenda.hidden = !attivo;
+      const peek = document.getElementById('ultimo-peek');
+      if (peek) peek.hidden = !attivo || !peek.childElementCount;
       if (attivo && (chiavePeriodo(filtro.periodo) !== caricato || Date.now() - ultimo > INTERVALLO_MS)) aggiorna();
       if (!attivo) { popup.chiudi(); pannelloPf?.ferma(); }
       pianifica();

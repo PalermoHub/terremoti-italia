@@ -1,6 +1,6 @@
 /* Ritocchi della webapp Terremoti Italia sopra lo stile condiviso (app.css). */
 #barra-tab .tab-aggiungi, #barra-tab [data-tab="aggiungi"] { display: none; }
-#btn-zoom-piu, #btn-zoom-meno { display: none; } /* + e − nella colonna degli strumenti: solo telefono */
+#ultimo-peek, #btn-zoom-piu, #btn-zoom-meno { display: none; } /* + e − nella colonna degli strumenti: solo telefono */
 #menu-info { display: none; } /* foglio del tab Menu: solo sul telefono (app.css lo mostra con body.info-aperto) */
 
 /* ==========================================================================
@@ -79,6 +79,22 @@
     border-width: 1px 0 0; border-radius: var(--r-lg) var(--r-lg) 0 0; box-shadow: 0 -8px 32px rgba(0, 0, 0, .2);
   }
   body:has(#legende-box:not(.ridotta)) #mappa-info { display: none; }
+  /* «Ultimo evento»: scheda sopra la barra a tab; la pillola Legenda sale sopra di lei; con un foglio aperto si ritira */
+  #ultimo-peek {
+    position: fixed; z-index: var(--z-mappa-ui); left: 8px; right: 8px; bottom: calc(var(--tab-h) + var(--footer-h, 0px) + 8px); min-height: 72px; box-sizing: border-box;
+    display: flex; align-items: center; gap: 12px; padding: 10px 14px; text-align: left; font: inherit; color: var(--text);
+    background: var(--surface); border: 1px solid var(--border-ui); border-radius: var(--r-lg); box-shadow: var(--ombra);
+  }
+  #ultimo-peek[hidden] { display: none; }
+  #ultimo-peek:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+  #ultimo-peek .ultimo-peek-testi { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+  #ultimo-peek .ultimo-peek-quando { font-size: var(--fs-xs); font-weight: 700; color: var(--accent-strong); font-variant-numeric: tabular-nums; }
+  #ultimo-peek .ultimo-peek-luogo { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-md, 1rem); font-weight: 700; }
+  #ultimo-peek .ultimo-peek-conta { font-size: var(--fs-sm); color: var(--text-muted); }
+  body:has(#ultimo-peek:not([hidden])) :is(#mappa-info, .maplibregl-ctrl-bottom-right) { transform: translateY(-88px); } /* logo e scala salgono sopra la scheda */
+  body:has(#ultimo-peek:not([hidden])) #legende-box.ridotta { bottom: calc(var(--tab-h) + var(--footer-h, 0px) + 88px); }
+  body:is(.strati-aperti, .info-aperto):has(#ultimo-peek) #ultimo-peek,
+  body:has(#legende-box:not(.ridotta), #scheda:not([hidden]), #tabella-dati:not([hidden])) #ultimo-peek { display: none; }
   #legende-box:not(.ridotta) #legende-riduci { min-height: 48px; padding: 8px 16px; font-size: var(--fs-sm); }
   #legende-box:not(.ridotta) #legende-riduci::before { content: ''; display: block; width: 40px; height: 5px; margin: 0 auto 6px; border-radius: 3px; background: var(--border-ui); }
   #tabella-dati .tabella-conta { display: none; }
