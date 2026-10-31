@@ -39,7 +39,9 @@ export function creaMiniScala(fasce) {
   const a = document.createElement('span');
   nodo.append(da, corpo, a);
   const aggiorna = () => {
-    const s = scala(modoTema(), fasce);
+    const modo = modoTema();
+    const s = scala(modo, fasce);
+    nodo.dataset.modo = modo; // il CSS dà a ogni segmento la larghezza adatta al numero di classi
     nodo.classList.toggle('mini-scala-eta', Boolean(s.limiti));
     da.hidden = a.hidden = Boolean(s.limiti);
     da.textContent = s.da ?? '';

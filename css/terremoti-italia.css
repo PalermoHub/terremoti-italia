@@ -129,6 +129,20 @@
 .mini-scala-eta .mini-scala-barra { width: 160px; }
 .mini-scala-barra { display: inline-flex; width: 56px; height: 8px; border-radius: 4px; overflow: hidden; box-shadow: 0 0 0 1px var(--border-ui); }
 .mini-scala-barra i { flex: 1; }
+/* Pillola «Legenda» chiusa su schermi larghi: una riga sola, con più aria di quanta ne serva sul telefono */
+@media (min-width: 721px) {
+  #legende-box.ridotta { width: auto; }
+  #legende-box.ridotta #legende-riduci { display: flex; align-items: center; min-height: 52px; padding: 10px 20px; white-space: nowrap; font-size: var(--fs-sm); }
+  #legende-riduci .mini-scala { margin-left: 20px; gap: 12px; font-size: 13px; }
+  /* i colori respirano: segmenti staccati e larghi, non una striscia compressa */
+  .mini-scala-barra, .mini-scala-eta .mini-scala-barra { width: auto; height: 14px; gap: 3px; border-radius: 0; overflow: visible; box-shadow: none; }
+  .mini-scala-barra i { flex: none; width: 28px; border-radius: 4px; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .14); }
+  .mini-scala[data-modo="profondita"] .mini-scala-barra i { width: 20px; }
+  .mini-scala[data-modo="eta"] .mini-scala-barra i { width: 46px; }
+  .mini-scala-limiti { gap: 3px; }
+  .mini-scala-limiti > span { flex: none; width: 46px; }
+  .mini-scala-corpo { gap: 6px; }
+}
 
 /* «Aggiorna ora»: rilegge subito i terremoti dall'INGV, senza aspettare il giro dei 2 minuti (js/layers/terremoti.js).
    Stessa forma dei pulsanti «oggi/domani» delle allerte; [hidden] esplicito perché display:inline-flex lo scavalcherebbe. */
