@@ -9,3 +9,6 @@ graphify-out/
 a.png
 *:Zone.Identifier
 video-demo/
+
+# Plugin di riferimento (Layout Composer) e stampe INGV di esempio: solo locale
+plugin/

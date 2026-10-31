@@ -105,7 +105,7 @@ map.on('error', e => {
 map.once('style.load', async () => {
   for (const m of MODULI) m.aggiungiSorgenti(map);
   for (const m of MODULI) m.aggiungiLayer(map);
-  costruisciPannello(map, MODULI, document.getElementById('pannello'), document.getElementById('barra-gruppi'));
+  const pannelloStrati = costruisciPannello(map, MODULI, document.getElementById('pannello'), document.getElementById('barra-gruppi'));
   collegaTooltipScheda(map, MODULI);
   collegaScheda(map, MODULI, document.getElementById('scheda'), {});
   collegaPoligono(map); // forma «poligono» della ricerca attorno a un punto
@@ -166,7 +166,8 @@ map.once('style.load', async () => {
     fornitori: [terremoti.tabella, terremotiStorico.tabella, terremotiConfronto.tabella].filter(Boolean),
   });
   collegaInfo({ bottone: document.getElementById('btn-info') });
-  collegaStampa(map, document.getElementById('btn-stampa'), document.getElementById('stampa-menu'));
+  // «Stampa» è un tab del pannello di sinistra, subito sotto «Mappe di base»; il pulsante della barra strumenti resta per il menu del telefono
+  collegaStampa(map, document.getElementById('btn-stampa'), pannelloStrati.tab('stampa', t('stampa.tab'), { dopo: 'base' }), { eventi: () => [terremoti.tabella, terremotiStorico.tabella, terremotiConfronto.tabella].filter(f => f && f.attivo?.() !== false).flatMap(f => f.righe()) });
   const condivisi = { storico: terremotiStorico, confronto: terremotiConfronto, ricerca, map };
   collegaCondividi(document.getElementById('btn-condividi'), { moduli: condivisi });
   await applicaStatoDaUrl(location.search, condivisi); // strati e filtri del link condiviso, a strati già avviati

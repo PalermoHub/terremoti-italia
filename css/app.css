@@ -155,7 +155,7 @@ button { cursor: pointer; }
 label { display: block; padding: 2px 0; }
 select { width: 100%; margin: 2px 0 6px; }
 /* campo di testo e select: un solo aspetto per tutta l'interfaccia (le singole regole aggiungono solo le dimensioni) */
-.sotto-pannello select, .scheda-evento-scelta, #pannello-filtri select, #cerca-particella input, .strato-cerca, .strato-tema select, .gi-campo select, .agg-campo input, #stampa-menu select, .terremoti-filtro select {
+.sotto-pannello select, .scheda-evento-scelta, #pannello-filtri select, #cerca-particella input, .strato-cerca, .strato-tema select, .gi-campo select, .agg-campo input, .terremoti-filtro select {
   border: 1px solid var(--border-ui); border-radius: var(--r-sm); background: var(--surface); color: var(--text); font: inherit;
 }
 
@@ -1700,13 +1700,28 @@ body { grid-auto-rows: 0; } /* righe in più, se ce ne sono, non rubano spazio *
   #foglio-stampa .stampa-attribuzioni p { margin: 0; }
 }
 
-/* menu del pulsante «Stampa»: vista attuale o scala fissa */
-#stampa-menu { width: max-content; top: 70px; right: calc(var(--scheda-l) + 12px); left: auto; transform: none; flex-wrap: wrap; justify-content: center; max-width: calc(100vw - 24px); position: fixed; z-index: var(--z-barra); display: flex; align-items: center; gap: 8px; padding: 8px 14px; background: var(--surface); border: 1px solid var(--border-ui); border-radius: var(--r-lg); box-shadow: var(--ombra); font-size: var(--fs-sm); color: var(--text); }
-#stampa-menu[hidden] { display: none; }
-#stampa-menu label { display: inline; padding: 0; }
-#stampa-menu select { width: auto; margin: 0; padding: 4px 8px; }
-#stampa-menu button { padding: 5px 14px; font: inherit; font-weight: 600; color: var(--accent-ink); background: var(--accent); border: 1px solid var(--accent); border-radius: var(--r-pill); cursor: pointer; }
-#stampa-menu button:disabled { opacity: .6; cursor: wait; }
+/* pannello «Stampa»: scelta di area, formato ed elementi; il riquadro trascinabile sulla mappa è l'area che si stampa */
+#gruppo-stampa:not([hidden]) { display: flex; flex-direction: column; gap: 8px; }
+#gruppo-stampa .stampa-anteprima { width: 100%; height: auto; border: 1px solid var(--border-ui); border-radius: var(--r-sm, 4px); background: var(--surface-alt); }
+#gruppo-stampa .stampa-nota { margin: 0; font-size: var(--fs-xs); color: var(--text-soft, var(--text)); }
+#gruppo-stampa .stampa-campo { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; padding: 0; }
+#gruppo-stampa .stampa-campo[hidden], #gruppo-stampa fieldset[hidden] { display: none; }
+#gruppo-stampa .stampa-riga { display: flex; gap: 8px; }
+#gruppo-stampa input[type="text"], #gruppo-stampa select { width: 100%; margin: 0; padding: 5px 8px; font: inherit; }
+#gruppo-stampa .stampa-elementi { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 10px; margin: 0; padding: 6px 10px 8px; border: 1px solid var(--border-ui); border-radius: var(--r-sm, 4px); }
+#gruppo-stampa .stampa-shakemap { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 6px 10px 8px; border: 1px solid var(--border-ui); border-radius: var(--r-sm, 4px); }
+#gruppo-stampa .stampa-elementi label { display: flex; align-items: center; gap: 6px; padding: 0; }
+#gruppo-stampa .stampa-elementi .stampa-nota { grid-column: 1 / -1; }
+#gruppo-stampa .stampa-azioni { position: sticky; bottom: -10px; display: flex; justify-content: space-between; gap: 8px; margin: 0 -14px -10px; padding: 8px 14px 10px; background: var(--surface); border-top: 1px solid var(--border-ui); }
+#gruppo-stampa button.stampa-esporta { padding: 6px 16px; font: inherit; font-weight: 600; color: var(--accent-ink); background: var(--accent); border: 1px solid var(--accent); border-radius: var(--r-sm, 4px); cursor: pointer; }
+#gruppo-stampa button.stampa-adatta, #gruppo-stampa button.stampa-centra { padding: 6px 12px; font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border-ui); border-radius: var(--r-sm, 4px); cursor: pointer; }
+#gruppo-stampa button:disabled { opacity: .6; cursor: wait; }
+#stampa-riquadro { position: fixed; z-index: var(--z-mappa-ui); box-sizing: border-box; border: 2px solid var(--accent); box-shadow: 0 0 0 2px #fff, 0 0 0 3px rgba(0, 0, 0, .5); cursor: move; touch-action: none; }
+#stampa-riquadro[hidden] { display: none; }
+#stampa-riquadro .stampa-maniglia { position: absolute; right: -9px; bottom: -9px; width: 18px; height: 18px; background: var(--accent); border: 2px solid #fff; border-radius: 50%; cursor: nwse-resize; box-shadow: 0 1px 4px rgba(0, 0, 0, .4); }
+@media (max-width: 720px) {
+  #gruppo-stampa .stampa-anteprima { max-height: 120px; object-fit: contain; }
+}
 #condividi-menu { position: fixed; z-index: var(--z-barra); top: 70px; right: calc(var(--scheda-l) + 12px); width: min(360px, calc(100vw - 24px)); display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; background: var(--surface); border: 1px solid var(--border-ui); border-radius: var(--r-lg); box-shadow: var(--ombra); font-size: var(--fs-sm); color: var(--text); }
 #condividi-menu[hidden] { display: none; }
 #condividi-menu h2 { margin: 0; font-size: var(--fs-sm); font-weight: 700; }

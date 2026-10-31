@@ -193,7 +193,7 @@ export function costruisciPannello(map, moduli, contenitore, barra) {
     if (window.innerWidth >= STRETTO) return;
     document.querySelector('#rail-pannelli .rail-tab.attivo')?.click();
   };
-  const nuovoTab = (id, titolo) => {
+  const nuovoTab = (id, titolo, { dopo = null } = {}) => {
     const el = document.createElement('section');
     el.id = `gruppo-${id}`;
     el.className = 'sotto-pannello';
@@ -210,7 +210,8 @@ export function costruisciPannello(map, moduli, contenitore, barra) {
       if (apri) ripiegaDestra();
     });
     gruppi.push({ el, bottone });
-    barra.append(bottone);
+    const precedente = dopo && document.getElementById(`btn-gruppo-${dopo}`);
+    if (precedente) precedente.after(bottone); else barra.append(bottone); // `dopo`: il tab si mette subito sotto un altro
     contenitore.append(el);
     el.bottone = bottone;
     return el;
@@ -389,6 +390,8 @@ export function costruisciPannello(map, moduli, contenitore, barra) {
     const aperto = ['scheda', 'rndt-pannello', 'geoimage-pannello', 'tema-ui-pannello', 'chatbot-pannello', 'storico-pannello', 'confronto-pannello'].some(id => { const p = document.getElementById(id); return p && !p.hidden && !p.classList.contains('collassato'); });
     if (aperto) chiudiGruppi();
   }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['hidden', 'class'] });
+  // tab aggiunti da fuori (es. «Stampa»): il pannello tiene bottone, apertura e chiusura come per gli altri gruppi
+  return { tab: (id, titolo, opzioni) => nuovoTab(id, titolo, opzioni) };
 }
 
 // Disattiva uno strato il cui dato non si è caricato: nascosto, casella spenta e non cliccabile.

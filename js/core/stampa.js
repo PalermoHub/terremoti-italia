@@ -27,6 +27,13 @@ export function pixelRatioSicuro(ratio, area, maxLato) {
 
 // 192 dpi (nitido) finché il canvas resta gestibile; A0 a 192 dpi supererebbe i 49 milioni di pixel.
 export const pixelRatioPerFormato = formato => (formato === 'A0' ? 1 : 2);
+// Lato massimo del canvas WebGL del dispositivo (px): oltre, la cattura fallisce
+export function limiteLatoGpu(map) {
+  try {
+    const gl = map.getCanvas().getContext('webgl2') ?? map.getCanvas().getContext('webgl');
+    return gl?.getParameter(gl.MAX_RENDERBUFFER_SIZE) ?? 4096;
+  } catch { return 4096; }
+}
 export const SCALE_STAMPA = [1000, 2000, 5000, 10000, 25000];
 
 export const mmInPx = mm => mm / MM_PER_POLLICE * DPI_CSS;
@@ -37,7 +44,7 @@ const metriPerPx = (zoom, lat) => CIRCONFERENZA * Math.cos(lat * Math.PI / 180) 
 export const scalaDaZoom = (zoom, lat) => metriPerPx(zoom, lat) * DPI_CSS / MM_PER_POLLICE * 1000;
 export const zoomPerScala = (lat, scala) => Math.log2(CIRCONFERENZA * Math.cos(lat * Math.PI / 180) * DPI_CSS / (512 * scala * MM_PER_POLLICE / 1000));
 
-const LUNGHEZZE_BARRA = [10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 2500, 5000, 10000];
+const LUNGHEZZE_BARRA = [10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000, 2500, 5000, 10000, 20000, 25000, 50000, 100000, 200000, 250000, 500000, 1000000];
 // Barra grafica: la lunghezza tonda più grande che sta in `maxMm` di carta.
 export function barraScala(scala, maxMm) {
   const metri = LUNGHEZZE_BARRA.filter(m => m * 1000 / scala <= maxMm).pop() ?? LUNGHEZZE_BARRA[0];
@@ -49,7 +56,7 @@ export function orientamento(larghezza, altezza) {
 }
 
 // Il canvas WebGL è leggibile solo durante il render: si forza un ridisegno e si cattura al primo evento «render».
-function catturaMappa(map) {
+export function catturaMappa(map) {
   return new Promise((risolvi, rifiuta) => {
     map.once('render', () => {
       // Blob + URL temporaneo: per i formati grandi un data URL base64 sarebbe enorme
@@ -61,25 +68,27 @@ function catturaMappa(map) {
 
 // Cattura a una scala esatta: la mappa reale viene portata (di nascosto) alla dimensione del riquadro di stampa e allo zoom
 // corrispondente, poi rimessa com'era. Così restano tutti i layer, senza ricostruire una seconda mappa.
-async function catturaInScala(map, scala, area, pixelRatio) {
+// `zoomFisso` (opzionale) sostituisce lo zoom calcolato dalla scala: il poster inquadra la vista attuale senza scala.
+export async function catturaInScala(map, scala, area, pixelRatio, zoomFisso = null, centroFisso = null) {
   const contenitore = map.getContainer();
   const stile = contenitore.style.cssText;
-  const vista = { center: map.getCenter(), zoom: map.getZoom(), bearing: map.getBearing(), pitch: map.getPitch() };
-  const zoom = zoomPerScala(vista.center.lat, scala);
+  // il margine dei pannelli (padding) sposterebbe il centro della cattura: si azzera durante lo scatto e si rimette dopo
+  const vista = { center: map.getCenter(), zoom: map.getZoom(), bearing: map.getBearing(), pitch: map.getPitch(), padding: map.getPadding?.() };
+  const centro = centroFisso ?? vista.center;
+  const zoom = zoomFisso ?? zoomPerScala(centro.lat, scala);
   const ratioIniziale = map.getPixelRatio?.() ?? window.devicePixelRatio;
   try {
-    const gl = map.getCanvas().getContext('webgl2') ?? map.getCanvas().getContext('webgl');
-    map.setPixelRatio?.(pixelRatioSicuro(pixelRatio, area, gl?.getParameter(gl.MAX_RENDERBUFFER_SIZE) ?? 4096));
+    map.setPixelRatio?.(pixelRatioSicuro(pixelRatio, area, limiteLatoGpu(map)));
     contenitore.style.cssText = `${stile};position:fixed;left:0;top:0;width:${mmInPx(area.larghezza)}px;height:${mmInPx(area.altezza)}px;visibility:hidden;pointer-events:none`;
     map.resize();
-    map.jumpTo({ center: vista.center, zoom, bearing: 0, pitch: 0 });
+    map.jumpTo({ center: centro, zoom, bearing: 0, pitch: 0, padding: { top: 0, right: 0, bottom: 0, left: 0 } });
     await new Promise(risolvi => { // pronta quando i tile richiesti sono arrivati: loaded() e «idle» restano falsi finché esistono sorgenti di layer spenti mai caricate
       const fine = () => { clearTimeout(t); map.off('render', controlla); risolvi(); };
       const controlla = () => { if (map.areTilesLoaded()) fine(); };
       const t = setTimeout(fine, 12000);
       map.on('render', controlla); map.triggerRepaint();
     });
-    return { immagine: await catturaMappa(map), centro: map.getCenter() };
+    return { immagine: await catturaMappa(map), centro: map.getCenter(), zoom: map.getZoom() };
   } finally {
     contenitore.style.cssText = stile;
     map.setPixelRatio?.(ratioIniziale);
@@ -88,14 +97,14 @@ async function catturaInScala(map, scala, area, pixelRatio) {
   }
 }
 
-function el(tag, attr = {}, ...figli) {
+export function el(tag, attr = {}, ...figli) {
   const nodo = Object.assign(document.createElement(tag), attr);
   nodo.append(...figli);
   return nodo;
 }
 
 // `scala` = denominatore (es. 5000) per la stampa in scala, null per la vista attuale.
-function costruisciFoglio(map, immagine, { scala = null, centro = map.getCenter(), formato = 'A4', direzione = 'landscape' } = {}) {
+function costruisciFoglio(map, immagine, { scala = null, centro = map.getCenter(), formato = 'A4', direzione = 'landscape', titolo = '' } = {}) {
   const attribuzioni = attribuzioniUniche(
     [...document.querySelectorAll('#mappa .maplibregl-ctrl-attrib-inner')].map(a => a.textContent));
   const legende = document.getElementById('legende');
@@ -104,7 +113,7 @@ function costruisciFoglio(map, immagine, { scala = null, centro = map.getCenter(
   const area = areaMappaMm(formato, direzione);
   const foglio = el('div', { id: 'foglio-stampa', className: scala ? 'in-scala' : '', style: `--mappa-l:${area.larghezza}mm;--mappa-a:${area.altezza}mm` },
     el('style', { textContent: `@page { size: ${formato} ${direzione}; margin: ${MARGINE_MM}mm; }` }),
-    el('header', {}, el('h1', { textContent: tr('stampa.titolo') }),
+    el('header', {}, el('h1', { textContent: titolo || tr('stampa.titolo') }),
       el('p', { textContent: tr('stampa.riga', { data, lat: centro.lat.toFixed(4), lng: centro.lng.toFixed(4), dettaglio }) })),
     el('img', { className: 'stampa-mappa', src: immagine, alt: tr('stampa.alt') }));
   if (scala) {
@@ -127,43 +136,42 @@ function costruisciFoglio(map, immagine, { scala = null, centro = map.getCenter(
   return foglio;
 }
 
-// Il pulsante apre un piccolo menu: «Vista attuale» o una scala fissa. `menu` contiene il select #stampa-scala e il pulsante #stampa-vai.
-export function collegaStampa(map, bottone, menu) {
-  const scelta = menu.querySelector('#stampa-scala');
-  const sceltaFormato = menu.querySelector('#stampa-formato');
-  const sceltaDirezione = menu.querySelector('#stampa-direzione');
-  const vai = menu.querySelector('#stampa-vai');
-  scelta.replaceChildren(el('option', { value: '', textContent: tr('stampa.vistaAttuale') }),
-    ...SCALE_STAMPA.map(n => el('option', { value: String(n), textContent: tr('stampa.opzioneScala', { n: n.toLocaleString(localeIntl()) }) })));
-  sceltaFormato.replaceChildren(...Object.keys(FORMATI).map(f => el('option', { value: f, textContent: f })));
-  sceltaDirezione.replaceChildren(el('option', { value: 'landscape', textContent: tr('stampa.orizzontale') }), el('option', { value: 'portrait', textContent: tr('stampa.verticale') }));
-  const chiudi = () => { menu.hidden = true; bottone.setAttribute('aria-expanded', 'false'); };
-  bottone.setAttribute('aria-expanded', 'false');
-  bottone.addEventListener('click', () => {
-    menu.hidden = !menu.hidden;
-    bottone.setAttribute('aria-expanded', String(!menu.hidden));
-    if (!menu.hidden) scelta.focus();
-  });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !menu.hidden) { chiudi(); bottone.focus(); } });
-  document.addEventListener('pointerdown', e => { if (!menu.hidden && !menu.contains(e.target) && !bottone.contains(e.target)) chiudi(); });
+// PNG o PDF «poster»: la mappa a tutta pagina nel formato scelto (fino ad A0) con banner, legenda, scala, rosa dei venti e crediti.
+// `centro`/`zoom` arrivano dal riquadro scelto sulla mappa; senza scala lo zoom è già quello che fa stare il riquadro sul foglio.
+export async function esportaFile(map, { uscita, formato, direzione, scala, titolo, sottotitolo, elementi, evento, stelle, centro, zoom, dpi = null }) {
+  const { esportaPoster, areaMappaPoster } = await import('./stampa-poster.js'); // caricato solo quando serve
+  const area = areaMappaPoster(formato, direzione); // la mappa occupa l'area dentro la cornice, non tutta la pagina
+  const attribuzioni = attribuzioniUniche([...document.querySelectorAll('#mappa .maplibregl-ctrl-attrib-inner')].map(a => a.textContent));
+  let esito;
+  try { esito = await catturaInScala(map, scala, area, dpi ? dpi / DPI_CSS : pixelRatioPerFormato(formato), scala ? null : zoom, centro); } catch (e) { console.error('Poster: cattura della mappa non riuscita', e); return false; } // i18n-ok: messaggio solo per la console
+  try { await esportaPoster({ immagineUrl: esito.immagine, uscita, formato, direzione, titolo, sottotitolo, elementi, evento, stelle, attribuzioni, centro: esito.centro, zoom: esito.zoom }); return true; } catch (e) { console.error('Poster: esportazione non riuscita', e); return false; } finally { URL.revokeObjectURL(esito.immagine); } // i18n-ok: messaggio solo per la console
+}
 
-  vai.addEventListener('click', async () => {
-    const scala = +scelta.value || null;
-    const formato = sceltaFormato.value;
-    const direzione = sceltaDirezione.value;
-    vai.disabled = true;
-    try {
-      let esito;
-      try { esito = scala ? await catturaInScala(map, scala, areaMappaMm(formato, direzione), pixelRatioPerFormato(formato)) : { immagine: await catturaMappa(map), centro: map.getCenter() }; } catch (e) { console.error('Stampa: cattura della mappa non riuscita', e); return; } // i18n-ok: messaggio solo per la console
-      chiudi();
-      const foglio = costruisciFoglio(map, esito.immagine, { scala, centro: esito.centro, formato, direzione });
-      const pulisci = () => { URL.revokeObjectURL(esito.immagine); foglio.remove(); document.body.classList.remove('stampa-mappa'); window.removeEventListener('afterprint', pulisci); };
-      document.body.append(foglio);
-      document.body.classList.add('stampa-mappa');
-      window.addEventListener('afterprint', pulisci);
-      // l'immagine va decodificata prima della stampa, altrimenti l'anteprima parte con l'immagine ancora vuota
-      try { await foglio.querySelector('img').decode(); } catch { /* si stampa comunque */ }
-      window.print();
-    } finally { vai.disabled = false; }
-  });
+// Foglio stampabile (titolo, mappa, legende, attribuzioni) sull'area scelta: apre la finestra di stampa del browser
+export async function stampaFoglio(map, { formato, direzione, scala, titolo, centro, zoom }) {
+  let esito;
+  try { esito = scala || zoom != null ? await catturaInScala(map, scala, areaMappaMm(formato, direzione), pixelRatioPerFormato(formato), scala ? null : zoom, centro) : { immagine: await catturaMappa(map), centro: map.getCenter() }; } catch (e) { console.error('Stampa: cattura della mappa non riuscita', e); return false; } // i18n-ok: messaggio solo per la console
+  const foglio = costruisciFoglio(map, esito.immagine, { scala, centro: esito.centro, formato, direzione, titolo });
+  const pulisci = () => { URL.revokeObjectURL(esito.immagine); foglio.remove(); document.body.classList.remove('stampa-mappa'); window.removeEventListener('afterprint', pulisci); };
+  document.body.append(foglio);
+  document.body.classList.add('stampa-mappa');
+  window.addEventListener('afterprint', pulisci);
+  // l'immagine va decodificata prima della stampa, altrimenti l'anteprima parte con l'immagine ancora vuota
+  try { await foglio.querySelector('img').decode(); } catch { /* si stampa comunque */ }
+  window.print();
+  return true;
+}
+
+// «Stampa» è un tab del pannello di sinistra (`pannello` = la sua sezione, `tab.bottone` il suo pulsante): il contenuto si crea al
+// primo clic. Il pulsante della barra strumenti (che il menu del telefono richiama) apre lo stesso tab.
+// `opzioni.eventi`: funzione che dà gli eventi in elenco (per scegliere i contorni ShakeMap di uno di loro)
+export function collegaStampa(map, bottone, pannello, opzioni = {}) {
+  let pronto = false;
+  const prepara = async () => {
+    if (pronto) return;
+    pronto = true;
+    (await import('./stampa-dialogo.js')).creaPannelloStampa(map, pannello, pannello.bottone, opzioni);
+  };
+  pannello.bottone.addEventListener('click', prepara);
+  bottone?.addEventListener('click', () => pannello.bottone.click());
 }

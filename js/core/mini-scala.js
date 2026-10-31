@@ -14,7 +14,7 @@ const limiteEta = (fasce, i) => (Number.isFinite(fasce[i].finoA) ? `<${fasce[i].
 
 // Colori, nomi (tooltip dei segmenti) e testi della scala nel modo corrente. `fasce` = fasce d'età dal più recente (nome, colore, finoA in ms):
 // stanno nel layer dei terremoti, arrivano da fuori.
-function scala(modo, fasce) {
+export function scala(modo, fasce) {
   if (modo === 'magnitudo') {
     return { colori: CLASSI_MAGNITUDO.map(c => c.colore), nomi: CLASSI_MAGNITUDO.map(c => t(`terremoti.ev.mag.${c.chiave}`)), da: `M ${CLASSI_MAGNITUDO[0].da}`, a: `M ${CLASSI_MAGNITUDO.at(-1).da}+` };
   }

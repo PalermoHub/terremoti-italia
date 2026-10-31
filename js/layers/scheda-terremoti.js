@@ -243,7 +243,7 @@ export const caricaShakeMap = (urlBase = URL_SNAPSHOT) => fetch(`${urlBase}shake
   .then(ids => { for (const id of ids) eventiShakeMap.add(String(id)); })
   .catch(() => { /* senza elenco il collegamento alla ShakeMap non compare: meglio nessun link di uno che porta a una pagina vuota */ });
 // Contorni copiati nel ramo `shakemap` (file <id>/<prodotto>.json) e la chiave del loro nome
-const PRODOTTI_SHAKEMAP = [['mmi', 'terremoti.ev.cont.mmi'], ['pga', 'terremoti.ev.cont.pga'], ['pgv', 'terremoti.ev.cont.pgv'], ['psa0p3', 'terremoti.ev.cont.psa0p3'], ['psa1p0', 'terremoti.ev.cont.psa1p0'], ['psa3p0', 'terremoti.ev.cont.psa3p0']];
+export const PRODOTTI_SHAKEMAP = [['mmi', 'terremoti.ev.cont.mmi'], ['pga', 'terremoti.ev.cont.pga'], ['pgv', 'terremoti.ev.cont.pgv'], ['psa0p3', 'terremoti.ev.cont.psa0p3'], ['psa1p0', 'terremoti.ev.cont.psa1p0'], ['psa3p0', 'terremoti.ev.cont.psa3p0']];
 export const haShakeMap = p => eventiShakeMap.has(String(p.id));
 
 // Data e ora come le scrive l'INGV («2026-03-02 23:53:10»), nel fuso chiesto: UTC per l'ora ufficiale dell'evento, Roma per la stessa ora italiana

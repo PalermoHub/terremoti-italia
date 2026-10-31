@@ -34,10 +34,12 @@ function inquadra(map, geojson) {
 
 let attivo = null; // { id, prodotto } dei contorni in mappa: la scheda ridisegnata dopo un clic lo rilegge per rimettere la scelta
 export const contorniAttivi = () => attivo;
+let ultimiDati = null; // GeoJSON dei contorni in mappa: lo legge anche la stampa per scriverne la legenda
+export const contorniDati = () => ultimiDati;
 
 // Legenda dei contorni, nella colonna delle legende: titolo e spiegazione del prodotto, poi un campione di colore per ogni linea
 // (valori e colori sono quelli del file INGV, che cambiano da evento a evento) e il rimando alla ShakeMap dell'evento
-const UNITA = { mmi: '', pctg: '% g', cms: 'cm/s' };
+export const UNITA = { mmi: '', pctg: '% g', cms: 'cm/s' };
 let legenda = null;
 function scriviLegenda(dati) {
   if (!legenda) {
@@ -94,7 +96,7 @@ export function collegaShakeMap(map) {
     const mia = ++richiesta;
     attivo = prodotto ? { id, prodotto } : null;
     scriviChip();
-    if (!prodotto) { scriviLegenda(null); map.getSource(SRC)?.setData(VUOTO); return; }
+    if (!prodotto) { ultimiDati = null; scriviLegenda(null); map.getSource(SRC)?.setData(VUOTO); return; }
     try {
       const r = await fetch(`${URL_CONTORNI}${id}/${prodotto}.json`);
       if (!r.ok) throw new Error(String(r.status));
@@ -102,8 +104,9 @@ export function collegaShakeMap(map) {
       if (mia !== richiesta) return; // nel frattempo è stato scelto un altro prodotto
       assicuraStrati(map);
       map.getSource(SRC).setData(dati);
+      ultimiDati = dati;
       scriviLegenda(dati);
       inquadra(map, dati);
-    } catch { if (mia === richiesta) { map.getSource(SRC)?.setData(VUOTO); scriviLegenda(null); } }
+    } catch { if (mia === richiesta) { ultimiDati = null; map.getSource(SRC)?.setData(VUOTO); scriviLegenda(null); } }
   });
 }

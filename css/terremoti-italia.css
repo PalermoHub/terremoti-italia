@@ -329,3 +329,6 @@ input, textarea, [contenteditable] { caret-color: var(--accent-strong); }
 
 /* La minimappa sta sotto i popup degli eventi (z-index 1): il popup non ne viene coperto. Resta sopra la mappa e sotto legenda e scheda come prima. */
 #minimappa-panoramica { z-index: 0; }
+
+/* su desktop «Stampa» è un tab del pannello di sinistra: il pulsante della barra strumenti serve solo al menu del telefono */
+@media (min-width: 721px) { #barra-strumenti #btn-stampa { display: none; } }

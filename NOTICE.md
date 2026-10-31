@@ -16,3 +16,6 @@
 - MapLibre GL JS (BSD-3-Clause), PMTiles (BSD-3-Clause), copiate in `js/vendor/`.
 - qgis_headless_wsl2 (pigreco): QGIS headless su WSL2, https://github.com/pigreco/qgis_headless_wsl2 · video https://www.youtube.com/watch?v=FQEmhktDRaQ
 - Font Montserrat e Atkinson in `css/fonts/`; font delle etichette Noto Sans in `fonts/glyphs/` (copiati da OpenFreeMap).
+
+## Stampa poster (PNG/PDF)
+L'impaginazione della stampa poster (banner, legenda a riquadro, scala, rosa dei venti) è ispirata a **Layout Composer** di Defani Arman Alfitriansyah (MIT, https://github.com/Defani/Layout-Composer). Nessun codice è stato copiato; il generatore PDF e il disegno su canvas sono scritti per questa app. I dati dei terremoti sono INGV, citati nel piede della stampa insieme alle attribuzioni delle basi cartografiche attive.
