@@ -65,8 +65,22 @@
   /* sul telefono la Lista Terremoti si apre dal tab in basso (dopo «Strati»): il pulsante tra gli strumenti non serve */
   body.info-aperto #menu-info button { justify-content: flex-start; gap: 14px; } /* voci del Menu: icona a sinistra, testo subito accanto */
   #barra-strumenti :is(#btn-zoom-piu, #btn-zoom-meno) { display: flex; }
+  /* + e − formano una pillola unica 44×88: due metà unite da un filetto, un solo posto nella colonna */
+  #barra-strumenti #btn-zoom-piu, #barra-strumenti #btn-zoom-meno { order: 2; } /* Home e GPS prima, la pillola in fondo */
+  #barra-strumenti #btn-zoom-piu { margin-bottom: -4px; border-radius: 22px 22px 0 0; border-bottom: 0; }
+  #barra-strumenti #btn-zoom-meno { margin-top: -4px; border-radius: 0 0 22px 22px; border-top: 0; position: relative; }
+  #barra-strumenti #btn-zoom-meno::before { content: ''; position: absolute; top: 0; left: 8px; right: 8px; height: 1px; background: var(--border-ui); }
   .maplibregl-ctrl-top-right { display: none; } /* i + / − di MapLibre lasciano il posto ai pulsanti sotto Home */
-  #barra-strumenti :is(#btn-tabella, #btn-info, #btn-condividi, #btn-stampa, #btn-tema, #switch-lingua) { display: none; } /* stanno nel tab Menu */
+  #barra-strumenti :is(#btn-tabella, #btn-info, #btn-condividi, #btn-stampa, #btn-tema, #btn-fs, #switch-lingua) { display: none; } /* stanno nel tab Menu */
+  /* legenda aperta = foglio in basso a tutta larghezza sopra la barra a tab (chiusa resta la pillola «Legenda») */
+  #legende-box:not(.ridotta) {
+    --legende-bottom: calc(var(--tab-h) + var(--footer-h, 0px)); --legende-alto: 33dvh; /* il foglio parte sotto la colonna dei pulsanti */
+    left: 0; right: 0; width: auto; max-width: none; bottom: var(--legende-bottom);
+    border-width: 1px 0 0; border-radius: var(--r-lg) var(--r-lg) 0 0; box-shadow: 0 -8px 32px rgba(0, 0, 0, .2);
+  }
+  body:has(#legende-box:not(.ridotta)) #mappa-info { display: none; }
+  #legende-box:not(.ridotta) #legende-riduci { min-height: 48px; padding: 8px 16px; font-size: var(--fs-sm); }
+  #legende-box:not(.ridotta) #legende-riduci::before { content: ''; display: block; width: 40px; height: 5px; margin: 0 auto 6px; border-radius: 3px; background: var(--border-ui); }
   #tabella-dati .tabella-conta { display: none; }
   #tabella-dati .tabella-titolo { flex: 1; }
   #tabella-dati .tabella-filtro { flex: 1 1 150px; width: auto; height: 38px; }

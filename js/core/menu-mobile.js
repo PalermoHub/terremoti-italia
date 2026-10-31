@@ -7,6 +7,7 @@ const VOCI = [
   { id: 'btn-info', icona: 'info', etichetta: 'html.btn.info' },
   { id: 'btn-condividi', icona: 'condividi', etichetta: 'html.btn.condividi' },
   { id: 'btn-stampa', icona: 'stampa', etichetta: 'html.btn.stampa' },
+  { id: 'btn-fs', icona: 'schermoIntero', etichetta: 'html.btn.fs' },
   { id: 'btn-tema', icona: 'luna', etichetta: 'html.tema' },
   { id: 'switch-lingua', icona: 'globo', etichetta: 'lingua.passa' }, // creato da i18n.js dopo l'avvio: si cerca al clic
 ];
