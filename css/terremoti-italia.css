@@ -1,6 +1,6 @@
 /* Ritocchi della webapp Terremoti Italia sopra lo stile condiviso (app.css). */
 #barra-tab .tab-aggiungi, #barra-tab [data-tab="aggiungi"] { display: none; }
-#ultimo-peek, #btn-zoom-piu, #btn-zoom-meno { display: none; } /* + e − nella colonna degli strumenti: solo telefono */
+#btn-zoom-piu, #btn-zoom-meno { display: none; } /* + e − nella colonna degli strumenti: solo telefono */
 #menu-info { display: none; } /* foglio del tab Menu: solo sul telefono (app.css lo mostra con body.info-aperto) */
 
 /* ==========================================================================
@@ -82,19 +82,10 @@
   #legende-box.ridotta { width: auto; } /* la pillola si adatta a titolo + mini-scala */
   #legende-box.ridotta #legende-riduci { display: flex; align-items: center; min-height: 44px; white-space: nowrap; }
   /* «Ultimo evento»: scheda sopra la barra a tab; la pillola Legenda sale sopra di lei; con un foglio aperto si ritira */
-  #ultimo-peek {
-    position: fixed; z-index: var(--z-mappa-ui); left: 8px; right: 8px; bottom: calc(var(--tab-h) + var(--footer-h, 0px) + 8px); min-height: 72px; box-sizing: border-box;
-    display: flex; align-items: center; gap: 12px; padding: 10px 14px; text-align: left; font: inherit; color: var(--text);
-    background: var(--surface); border: 1px solid var(--border-ui); border-radius: var(--r-lg); box-shadow: var(--ombra);
-  }
-  #ultimo-peek[hidden] { display: none; }
-  #ultimo-peek:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
-  #ultimo-peek .ultimo-peek-testi { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-  #ultimo-peek .ultimo-peek-quando { font-size: var(--fs-xs); font-weight: 700; color: var(--accent-strong); font-variant-numeric: tabular-nums; }
-  #ultimo-peek .ultimo-peek-luogo { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-md, 1rem); font-weight: 700; }
-  #ultimo-peek .ultimo-peek-conta { font-size: var(--fs-sm); color: var(--text-muted); }
-  body:has(#ultimo-peek:not([hidden])) :is(#mappa-info, .maplibregl-ctrl-bottom-right) { transform: translateY(-88px); } /* logo e scala salgono sopra la scheda */
-  body:has(#ultimo-peek:not([hidden])) #legende-box.ridotta { bottom: calc(var(--tab-h) + var(--footer-h, 0px) + 88px); }
+  body #ultimo-peek { left: 8px; right: 8px; width: auto; max-width: none; bottom: calc(var(--tab-h) + var(--footer-h, 0px) + 8px); }
+  #ultimo-peek:not([hidden]) { display: flex; }
+  body:has(#ultimo-peek:not([hidden])) :is(#mappa-info, .maplibregl-ctrl-bottom-right) { transform: translateY(-100px); } /* logo e scala salgono sopra la scheda */
+  body:has(#ultimo-peek:not([hidden])) #legende-box.ridotta { bottom: calc(var(--tab-h) + var(--footer-h, 0px) + 100px); }
   body:is(.strati-aperti, .info-aperto):has(#ultimo-peek) #ultimo-peek,
   body:has(#legende-box:not(.ridotta), #scheda:not([hidden]), #tabella-dati:not([hidden])) #ultimo-peek { display: none; }
   #legende-box:not(.ridotta) #legende-riduci { min-height: 48px; padding: 8px 16px; font-size: var(--fs-sm); }
@@ -106,9 +97,28 @@
   #tabella-dati .tabella-nota { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; max-height: 2.8em; overflow: hidden; }
 }
 
+/* Scheda «Ultimo evento» (js/layers/terremoti.js). Sul telefono sta sopra la barra a tab (blocco ≤ 720 px); su schermi larghi
+   compare solo a legenda ridotta, sopra la pillola «Legenda» (con la legenda aperta l'ultimo evento è già lì dentro). */
+#ultimo-peek {
+  position: fixed; z-index: var(--z-mappa-ui); left: calc(var(--sx) + 12px); bottom: 94px; width: 320px; max-width: calc(100% - var(--sx) - 24px); min-height: 72px; box-sizing: border-box;
+  display: none; align-items: center; gap: 12px; padding: 10px 14px; text-align: left; font: inherit; color: var(--text); cursor: pointer;
+  background: var(--surface); border: 1px solid var(--border-ui); border-radius: var(--r-lg); box-shadow: var(--ombra);
+}
+@media (min-width: 721px) { body:has(#legende-box.ridotta) #ultimo-peek:not([hidden]) { display: flex; } }
+@media (min-width: 721px) and (max-width: 1099px) { #ultimo-peek { bottom: 154px; } } /* qui la legenda sta più in alto, sopra la ricerca */
+#ultimo-peek:hover { border-color: var(--accent); }
+#ultimo-peek:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+#ultimo-peek .ultimo-peek-testi { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+#ultimo-peek .ultimo-peek-quando { font-size: 12px; font-weight: 700; color: var(--accent-strong); font-variant-numeric: tabular-nums; }
+#ultimo-peek .ultimo-peek-luogo { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 16px; font-weight: 700; }
+#ultimo-peek .ultimo-peek-conta { font-size: 13px; color: var(--text-muted); }
+
+/* Scala in km di MapLibre: colori del tema (di suo è un rettangolo bianco che a tema scuro spicca troppo) */
+.maplibregl-ctrl-scale { background: color-mix(in srgb, var(--surface) 85%, transparent); color: var(--text); border-color: var(--text-muted); font-size: 12px; }
+
 /* Mini-scala nella pillola «Legenda» chiusa (js/core/mini-scala.js): segmenti uguali, larghezza fissa */
 #legende-riduci .mini-scala { margin-left: 12px; } /* a tutte le larghezze: il titolo non tocca la scala */
-.mini-scala { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-xs); font-weight: 700; font-variant-numeric: tabular-nums; }
+.mini-scala { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .mini-scala-corpo { display: inline-flex; flex-direction: column; gap: 3px; }
 .mini-scala-limiti { display: none; }
 .mini-scala-eta .mini-scala-limiti { display: flex; }
