@@ -79,6 +79,8 @@
     border-width: 1px 0 0; border-radius: var(--r-lg) var(--r-lg) 0 0; box-shadow: 0 -8px 32px rgba(0, 0, 0, .2);
   }
   body:has(#legende-box:not(.ridotta)) #mappa-info { display: none; }
+  #legende-box.ridotta { width: auto; } /* la pillola si adatta a titolo + mini-scala */
+  #legende-box.ridotta #legende-riduci { display: flex; align-items: center; gap: 10px; min-height: 44px; white-space: nowrap; }
   /* «Ultimo evento»: scheda sopra la barra a tab; la pillola Legenda sale sopra di lei; con un foglio aperto si ritira */
   #ultimo-peek {
     position: fixed; z-index: var(--z-mappa-ui); left: 8px; right: 8px; bottom: calc(var(--tab-h) + var(--footer-h, 0px) + 8px); min-height: 72px; box-sizing: border-box;
@@ -103,6 +105,10 @@
   #tabella-dati .tabella-scheda { min-height: 38px; }
   #tabella-dati .tabella-nota { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; max-height: 2.8em; overflow: hidden; }
 }
+
+/* Mini-scala nella pillola «Legenda» chiusa (js/core/mini-scala.js): segmenti uguali, larghezza fissa */
+.mini-scala { display: inline-flex; width: 64px; height: 8px; border-radius: 4px; overflow: hidden; box-shadow: 0 0 0 1px var(--border-ui); }
+.mini-scala i { flex: 1; }
 
 /* «Aggiorna ora»: rilegge subito i terremoti dall'INGV, senza aspettare il giro dei 2 minuti (js/layers/terremoti.js).
    Stessa forma dei pulsanti «oggi/domani» delle allerte; [hidden] esplicito perché display:inline-flex lo scavalcherebbe. */

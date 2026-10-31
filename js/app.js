@@ -22,6 +22,8 @@ import { creaRegolatoreRaggio, raggioAttivo, EVENTO_RAGGIO } from './core/raggio
 import { EVENTO_FILTRO } from './layers/scheda-terremoti-dom.js';
 import { collegaMinimappa } from './core/minimappa.js';
 import { caricaTema } from './core/tema-magnitudo.js';
+import { creaMiniScala } from './core/mini-scala.js';
+import { FASCE } from './layers/scheda-terremoti.js';
 import { t } from './core/i18n.js';
 import { collegaCondividi, applicaStatoDaUrl, tieniAggiornatoIndirizzo } from './core/condividi.js';
 import protezioneCivile from './layers/protezione-civile.js';
@@ -64,10 +66,12 @@ caricaTema(localStorage);
 document.addEventListener(EVENTO_FILTRO, () => { if (raggioAttivo()) document.dispatchEvent(new Event(EVENTO_RAGGIO)); });
 document.getElementById('legende-raggio').append(interruttoreLiveZoomLegenda(localStorage), creaRegolatoreRaggio(localStorage));
 const riduciLegenda = document.getElementById('legende-riduci');
+const miniScala = creaMiniScala(FASCE.map(f => f.colore));
 const mostraLegendaRidotta = ridotta => {
   document.getElementById('legende-box').classList.toggle('ridotta', ridotta);
   riduciLegenda.setAttribute('aria-expanded', String(!ridotta));
   riduciLegenda.textContent = ridotta ? t('app.legenda.apri') : t('html.legende.riduci');
+  if (ridotta) riduciLegenda.append(miniScala); // chiusa: la barra dei colori in corso accanto al titolo
 };
 riduciLegenda.addEventListener('click', () => mostraLegendaRidotta(!document.getElementById('legende-box').classList.contains('ridotta')));
 // sul telefono la legenda aperta copre quasi tutta la mappa: parte ridotta, un tocco la apre
