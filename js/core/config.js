@@ -15,8 +15,8 @@ export const VISTA_ITALIA = [[6.4, 35.3], [18.9, 47.3]];
 export const paddingVistaItalia = () => (window.matchMedia('(max-width: 720px)').matches ? { top: 72, right: 8, bottom: 260, left: 8 } : 24);
 export const CENTRO = [12.5, 41.3];
 export const ZOOM = window.matchMedia('(max-width: 768px)').matches ? 4.6 : 5.4; // di riserva: la mappa parte da VISTA_ITALIA
-// Limiti di spostamento: l'Italia con un largo margine: il margine fissa anche quanto ci si può allontanare (a mappa larga 1440 px serve circa 32° di longitudine).
-export const LIMITI = [[-6.0, 30.0], [30.0, 52.0]];
+// Limiti di spostamento: l'Italia con un largo margine (in verticale ampio: sul telefono la mappa è alta e le fasce in basso coprono il Sud, che va poter portare in vista): il margine fissa anche quanto ci si può allontanare (a mappa larga 1440 px serve circa 32° di longitudine).
+export const LIMITI = [[-6.0, 10.0], [30.0, 60.0]];
 // Riquadro degli eventi (terremoti): l'Italia e i mari vicini; deve coincidere con AREA di server/terremoti.js (lo verifica un test).
 export const AREA_EVENTI = { minlon: 5.5, minlat: 35.0, maxlon: 19.5, maxlat: 47.6 };
 export const ZOOM_SLIDER = [4, 16];
