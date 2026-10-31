@@ -1,5 +1,5 @@
 import { svgIcona } from '../core/icone.js';
-import { t, tl } from '../core/i18n.js';
+import { lingua, t, tl } from '../core/i18n.js';
 import { STILE_BASE } from '../core/config.js';
 
 // Basi cartografiche alternative: Positron (stile di partenza), basi raster classiche (OSM, Esri, Google,
@@ -77,6 +77,17 @@ let basiPronte = false; // le basi raster esistono: da qui in poi una base vetto
 let sottoBasi; // primo layer delle basi: ogni base vettoriale si inserisce sotto a tutto
 let spriteImpostato = false; // lo sprite OpenFreeMap si imposta con la prima base vettoriale
 
+// Etichette meno invadenti: un solo nome per luogo (lo stile ne aggiunge una seconda riga in arabo, cirillico…) e, sulla base chiara,
+// i nomi di luogo in grigio scuro invece che nero: i cerchi dei terremoti restano in primo piano.
+// Prima il nome nella lingua dell'app (italiano o inglese): «Svizzera» e non «Schweiz/Suisse/Svizzera/Svizra»; poi quello latino, poi il nome locale.
+const testoLatino = () => ['coalesce', ['get', `name:${lingua()}`], ['get', 'name:latin'], ['get', 'name']];
+const LUOGHI_GRIGI = new Set(['label_other', 'label_village', 'label_town', 'label_state', 'label_city', 'label_city_capital', 'label_country_3', 'label_country_2', 'label_country_1']);
+function etichetteLatine(l, id) {
+  if (l.type !== 'symbol' || !JSON.stringify(l.layout?.['text-field'] ?? '').includes('name:nonlatin')) return l;
+  const grigio = id === 'positron' && LUOGHI_GRIGI.has(l.id);
+  return { ...l, layout: { ...l.layout, 'text-field': testoLatino() }, paint: grigio ? { ...l.paint, 'text-color': '#5d636a' } : l.paint };
+}
+
 // Le basi vettoriali OpenFreeMap (Positron, scura, luminosa: circa 220 layer in tutto) si aggiungono alla prima scelta, non all'avvio:
 // la base di partenza è Mapbox e ogni layer in più rallenta lo stile a ogni addLayer e getStyle.
 // Con lo stile arrivano anche le sorgenti vettoriali e lo sprite (uguali per tutte e tre).
@@ -88,8 +99,9 @@ function caricaVettoriale(map, id) {
     for (const [nome, sorgente] of Object.entries(stile.sources ?? {})) if (!map.getSource(nome)) map.addSource(nome, sorgente);
     if (Array.isArray(stile.sprite)) for (const sp of stile.sprite) map.addSprite(sp.id, sp.url); // più sprite con prefisso (es. `antique:city`)
     else if (stile.sprite && !spriteImpostato) { map.setSprite(stile.sprite); spriteImpostato = true; }
-    for (const l of stile.layers) {
-      if (!map.getSource(l.source) && l.type !== 'background') continue;
+    for (const l0 of stile.layers) {
+      if (!map.getSource(l0.source) && l0.type !== 'background') continue;
+      const l = etichetteLatine(l0, id);
       map.addLayer({ ...l, id: `base-${id}-${l.id}`, layout: { ...l.layout, visibility: 'none' } }, sottoBasi);
     }
     scegli(map, baseCorrente);

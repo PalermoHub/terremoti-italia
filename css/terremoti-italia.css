@@ -80,7 +80,7 @@
   }
   body:has(#legende-box:not(.ridotta)) #mappa-info { display: none; }
   #legende-box.ridotta { width: auto; } /* la pillola si adatta a titolo + mini-scala */
-  #legende-box.ridotta #legende-riduci { display: flex; align-items: center; gap: 10px; min-height: 44px; white-space: nowrap; }
+  #legende-box.ridotta #legende-riduci { display: flex; align-items: center; min-height: 44px; white-space: nowrap; }
   /* «Ultimo evento»: scheda sopra la barra a tab; la pillola Legenda sale sopra di lei; con un foglio aperto si ritira */
   #ultimo-peek {
     position: fixed; z-index: var(--z-mappa-ui); left: 8px; right: 8px; bottom: calc(var(--tab-h) + var(--footer-h, 0px) + 8px); min-height: 72px; box-sizing: border-box;
@@ -107,6 +107,7 @@
 }
 
 /* Mini-scala nella pillola «Legenda» chiusa (js/core/mini-scala.js): segmenti uguali, larghezza fissa */
+#legende-riduci .mini-scala { margin-left: 12px; } /* a tutte le larghezze: il titolo non tocca la scala */
 .mini-scala { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-xs); font-weight: 700; font-variant-numeric: tabular-nums; }
 .mini-scala-barra { display: inline-flex; width: 56px; height: 8px; border-radius: 4px; overflow: hidden; box-shadow: 0 0 0 1px var(--border-ui); }
 .mini-scala-barra i { flex: 1; }
