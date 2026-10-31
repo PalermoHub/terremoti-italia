@@ -332,3 +332,6 @@ input, textarea, [contenteditable] { caret-color: var(--accent-strong); }
 
 /* su desktop «Stampa» è un tab del pannello di sinistra: il pulsante della barra strumenti serve solo al menu del telefono */
 @media (min-width: 721px) { #barra-strumenti #btn-stampa { display: none; } }
+
+/* Pannello «Stampa» aperto su desktop: legenda, minimappa, logo e scala sparirebbero dal poster e confondono rispetto al riquadro. */
+@media (min-width: 721px) { body.stampa-pannello :is(#legende-box, #minimappa-panoramica, #mappa-info, .maplibregl-ctrl-scale) { display: none; } }

@@ -396,6 +396,7 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
     if (apri === aperto) return;
     aperto = apri;
     riquadro.hidden = !apri;
+    document.body.classList.toggle('stampa-pannello', apri); // su desktop nasconde legenda, minimappa, logo e scala della mappa
     aggiornaEvidenza(); // chiuso il pannello l'alone va via, i contorni restano
     if (!apri) { map.off('moveend', sulMovimento); window.removeEventListener('resize', sulRidimensionamento); document.removeEventListener(EVENTO_SHAKEMAP, suContorni); return; }
     stato.riquadro = stato.riquadro ? adattaProporzione(stato.riquadro, proporzione(), vista()) : riquadroIniziale(vista(), proporzione());
