@@ -2,6 +2,7 @@
 // magnitudo o profondità), così il colore dei cerchi si legge anche a legenda chiusa. Magnitudo e profondità hanno i due
 // estremi scritti ai lati; l'età ha i limiti scritti sotto ogni segmento (fasce di durata molto diversa: 1 h, 23 h, 2 giorni…).
 // Si riallinea al cambio di modo.
+import { t, tl } from './i18n.js';
 import { CLASSI_MAGNITUDO } from './magnitudo.js';
 import { CLASSI_PROFONDITA, etichettaClasseProfondita } from './profondita.js';
 import { EVENTO_TEMA_MAGNITUDO, modoTema } from './tema-magnitudo.js';
@@ -11,17 +12,17 @@ const ORA_MS = 3600000;
 // Limite scritto sotto una fascia d'età: «<1 h», «<24 h», «<72 h», «≥72 h» (l'ultima non ha limite: parte dal precedente)
 const limiteEta = (fasce, i) => (Number.isFinite(fasce[i].finoA) ? `<${fasce[i].finoA / ORA_MS} h` : `≥${fasce[i - 1].finoA / ORA_MS} h`);
 
-// Colori e testi della scala nel modo corrente. `fasce` = fasce d'età dal più recente (colore, finoA in ms):
+// Colori, nomi (tooltip dei segmenti) e testi della scala nel modo corrente. `fasce` = fasce d'età dal più recente (nome, colore, finoA in ms):
 // stanno nel layer dei terremoti, arrivano da fuori.
 function scala(modo, fasce) {
   if (modo === 'magnitudo') {
-    return { colori: CLASSI_MAGNITUDO.map(c => c.colore), da: `M ${CLASSI_MAGNITUDO[0].da}`, a: `M ${CLASSI_MAGNITUDO.at(-1).da}+` };
+    return { colori: CLASSI_MAGNITUDO.map(c => c.colore), nomi: CLASSI_MAGNITUDO.map(c => `M ${t(`terremoti.ev.mag.${c.chiave}`)}`), da: `M ${CLASSI_MAGNITUDO[0].da}`, a: `M ${CLASSI_MAGNITUDO.at(-1).da}+` };
   }
   if (modo === 'profondita') {
     const ultima = CLASSI_PROFONDITA.length - 1;
-    return { colori: CLASSI_PROFONDITA.map(c => c.colore), da: `${etichettaClasseProfondita(0)} km`, a: `${etichettaClasseProfondita(ultima)} km` };
+    return { colori: CLASSI_PROFONDITA.map(c => c.colore), nomi: CLASSI_PROFONDITA.map((_, i) => `${etichettaClasseProfondita(i)} km`), da: `${etichettaClasseProfondita(0)} km`, a: `${etichettaClasseProfondita(ultima)} km` };
   }
-  return { colori: fasce.map(f => f.colore), limiti: fasce.map((_, i) => limiteEta(fasce, i)) };
+  return { colori: fasce.map(f => f.colore), nomi: fasce.map((f, i) => `${tl(f.nome)} (${limiteEta(fasce, i)})`), limiti: fasce.map((_, i) => limiteEta(fasce, i)) };
 }
 
 export function creaMiniScala(fasce) {
@@ -46,9 +47,10 @@ export function creaMiniScala(fasce) {
     da.hidden = a.hidden = Boolean(s.limiti);
     da.textContent = s.da ?? '';
     a.textContent = s.a ?? '';
-    barra.replaceChildren(...s.colori.map(colore => {
+    barra.replaceChildren(...s.colori.map((colore, i) => {
       const segmento = document.createElement('i');
       segmento.style.background = colore;
+      segmento.title = s.nomi[i]; // il valore della classe al passaggio del mouse
       return segmento;
     }));
     limiti.replaceChildren(...(s.limiti ?? []).map(testo => {
