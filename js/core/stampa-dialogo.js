@@ -23,26 +23,30 @@ export function aspetto(formato, direzione, uscita) {
 
 // Riquadro { x, y, w, h } in px dello schermo, al centro della vista e con un margine tutt'intorno
 // `vista.sinistra` (opzionale) = x da cui la mappa è libera: a sinistra c'è il pannello
+// `vista.alto` (opzionale) = y da cui la mappa è libera: sul telefono il pannello è un foglio in alto; `vista.altezza` è il limite in basso
 export function riquadroIniziale(vista, proporzione) {
   const sinistra = vista.sinistra ?? 0;
+  const alto = vista.alto ?? 0;
   const libera = vista.larghezza - sinistra;
+  const liberaA = vista.altezza - alto;
   const maxL = libera * (1 - 2 * MARGINE_INIZIALE);
-  const maxA = vista.altezza * (1 - 2 * MARGINE_INIZIALE);
+  const maxA = liberaA * (1 - 2 * MARGINE_INIZIALE);
   const w = Math.min(maxL, maxA * proporzione);
   const h = w / proporzione;
-  return { x: sinistra + (libera - w) / 2, y: (vista.altezza - h) / 2, w, h };
+  return { x: sinistra + (libera - w) / 2, y: alto + (liberaA - h) / 2, w, h };
 }
 
 // Tiene il riquadro dentro la vista senza cambiarne la dimensione
 export function dentroVista(r, vista) {
-  return { ...r, x: Math.max(vista.sinistra ?? 0, Math.min(r.x, vista.larghezza - r.w)), y: Math.max(0, Math.min(r.y, vista.altezza - r.h)) };
+  return { ...r, x: Math.max(vista.sinistra ?? 0, Math.min(r.x, vista.larghezza - r.w)), y: Math.max(vista.alto ?? 0, Math.min(r.y, vista.altezza - r.h)) };
 }
 
 // Nuova proporzione (cambio di formato o orientamento): stesso centro e stessa larghezza, ridotto se non sta nella vista
 export function adattaProporzione(r, proporzione, vista) {
   let w = r.w;
   let h = w / proporzione;
-  if (h > vista.altezza) { h = vista.altezza; w = h * proporzione; }
+  const liberaA = vista.altezza - (vista.alto ?? 0);
+  if (h > liberaA) { h = liberaA; w = h * proporzione; }
   const libera = vista.larghezza - (vista.sinistra ?? 0);
   if (w > libera) { w = libera; h = w / proporzione; }
   return dentroVista({ x: r.x + r.w / 2 - w / 2, y: r.y + r.h / 2 - h / 2, w, h }, vista);
@@ -88,14 +92,22 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
     let larghezza = contenitore.clientWidth;
     let altezza = contenitore.clientHeight;
     let sinistra = 0;
+    let alto = 0;
     if (aperto) {
-      const p = radice.getBoundingClientRect();
+      // il pannello visibile è il contenitore (la sezione scorre dentro e può essere molto più alta)
+      const p = (radice.parentElement ?? radice).getBoundingClientRect();
       const minimo = 2 * LARGHEZZA_MIN_RIQUADRO;
-      if (p.width >= b.width * 0.9) altezza = Math.max(minimo, Math.min(altezza, p.top - b.top - 12));
-      else if (p.left - b.left < b.width / 2) sinistra = Math.max(0, Math.min(larghezza - minimo, p.right - b.left + 12));
+      if (p.width >= b.width * 0.9) {
+        if (p.top - b.top < b.height / 2) { // telefono: foglio in alto, la mappa libera sta sotto, sopra la barra dei tab
+          const tab = document.getElementById('barra-tab');
+          const fondo = tab && tab.offsetParent !== null ? tab.getBoundingClientRect().top - b.top - 8 : altezza;
+          alto = Math.max(0, Math.min(p.bottom - b.top + 12, altezza - minimo));
+          altezza = Math.max(alto + minimo, Math.min(altezza, fondo));
+        } else altezza = Math.max(minimo, Math.min(altezza, p.top - b.top - 12));
+      } else if (p.left - b.left < b.width / 2) sinistra = Math.max(0, Math.min(larghezza - minimo, p.right - b.left + 12));
       else larghezza = Math.max(minimo, Math.min(larghezza, p.left - b.left - 12));
     }
-    return { larghezza, altezza, sinistra };
+    return { larghezza, altezza, sinistra, alto };
   };
   const proporzione = () => aspetto(stato.formato, stato.direzione, stato.uscita);
 
@@ -299,7 +311,7 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
       return;
     }
     const v = vista();
-    stato.riquadro = dentroVista({ ...r, x: (v.sinistra ?? 0) + (v.larghezza - (v.sinistra ?? 0) - r.w) / 2, y: (v.altezza - r.h) / 2 }, v);
+    stato.riquadro = dentroVista({ ...r, x: (v.sinistra ?? 0) + (v.larghezza - (v.sinistra ?? 0) - r.w) / 2, y: (v.alto ?? 0) + (v.altezza - (v.alto ?? 0) - r.h) / 2 }, v);
     posiziona(); riempiEventi(); aggiornaAnteprima();
   });
   adatta.addEventListener('click', () => { stato.riquadro = riquadroIniziale(vista(), proporzione()); posiziona(); riempiEventi(); aggiornaAnteprima(); });
