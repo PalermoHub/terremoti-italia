@@ -138,13 +138,13 @@ function costruisciFoglio(map, immagine, { scala = null, centro = map.getCenter(
 
 // PNG o PDF «poster»: la mappa a tutta pagina nel formato scelto (fino ad A0) con banner, legenda, scala, rosa dei venti e crediti.
 // `centro`/`zoom` arrivano dal riquadro scelto sulla mappa; senza scala lo zoom è già quello che fa stare il riquadro sul foglio.
-export async function esportaFile(map, { uscita, formato, direzione, scala, titolo, sottotitolo, elementi, evento, stelle, centro, zoom, dpi = null }) {
+export async function esportaFile(map, { uscita, formato, direzione, scala, titolo, sottotitolo, elementi, evento, stelle, scheda, centro, zoom, dpi = null }) {
   const { esportaPoster, areaMappaPoster } = await import('./stampa-poster.js'); // caricato solo quando serve
   const area = areaMappaPoster(formato, direzione); // la mappa occupa l'area dentro la cornice, non tutta la pagina
   const attribuzioni = attribuzioniUniche([...document.querySelectorAll('#mappa .maplibregl-ctrl-attrib-inner')].map(a => a.textContent));
   let esito;
   try { esito = await catturaInScala(map, scala, area, dpi ? dpi / DPI_CSS : pixelRatioPerFormato(formato), scala ? null : zoom, centro); } catch (e) { console.error('Poster: cattura della mappa non riuscita', e); return false; } // i18n-ok: messaggio solo per la console
-  try { await esportaPoster({ immagineUrl: esito.immagine, uscita, formato, direzione, titolo, sottotitolo, elementi, evento, stelle, attribuzioni, centro: esito.centro, zoom: esito.zoom }); return true; } catch (e) { console.error('Poster: esportazione non riuscita', e); return false; } finally { URL.revokeObjectURL(esito.immagine); } // i18n-ok: messaggio solo per la console
+  try { await esportaPoster({ immagineUrl: esito.immagine, uscita, formato, direzione, titolo, sottotitolo, elementi, evento, stelle, scheda, attribuzioni, centro: esito.centro, zoom: esito.zoom }); return true; } catch (e) { console.error('Poster: esportazione non riuscita', e); return false; } finally { URL.revokeObjectURL(esito.immagine); } // i18n-ok: messaggio solo per la console
 }
 
 // Foglio stampabile (titolo, mappa, legende, attribuzioni) sull'area scelta: apre la finestra di stampa del browser

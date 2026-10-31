@@ -1,14 +1,14 @@
 // Pannello «Stampa»: scelta di cosa stampare. Un riquadro trascinabile sulla mappa (con la proporzione del foglio) dice quale area
 // finisce nel file; il pannello sceglie formato, uscita, titolo ed elementi e mostra un'anteprima che si aggiorna da sola.
 // La mappa sotto il riquadro resta spostabile e ingrandibile: il riquadro resta fermo sullo schermo.
-import { t as tr, localeIntl } from './i18n.js';
+import { t as tr, tl, localeIntl } from './i18n.js';
 import { FORMATI, SCALE_STAMPA, areaMappaMm, attribuzioniUniche, el, esportaFile, limiteLatoGpu, mmInPx, pixelRatioSicuro, stampaFoglio } from './stampa.js';
 import { evidenziaEventi, nascondiEvidenzaEventi } from './evidenza-eventi.js';
 import { coloreMagnitudo } from './magnitudo.js';
 import { coloreProfondita } from './profondita.js';
 import { modoTema } from './tema-magnitudo.js';
 import { EVENTO_SHAKEMAP, contorniAttivi } from './shakemap-mappa.js';
-import { PRODOTTI_SHAKEMAP, fasciaEta, haShakeMap } from '../layers/scheda-terremoti.js';
+import { PRODOTTI_SHAKEMAP, fasciaEta, haShakeMap, modelloPopupTerremoto, raggioMagnitudo } from '../layers/scheda-terremoti.js';
 import { areaMappaPoster, caricaLogo, disegnaPoster, paginaMm, sottotitoloPredefinito, zoomPerPagina } from './stampa-poster.js';
 
 const LARGHEZZA_ANTEPRIMA = 640; // px del canvas dell'anteprima (CSS lo adatta al pannello)
@@ -180,7 +180,7 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
       pagina, formato: stato.formato, direzione: stato.direzione, titolo: stato.titolo || tr('stampa.poster.titoloDefault'),
       sottotitolo: sottotitoloEffettivo() || sottotitoloPredefinito(vista.centro, data),
       attribuzioni: attribuzioniUniche([...document.querySelectorAll('#mappa .maplibregl-ctrl-attrib-inner')].map(a => a.textContent)),
-      logo, data, elementi: stato.elementi, evento: eventoScelto(), stelle: stelleDaEventi(), mappa: { immagine: ultimoFotogramma, ritaglio }, vista,
+      logo, data, elementi: stato.elementi, evento: eventoScelto(), stelle: stelleDaEventi(), scheda: schedaDaEvento(), mappa: { immagine: ultimoFotogramma, ritaglio }, vista,
     });
   }
   const sulMovimento = () => { riempiEventi(); aggiornaAnteprima(); };
@@ -241,6 +241,39 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
     const colore = p => (modo === 'magnitudo' ? coloreMagnitudo(p.mag) : modo === 'profondita' ? coloreProfondita(p.prof) : fasciaEta(p.ts).colore);
     return eventi().filter(p => p.mag >= SOGLIA_STELLA && Number.isFinite(p.lon) && Number.isFinite(p.lat)).map(p => ({ lon: p.lon, lat: p.lat, colore: colore(p) }));
   };
+  // Scheda di un solo evento sul poster (il contenuto del suo tooltip): si sceglie tra gli eventi dentro il riquadro, i più forti per primi
+  const eventiScheda = new Map();
+  const sceltaScheda = el('select', { id: 'stampa-scheda-evento' });
+  const riempiScheda = () => {
+    const r = stato.riquadro;
+    if (!r) return;
+    const a = map.unproject([r.x, r.y]);
+    const b = map.unproject([r.x + r.w, r.y + r.h]);
+    const voci = eventi().filter(p => Number.isFinite(p.mag) && p.lon >= a.lng && p.lon <= b.lng && p.lat <= a.lat && p.lat >= b.lat)
+      .sort((x, y) => y.mag - x.mag || y.ts - x.ts).slice(0, 60);
+    for (const p of voci) eventiScheda.set(String(p.id), p);
+    const corrente = sceltaScheda.value;
+    const ids = new Set(voci.map(p => String(p.id)));
+    const testo = p => `M ${Number(p.mag).toLocaleString(localeIntl(), { minimumFractionDigits: 1, maximumFractionDigits: 1 })} · ${p.luogo || '—'} · ${new Date(p.ts).toLocaleString(localeIntl(), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`;
+    sceltaScheda.replaceChildren(
+      el('option', { value: '', textContent: tr('stampa.scheda.nessuna') }),
+      ...voci.map(p => el('option', { value: String(p.id), textContent: testo(p) })),
+      ...(corrente && !ids.has(corrente) && eventiScheda.has(corrente) ? [el('option', { value: corrente, textContent: testo(eventiScheda.get(corrente)) })] : []), // scelto prima di spostare il riquadro
+    );
+    sceltaScheda.value = corrente;
+  };
+  const schedaDaEvento = () => {
+    const p = eventiScheda.get(sceltaScheda.value);
+    if (!p || !Number.isFinite(p.lon) || !Number.isFinite(p.lat)) return null;
+    const m = modelloPopupTerremoto(p);
+    const gradi = (v, pos, neg) => `${Math.abs(v).toFixed(5)}° ${v >= 0 ? pos : neg}`;
+    return {
+      lon: p.lon, lat: p.lat, colore: p.colore || '#0b4f7a', coloreMag: coloreMagnitudo(p.mag), sezione: tl('Terremoti'), titolo: tl(m.titolo), sottotitolo: tl(m.sottotitolo), badge: m.badge?.testo,
+      righe: m.righe.map(x => ({ chiave: tl(x.etichetta), valore: tl(String(x.valore)), simbolo: x.etichetta === 'Magnitudo' ? 'mag' : x.etichetta === 'Ora locale' ? 'tempo' : '', raggio: raggioMagnitudo(p.mag) })),
+      coordinate: `${gradi(p.lat, 'N', 'S')} · ${gradi(p.lon, 'E', 'O')}`,
+    };
+  };
+  sceltaScheda.addEventListener('change', () => aggiornaAnteprima(false));
   const noti = new Map(); // eventi già visti nell'elenco (id → riga): servono a evidenziarli e a scriverli nel poster anche dopo che escono dall'area
   const eventoScelto = () => { const c = contorniAttivi(); return c ? noti.get(String(c.id)) ?? null : null; };
   // L'evento dei contorni si evidenzia in mappa con l'alone magenta (è un livello della mappa: finisce anche nel file)
@@ -252,6 +285,7 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
   sceltaEvento.addEventListener('change', applicaContorni);
   sceltaProdotto.addEventListener('change', () => { if (sceltaEvento.value) applicaContorni(); });
   const riempiEventi = () => {
+    riempiScheda();
     const corrente = contorniAttivi()?.id ?? '';
     const voci = fortiNellArea();
     for (const p of voci) noti.set(String(p.id), p);
@@ -274,6 +308,9 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
     el('label', { className: 'stampa-campo', htmlFor: 'stampa-shakemap-evento' }, el('span', { textContent: tr('stampa.shakemap.evento') }), sceltaEvento),
     el('label', { className: 'stampa-campo', htmlFor: 'stampa-shakemap-prodotto' }, el('span', { textContent: tr('stampa.shakemap.prodotto') }), sceltaProdotto),
     intestazioneElenco, vuotoShake, el('p', { className: 'stampa-nota', textContent: tr('stampa.shakemap.nota') }));
+  const campoScheda = el('label', { className: 'stampa-campo', htmlFor: 'stampa-scheda-evento' }, el('span', { textContent: tr('stampa.scheda.titolo') }), sceltaScheda);
+  const notaScheda = el('p', { className: 'stampa-nota', textContent: tr('stampa.scheda.nota') });
+  campoSoloPoster.push(campoScheda, notaScheda);
   const campoRisoluzione = sceltaDa('stampa-risoluzione', tr('html.stampa.risoluzione'), [96, 150, 300].map(d => [String(d), tr('stampa.risoluzione.opzione', { dpi: d, nome: tr(`stampa.risoluzione.${d}`) })]), String(stato.dpi), v => { stato.dpi = +v; aggiornaRisoluzione(); });
   campoSoloPoster.push(campoRisoluzione, infoRisoluzione);
   const statoEsporta = el('p', { className: 'stampa-nota stampa-errore', role: 'status', hidden: true, textContent: tr('stampa.errore') });
@@ -294,6 +331,7 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
       sceltaDa('stampa-scala', tr('html.stampa.scala'), [['', tr('stampa.vistaAttuale')], ...SCALE_STAMPA.map(n => [String(n), tr('stampa.opzioneScala', { n: n.toLocaleString(localeIntl()) })])], '', v => { stato.scala = +v || null; aggiornaAnteprima(false); })),
     campoRisoluzione, infoRisoluzione,
     shake,
+    campoScheda, notaScheda,
     elementi,
     statoEsporta,
     el('div', { className: 'stampa-azioni' }, adatta, centra, esporta));
@@ -328,7 +366,7 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
       const comuni = { formato: stato.formato, direzione: stato.direzione, scala: stato.scala, centro, zoom, titolo: stato.titolo };
       statoEsporta.hidden = true;
       const riuscita = stato.uscita === 'stampa' ? await stampaFoglio(map, comuni)
-        : await esportaFile(map, { ...comuni, uscita: stato.uscita, dpi: stato.dpi, titolo: stato.titolo || tr('stampa.poster.titoloDefault'), sottotitolo: sottotitoloEffettivo(), elementi: stato.elementi, evento: eventoScelto(), stelle: stelleDaEventi() });
+        : await esportaFile(map, { ...comuni, uscita: stato.uscita, dpi: stato.dpi, titolo: stato.titolo || tr('stampa.poster.titoloDefault'), sottotitolo: sottotitoloEffettivo(), elementi: stato.elementi, evento: eventoScelto(), stelle: stelleDaEventi(), scheda: schedaDaEvento() });
       statoEsporta.hidden = riuscita !== false; // cattura o scrittura fallite (di solito immagine troppo grande per il dispositivo)
     } finally { stato.occupato = false; esporta.disabled = false; esporta.textContent = etichetta; }
   });

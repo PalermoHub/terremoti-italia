@@ -9,6 +9,7 @@ import { FORMATI, barraScala, scalaDaZoom } from './stampa.js';
 import { scala } from './mini-scala.js';
 import { UNITA, contorniAttivi, contorniDati } from './shakemap-mappa.js';
 import { modoTema } from './tema-magnitudo.js';
+import { ICONE } from './icone.js';
 import { FASCE } from '../layers/scheda-terremoti.js';
 
 const MM_PX_CSS = 25.4 / 96; // lato di un pixel CSS sul foglio, in mm
@@ -257,6 +258,107 @@ function disegnaStelle(ctx, m, proj, stelle, zoom, corpo) {
   ctx.restore();
 }
 
+// Scheda di un evento: replica il popup che si apre in mappa (testata con marchio e sezione, titolo, badge della fascia d'età, righe
+// etichetta/valore con il cerchio della magnitudo, coordinate) con la sua stessa linea di richiamo ad angolo, dal punto dell'epicentro.
+// `scheda` = { lon, lat, colore, coloreMag, titolo, sottotitolo, badge?, righe: [{ chiave, valore, simbolo?, raggio? }], coordinate };
+// `occupati` = riquadri già coperti (legenda, scala, piede, rosa): la scheda cerca un angolo libero
+const MONO = 'ui-monospace, SFMono-Regular, Menlo, Consolas, monospace';
+const conAlfa = (hex, a) => { const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16)); return `rgba(${r},${g},${b},${a})`; };
+const testoSuColore = hex => { const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16)); return 0.299 * r + 0.587 * g + 0.114 * b > 150 ? '#1f2937' : '#fff'; };
+function pillola(ctx, x, y, testo, colore, corpo, pieno = false) {
+  ctx.font = `bold ${corpo * 0.85}px Montserrat, sans-serif`;
+  const w = ctx.measureText(testo).width + corpo * 1.4, h = corpo * 1.5;
+  ctx.beginPath(); ctx.roundRect(x, y - h / 2, w, h, h / 2);
+  ctx.fillStyle = pieno ? colore : conAlfa(colore, 0.14); ctx.fill();
+  ctx.strokeStyle = pieno ? 'rgba(0,0,0,.35)' : conAlfa(colore, 0.53); ctx.lineWidth = 0.15; ctx.stroke();
+  ctx.fillStyle = pieno ? testoSuColore(colore) : colore; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.fillText(testo, x + corpo * 0.7, y + corpo * 0.05);
+  return w;
+}
+function disegnaScheda(ctx, u, m, proj, scheda, corpo, occupati) {
+  const { x, y } = proj.verso(scheda.lon, scheda.lat);
+  if (x < 0 || y < 0 || x > m.larghezza || y > m.altezza) return; // l'epicentro è fuori dal riquadro
+  const ex = m.x + x, ey = m.y + y;
+  const w = corpo * 24, pad = corpo * 1.3, interno = w - 2 * pad;
+  const riga = corpo * 2.5;
+  // misure
+  ctx.font = `bold ${corpo * 1.35}px Montserrat, sans-serif`;
+  const titolo = spezzaRighe(ctx, scheda.titolo, interno).slice(0, 3);
+  ctx.font = `${corpo * 0.8}px ${MONO}`;
+  const larghezzaChiave = Math.max(...scheda.righe.map(r => ctx.measureText(r.chiave).width + (r.simbolo ? corpo * 2.6 : 0))) + corpo * 1.2;
+  ctx.font = `bold ${corpo * 0.95}px Montserrat, sans-serif`;
+  const righe = scheda.righe.map(r => ({ ...r, valoreRighe: r.simbolo === 'mag' ? [r.valore] : spezzaRighe(ctx, r.valore, interno - larghezzaChiave).slice(0, 3) }));
+  const hRighe = righe.reduce((t, r) => t + Math.max(riga, r.valoreRighe.length * corpo * 1.25 + corpo * 1.1), 0);
+  const h = pad * 0.9 + corpo * 5.6 + titolo.length * corpo * 1.65 + hRighe + corpo * 2.8;
+  // posizione: dal lato con più posto, sopra o sotto; la linea sale dal punto, poi entra di lato nella scheda
+  const orizz = corpo * 4, gancio = corpo * 2.2;
+  const interseca = (a, b) => a.x < b.x + b.w && a.x + a.w > b.x && a.y < b.y + b.h && a.y + a.h > b.y;
+  const clampY = v => Math.min(Math.max(v, m.y + corpo), m.y + m.altezza - h - corpo);
+  const candidati = [[1, -1], [-1, -1], [1, 1], [-1, 1]].map(([dx, dy]) => {
+    const cx = dx > 0 ? ex + orizz : ex - orizz - w;
+    const cy = clampY(dy < 0 ? ey - corpo * 3 - h + gancio : ey + corpo * 3 - gancio);
+    return { x: cx, y: cy, w, h, dx, dy };
+  }).filter(c => c.x >= m.x + corpo * 0.5 && c.x + w <= m.x + m.larghezza - corpo * 0.5);
+  if (!candidati.length) return;
+  const r = candidati.find(c => !occupati.some(o => interseca(c, o))) ?? candidati[0];
+  const yIngresso = Math.min(Math.max(r.dy < 0 ? r.y + h - gancio : r.y + gancio, r.y + corpo), r.y + h - corpo);
+  const xIngresso = r.dx > 0 ? r.x : r.x + w;
+  // linea di richiamo ad angolo e punto sull'epicentro
+  ctx.save();
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  const percorso = () => { ctx.beginPath(); ctx.moveTo(ex, ey); ctx.lineTo(ex, yIngresso); ctx.lineTo(xIngresso, yIngresso); };
+  percorso(); ctx.strokeStyle = 'rgba(255,255,255,.95)'; ctx.lineWidth = corpo * 0.55; ctx.stroke();
+  percorso(); ctx.strokeStyle = scheda.colore; ctx.lineWidth = corpo * 0.25; ctx.stroke();
+  ctx.beginPath(); ctx.arc(ex, ey, corpo * 0.7, 0, 2 * Math.PI);
+  ctx.fillStyle = scheda.colore; ctx.fill(); ctx.strokeStyle = '#fff'; ctx.lineWidth = corpo * 0.25; ctx.stroke();
+  ctx.restore();
+  // scheda
+  carta(ctx, u, r.x, r.y, w, h, corpo * 1.2, 'rgba(255,255,255,.96)');
+  const x0 = r.x + pad;
+  let yy = r.y + pad * 0.9 + corpo * 1;
+  ctx.fillStyle = scheda.colore; ctx.beginPath(); ctx.roundRect(x0, yy - corpo * 1, corpo * 2, corpo * 2, corpo * 0.45); ctx.fill();
+  ctx.save(); ctx.translate(x0 + corpo * 0.2, yy - corpo * 0.8); ctx.scale(corpo * 1.6 / 24, corpo * 1.6 / 24); ctx.fillStyle = testoSuColore(scheda.colore) === '#fff' ? '#fff' : '#1f2937'; ctx.fill(new Path2D(ICONE.terremoto)); ctx.restore();
+  ctx.fillStyle = '#5b6570'; ctx.font = `600 ${corpo * 0.8}px ${MONO}`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.letterSpacing = `${corpo * 0.1}px`; ctx.fillText(scheda.sezione.toUpperCase(), x0 + corpo * 2.9, yy); ctx.letterSpacing = '0px';
+  yy += corpo * 2 + corpo * 0.5;
+  ctx.font = `bold ${corpo * 1.35}px Montserrat, sans-serif`; ctx.fillStyle = '#1b1f24';
+  titolo.forEach(t => { ctx.fillText(t, x0, yy); yy += corpo * 1.65; });
+  yy += corpo * 0.7;
+  let bx = x0;
+  if (scheda.badge) bx += pillola(ctx, bx, yy, scheda.badge, scheda.colore, corpo) + corpo * 0.5;
+  if (scheda.sottotitolo) pillola(ctx, bx, yy, scheda.sottotitolo, scheda.colore, corpo);
+  yy += corpo * 1.4;
+  righe.forEach(rg => {
+    const alt = Math.max(riga, rg.valoreRighe.length * corpo * 1.25 + corpo * 1.1);
+    ctx.strokeStyle = '#d0d7de'; ctx.lineWidth = 0.15; ctx.beginPath(); ctx.moveTo(x0, yy); ctx.lineTo(x0 + interno, yy); ctx.stroke();
+    const cy = yy + alt / 2;
+    let xt = x0;
+    if (rg.simbolo === 'mag') {
+      ctx.beginPath(); ctx.arc(x0 + corpo * 0.9, cy, Math.min(rg.raggio * MM_PX_CSS * 1.05, corpo * 1.1), 0, 2 * Math.PI);
+      ctx.strokeStyle = '#5b6570'; ctx.lineWidth = corpo * 0.14; ctx.stroke(); xt += corpo * 2.6;
+    } else if (rg.simbolo === 'tempo') {
+      ctx.beginPath(); ctx.arc(x0 + corpo * 0.9, cy, corpo * 0.5, 0, 2 * Math.PI);
+      ctx.fillStyle = scheda.colore; ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,.25)'; ctx.lineWidth = 0.15; ctx.stroke(); xt += corpo * 2.6;
+    }
+    ctx.font = `${corpo * 0.8}px ${MONO}`; ctx.fillStyle = '#5b6570'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+    ctx.fillText(rg.chiave, xt, cy);
+    if (rg.simbolo === 'mag') {
+      ctx.font = `bold ${corpo * 0.85}px Montserrat, sans-serif`;
+      const wb = ctx.measureText(rg.valore).width + corpo * 1.4;
+      pillola(ctx, x0 + interno - wb, cy, rg.valore, scheda.coloreMag, corpo, true);
+    } else {
+      ctx.font = `bold ${corpo * 0.95}px Montserrat, sans-serif`; ctx.fillStyle = '#1b1f24'; ctx.textAlign = 'right';
+      const n = rg.valoreRighe.length;
+      rg.valoreRighe.forEach((t, i) => ctx.fillText(t, x0 + interno, cy + (i - (n - 1) / 2) * corpo * 1.25));
+    }
+    yy += alt;
+  });
+  ctx.strokeStyle = '#d0d7de'; ctx.lineWidth = 0.15; ctx.beginPath(); ctx.moveTo(x0, yy + corpo * 0.3); ctx.lineTo(x0 + interno, yy + corpo * 0.3); ctx.stroke();
+  ctx.font = `${corpo * 0.8}px ${MONO}`; ctx.fillStyle = '#5b6570'; ctx.textAlign = 'left';
+  ctx.fillText(scheda.coordinate, x0, yy + corpo * 1.5, interno);
+  ctx.textBaseline = 'middle';
+}
+
 // Disegna il poster sulla pagina `canvas`: sfondo bianco, banner, mappa incorniciata con graticola, legenda, scala, rosa dei venti, piede.
 // Le misure sono in mm: il contesto è scalato di `u` px/mm. `mappa` = { immagine, ritaglio? } con ritaglio opzionale { x, y, w, h } in px dell'immagine.
 // `vista` = { centro, zoom } con cui la mappa è stata resa: servono per la graticola e la barra di scala.
@@ -314,6 +416,7 @@ export function disegnaPoster(canvas, opzioni) {
   ctx.fillText(sottotitolo, corpo * 2.6, m.banner * 0.74, L * 0.55);
 
 
+  const occupati = []; // riquadri coperti da legenda, scala, rosa e piede: la scheda dell'evento li evita
   const sx = m.x + margine; // origine degli elementi dentro la mappa
   const fondo = m.y + m.altezza - margine;
 
@@ -324,6 +427,7 @@ export function disegnaPoster(canvas, opzioni) {
     const b = barraScala(scalaReale, 60);
     const yS = fondo - hScala;
     carta(ctx, u, sx, yS, b.mm + corpo * 8, hScala, corpo * 0.7);
+    occupati.push({ x: sx, y: yS, w: b.mm + corpo * 8, h: hScala });
     const bx = sx + corpo * 1.2, by = yS + corpo * 1.4, spessore = corpo * 0.55;
     const segmenti = 4;
     for (let i = 0; i < segmenti; i++) {
@@ -352,6 +456,7 @@ export function disegnaPoster(canvas, opzioni) {
     const wLeg = corpo * 17.5;
     const y0 = fondo - (el.scala ? hScala + corpo * 0.9 : 0) - hLeg;
     carta(ctx, u, sx, y0, wLeg, hLeg, corpo * 0.8);
+    occupati.push({ x: sx, y: y0, w: wLeg, h: hLeg });
     ctx.fillStyle = BLU; ctx.beginPath(); ctx.roundRect(sx, y0, wLeg, testata, [corpo * 0.8, corpo * 0.8, 0, 0]); ctx.fill();
     ctx.fillStyle = '#f5a623'; ctx.fillRect(sx, y0 + testata - corpo * 0.2, wLeg, corpo * 0.2);
     ctx.fillStyle = '#fff'; ctx.textAlign = 'left';
@@ -416,6 +521,7 @@ export function disegnaPoster(canvas, opzioni) {
   }
 
   // Rosa dei venti (alto a destra dentro la mappa)
+  if (el.rosa) occupati.push({ x: m.x + m.larghezza - margine - corpo * 5, y: m.y + margine + corpo * 1.4, w: corpo * 4.8, h: corpo * 5.2 });
   if (el.rosa) roseDeiVenti(ctx, u, m.x + m.larghezza - margine - corpo * 2.6, m.y + margine + corpo * 4, corpo * 1.9);
 
   // Piede in basso a destra: fonte dei dati, realizzazione, link all'app, attribuzioni delle basi, logo ODS
@@ -435,6 +541,7 @@ export function disegnaPoster(canvas, opzioni) {
   const xP = m.x + m.larghezza - margine - wPiede;
   const yP = fondo - hPiede;
   carta(ctx, u, xP, yP, wPiede, hPiede, corpo * 0.8);
+  occupati.push({ x: xP, y: yP, w: wPiede, h: hPiede });
   ctx.fillStyle = BLU; ctx.beginPath(); ctx.roundRect(xP, yP, corpo * 0.45, hPiede, [corpo * 0.8, 0, 0, corpo * 0.8]); ctx.fill();
   ctx.textAlign = 'left';
   righe.forEach((r, i) => {
@@ -450,6 +557,8 @@ export function disegnaPoster(canvas, opzioni) {
     const hl = Math.min(hRighe - corpo * 0.4, corpo * 4.8);
     ctx.drawImage(logo, xP + corpo * 1.1, yP + (hRighe - hl) / 2, hl * (logo.naturalWidth / logo.naturalHeight), hl);
   }
+
+  if (opzioni.scheda) disegnaScheda(ctx, u, m, proj, opzioni.scheda, corpo, occupati);
 
   // Filetto esterno della pagina
   ctx.strokeStyle = BLU; ctx.lineWidth = 0.6; ctx.strokeRect(0.3, 0.3, L - 0.6, A - 0.6);
@@ -492,7 +601,7 @@ function scarica(blob, nome) {
 // Sottotitolo di riserva: centro della mappa e data
 export const sottotitoloPredefinito = (centro, data) => tr('stampa.poster.sottotitolo', { lat: centro.lat.toFixed(3), lng: centro.lng.toFixed(3), data });
 
-export async function esportaPoster({ immagineUrl, uscita, formato, direzione, titolo, sottotitolo, elementi, evento, stelle, attribuzioni, centro, zoom }) {
+export async function esportaPoster({ immagineUrl, uscita, formato, direzione, titolo, sottotitolo, elementi, evento, stelle, scheda, attribuzioni, centro, zoom }) {
   const pagina = paginaMm(formato, direzione);
   const area = areaMappaPoster(formato, direzione);
   const mappa = await caricaImmagine(immagineUrl);
@@ -500,7 +609,7 @@ export async function esportaPoster({ immagineUrl, uscita, formato, direzione, t
   const canvas = Object.assign(document.createElement('canvas'), { width: Math.round(pagina.larghezza * k), height: Math.round(pagina.altezza * k) });
   const data = new Date().toLocaleDateString(localeIntl(), { day: 'numeric', month: 'long', year: 'numeric' });
   disegnaPoster(canvas, {
-    pagina, formato, direzione, titolo, attribuzioni, data, logo: await caricaLogo(), elementi, evento, stelle,
+    pagina, formato, direzione, titolo, attribuzioni, data, logo: await caricaLogo(), elementi, evento, stelle, scheda,
     mappa: { immagine: mappa }, vista: { centro, zoom },
     sottotitolo: sottotitolo || sottotitoloPredefinito(centro, data),
   });
