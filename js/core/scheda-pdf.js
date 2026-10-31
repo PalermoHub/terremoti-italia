@@ -31,7 +31,9 @@ function tokenChiari() {
 }
 
 async function comeDataUrl(url) {
-  const blob = await (await fetch(url, { signal: AbortSignal.timeout(8000) })).blob();
+  const risposta = await fetch(url, { signal: AbortSignal.timeout(8000) });
+  if (!risposta.ok) throw new Error(`HTTP ${risposta.status}`); // i18n-ok: errore tecnico
+  const blob = await risposta.blob();
   return new Promise((ok, ko) => { const f = new FileReader(); f.onload = () => ok(f.result); f.onerror = ko; f.readAsDataURL(blob); });
 }
 
@@ -41,6 +43,8 @@ async function incorporaImmagini(radice) {
     if (img.src.startsWith('data:')) return;
     try { img.src = await comeDataUrl(img.src); } catch { img.removeAttribute('src'); }
   }));
+  // senza decodifica l'immagine misura ~0 px e la riga che la contiene risulta più bassa di com'è
+  await Promise.all([...radice.querySelectorAll('img[src]')].map(img => { img.loading = 'eager'; return Promise.race([img.decode().catch(() => {}), new Promise(r => setTimeout(r, 3000))]); }));
 }
 
 // Stile calcolato copiato inline sul clone: nell'SVG non arrivano i fogli di stile dell'app. Copiarlo tutto (565 proprietà su
@@ -111,11 +115,10 @@ function pulita(sez) {
     h.append(sez.dataset.titolo || sommario.querySelector('h3')?.textContent?.trim() || '');
     sommario.replaceWith(h);
   }
-  // senza <summary> un <details> mostrerebbe un titolo predefinito («Details»): la sezione diventa un semplice blocco
+  // senza <summary> un <details> mostrerebbe un titolo predefinito («Details»): la sezione diventa un semplice blocco; gli accordion interni restano come li vede l'utente (chiusi = solo titolo)
   const blocco = el('div', 'scheda-sez pdf-sez');
   blocco.dataset.chiave = sez.dataset.chiave;
   blocco.append(...c.childNodes);
-  blocco.querySelectorAll('details').forEach(d => { d.open = true; });
   return blocco;
 }
 
@@ -146,9 +149,15 @@ function blocchiDa(sezioni, { stralcio, coordinate, contesto, data }) {
     titolo.append(c.querySelector(':scope > .pdf-h3') ?? el('h3'));
     aggiungi(titolo, 'piena');
     blocchi[blocchi.length - 1].conSuccessivo = true;
-    for (const s of serie) aggiungi(s, classifica({ haGrafico: true, haTabella: false }));
-    const fonte = c.querySelector('.scheda-fonte');
-    if (fonte) aggiungi(fonte, 'piena');
+    // grafici in coppia; note e testi della sezione restano, nell'ordine originale, come blocchi a tutta larghezza
+    const percorri = nodo => {
+      for (const f of [...nodo.children]) {
+        if (f.classList.contains('terremoti-serie')) aggiungi(f, classifica({ haGrafico: true, haTabella: false }));
+        else if (f.querySelector('.terremoti-serie')) percorri(f);
+        else if (f.textContent.trim() || f.querySelector('svg, img')) aggiungi(f, 'piena');
+      }
+    };
+    percorri(c);
   }
   return blocchi;
 }
@@ -189,6 +198,7 @@ export async function generaPdfScheda(contenitore, { stralcio = null, titolo, co
       visti.add(s.dataset.chiave);
       return true;
     });
+    let nuovoId = 0;
     const opz = { stralcio, coordinate, contesto, data, titolo };
     const blocchi = blocchiDa(sezioni, opz);
     if (!blocchi.length) throw new Error('scheda senza contenuto'); // i18n-ok: errore tecnico
@@ -202,9 +212,37 @@ export async function generaPdfScheda(contenitore, { stralcio = null, titolo, co
       misura.append(casella);
       b.casella = casella;
     }
-    await incorporaImmagini(misura);
-    for (const b of blocchi) b.altezza = b.casella.offsetHeight + VUOTO;
     const corpo = h => A_PX - h - PIEDE - 2 * VUOTO;
+    await incorporaImmagini(misura);
+    const MAX = corpo(BANNER.ridotto);
+    // un blocco a tutta larghezza più alto di una pagina si spezza nei suoi figli (altrimenti la pagina lo taglierebbe)
+    for (let giro = 0; giro < 4; giro++) {
+      let spezzato = false;
+      for (let i = 0; i < blocchi.length; i++) {
+        const b = blocchi[i];
+        if (b.larghezza !== 'piena' || b.casella.offsetHeight + VUOTO <= MAX) continue;
+        let contenitore = b.nodo; // si scende nei contenitori con un solo figlio fino a trovare dove tagliare
+        while (contenitore.children?.length === 1) contenitore = contenitore.firstElementChild;
+        const figli = [...(contenitore.children ?? [])].filter(f => f.textContent.trim() || f.querySelector('svg, img'));
+        if (figli.length < 2) continue;
+        const nuovi = figli.map(f => {
+          const casella = el('div', 'pdf-blocco');
+          casella.style.width = b.casella.style.width;
+          casella.append(f);
+          return { id: `${b.id}.${nuovoId++}`, nodo: f, larghezza: 'piena', casella };
+        });
+        nuovi.forEach(x => b.casella.before(x.casella));
+        b.casella.remove();
+        blocchi.splice(i, 1, ...nuovi);
+        i += nuovi.length - 1;
+        spezzato = true;
+      }
+      if (!spezzato) break;
+    }
+    for (const b of blocchi) {
+      b.altezza = b.casella.offsetHeight + VUOTO;
+      if (b.altezza > MAX) console.warn('PDF scheda: blocco più alto di una pagina, sarà tagliato', b.id, b.altezza); // i18n-ok: avviso solo per la console
+    }
     const pagine = impagina(blocchi, { primaPagina: corpo(BANNER.pieno), altre: corpo(BANNER.ridotto) });
     const logo = await caricaLogo();
     const perId = new Map(blocchi.map(b => [b.id, b]));
