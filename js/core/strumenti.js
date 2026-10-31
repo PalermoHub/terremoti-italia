@@ -1,4 +1,4 @@
-import { VISTA_ITALIA, ZOOM_SLIDER } from './config.js';
+import { VISTA_ITALIA, ZOOM_SLIDER, paddingVistaItalia } from './config.js';
 import { collegaGeolocalizzazione } from './geolocalizzazione.js';
 import { segnala } from './pannello.js';
 
@@ -26,7 +26,7 @@ export function collegaStrumenti(map) {
     badge.textContent = Number.isInteger(z) ? String(z) : z.toFixed(1);
   };
   document.getElementById('btn-home').addEventListener('click', () => {
-    map.fitBounds(VISTA_ITALIA, { padding: 24, bearing: 0, pitch: 0 });
+    map.fitBounds(VISTA_ITALIA, { padding: paddingVistaItalia(), bearing: 0, pitch: 0 });
   });
   document.getElementById('btn-zoom-piu').addEventListener('click', () => map.zoomIn()); // solo telefono: sostituiscono i + / − di MapLibre
   document.getElementById('btn-zoom-meno').addEventListener('click', () => map.zoomOut());

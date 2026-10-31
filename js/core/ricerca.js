@@ -2,7 +2,7 @@
 // I nomi vengono da dati/indice-comuni.json (letto alla prima interazione), i confini da comuni.pmtiles: la scelta zooma sull'area
 // e ne evidenzia il confine; con l'interruttore «solo eventi in quest'area» restringe anche i terremoti in tempo reale
 // e, a Live Zoom acceso, inquadra quelli rimasti.
-import { HIT_COMUNI, SRC_COMUNI, STRATO_COMUNI as STRATO, VISTA_ITALIA, sorgenteComuni } from './config.js';
+import { HIT_COMUNI, SRC_COMUNI, STRATO_COMUNI as STRATO, VISTA_ITALIA, paddingVistaItalia, sorgenteComuni } from './config.js';
 import { caricaIndiceComuni } from './indice-comuni.js';
 import { t } from './i18n.js';
 import { segnala, spegniStratiTranne } from './pannello.js';
@@ -219,7 +219,7 @@ export function collegaRicerca(map, { terremoti = null, storico = null, comuni =
     map.setPaintProperty(RIEMPIMENTO, 'fill-opacity', scelta.com != null ? 0.14 : 0.2);
     const voce = indice ? voceScelta(indice, scelta) : null;
     if (voce && !senzaVista) inquadra(voce.riquadro);
-    else if (casa) map.fitBounds(VISTA_ITALIA, { padding: 24, bearing: 0, pitch: 0 });
+    else if (casa) map.fitBounds(VISTA_ITALIA, { padding: paddingVistaItalia(), bearing: 0, pitch: 0 });
     applicaEventi();
   }
 

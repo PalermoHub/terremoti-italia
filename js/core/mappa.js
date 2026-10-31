@@ -1,5 +1,5 @@
 import { allineaLayerAlPiano } from './allinea-piano.js';
-import { VISTA_ITALIA, LIMITI, STILE_AVVIO } from './config.js';
+import { VISTA_ITALIA, LIMITI, STILE_AVVIO, paddingVistaItalia } from './config.js';
 
 const STILE_VUOTO = {
   version: 8,
@@ -29,7 +29,7 @@ export function creaMappa(idContenitore, suRipiego = () => {}) {
   const protocollo = new pmtiles.Protocol();
   maplibregl.addProtocol('pmtiles', protocollo.tile);
   const map = new maplibregl.Map({
-    container: idContenitore, bounds: VISTA_ITALIA, fitBoundsOptions: { padding: 24 }, maxZoom: 19, maxBounds: LIMITI, style: STILE_AVVIO, hash: true,
+    container: idContenitore, bounds: VISTA_ITALIA, fitBoundsOptions: { padding: paddingVistaItalia() }, maxZoom: 19, maxBounds: LIMITI, style: STILE_AVVIO, hash: true,
     pitch: 0, bearing: 0,
   });
   abilitaInclinazione(map, false);
