@@ -71,7 +71,7 @@ const mostraLegendaRidotta = ridotta => {
   document.getElementById('legende-box').classList.toggle('ridotta', ridotta);
   riduciLegenda.setAttribute('aria-expanded', String(!ridotta));
   riduciLegenda.textContent = ridotta ? t('app.legenda.apri') : t('html.legende.riduci');
-  if (ridotta) riduciLegenda.append(miniScala); // chiusa: la barra dei colori in corso accanto al titolo
+  if (ridotta) riduciLegenda.append(...miniScala); // chiusa: la barra dei colori in corso accanto al titolo
 };
 riduciLegenda.addEventListener('click', () => mostraLegendaRidotta(!document.getElementById('legende-box').classList.contains('ridotta')));
 // sul telefono la legenda aperta copre quasi tutta la mappa: parte ridotta, un tocco la apre

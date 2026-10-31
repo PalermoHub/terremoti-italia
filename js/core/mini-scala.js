@@ -16,7 +16,7 @@ const limiteEta = (fasce, i) => (Number.isFinite(fasce[i].finoA) ? `<${fasce[i].
 // stanno nel layer dei terremoti, arrivano da fuori.
 function scala(modo, fasce) {
   if (modo === 'magnitudo') {
-    return { colori: CLASSI_MAGNITUDO.map(c => c.colore), nomi: CLASSI_MAGNITUDO.map(c => `M ${t(`terremoti.ev.mag.${c.chiave}`)}`), da: `M ${CLASSI_MAGNITUDO[0].da}`, a: `M ${CLASSI_MAGNITUDO.at(-1).da}+` };
+    return { colori: CLASSI_MAGNITUDO.map(c => c.colore), nomi: CLASSI_MAGNITUDO.map(c => t(`terremoti.ev.mag.${c.chiave}`)), da: `M ${CLASSI_MAGNITUDO[0].da}`, a: `M ${CLASSI_MAGNITUDO.at(-1).da}+` };
   }
   if (modo === 'profondita') {
     const ultima = CLASSI_PROFONDITA.length - 1;
@@ -25,7 +25,10 @@ function scala(modo, fasce) {
   return { colori: fasce.map(f => f.colore), nomi: fasce.map((f, i) => `${tl(f.nome)} (${limiteEta(fasce, i)})`), limiti: fasce.map((_, i) => limiteEta(fasce, i)) };
 }
 
+// Restituisce i nodi da mettere nella pillola: il nome di ciò che i colori rappresentano e la scala.
 export function creaMiniScala(fasce) {
+  const modoNome = document.createElement('span');
+  modoNome.className = 'mini-scala-modo';
   const nodo = document.createElement('span');
   nodo.className = 'mini-scala';
   const da = document.createElement('span');
@@ -42,6 +45,8 @@ export function creaMiniScala(fasce) {
   const aggiorna = () => {
     const modo = modoTema();
     const s = scala(modo, fasce);
+    const nome = t(`tema.mini.modo.${modo}`);
+    modoNome.textContent = nome;
     nodo.dataset.modo = modo; // il CSS dà a ogni segmento la larghezza adatta al numero di classi
     nodo.classList.toggle('mini-scala-eta', Boolean(s.limiti));
     da.hidden = a.hidden = Boolean(s.limiti);
@@ -50,7 +55,7 @@ export function creaMiniScala(fasce) {
     barra.replaceChildren(...s.colori.map((colore, i) => {
       const segmento = document.createElement('i');
       segmento.style.background = colore;
-      segmento.title = s.nomi[i]; // il valore della classe al passaggio del mouse
+      segmento.title = `${nome}: ${s.nomi[i]}`; // il valore della classe al passaggio del mouse
       return segmento;
     }));
     limiti.replaceChildren(...(s.limiti ?? []).map(testo => {
@@ -61,5 +66,5 @@ export function creaMiniScala(fasce) {
   };
   document.addEventListener(EVENTO_TEMA_MAGNITUDO, aggiorna);
   aggiorna();
-  return nodo;
+  return [modoNome, nodo];
 }
