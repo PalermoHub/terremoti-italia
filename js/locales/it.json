@@ -122,6 +122,7 @@
   "attributo.troppi": "Troppi valori distinti (oltre 200): scegli un altro campo o la graduata.",
   "avviso.chiudi": "Chiudi l'avviso",
   "avviso.stratiNonCaricati": "{n} strati non caricati: dati non raggiungibili",
+  "avviso.stampaInCorso": "Preparazione della stampa in corso: attendere qualche istante, non chiudere la pagina…",
   "avviso.attesaCaricamento": "Caricamento dei dati in corso, attendere…",
   "avviso.stratoNonCaricato": "Strato non caricato",
   "avviso.stratoNonCaricato.dettaglio": "Strato non caricato: {nome}",

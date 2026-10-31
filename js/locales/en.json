@@ -122,6 +122,7 @@
   "attributo.troppi": "Too many distinct values (over 200): choose another field or the graduated mode.",
   "avviso.chiudi": "Close the notice",
   "avviso.stratiNonCaricati": "{n} layers not loaded: data unreachable",
+  "avviso.stampaInCorso": "Preparing your print: please wait a moment and keep this page open…",
   "avviso.attesaCaricamento": "Loading data, please wait…",
   "avviso.stratoNonCaricato": "Layer not loaded",
   "avviso.stratoNonCaricato.dettaglio": "Layer not loaded: {nome}",

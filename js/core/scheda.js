@@ -15,6 +15,7 @@ import { raggioVicini, raggioAttivo, poligonoAttivo, areaRaggio, cerchioVisibile
 import { EVENTO_TABELLA } from './tabella-dati.js';
 import { inModoEmergenza, moduliAlClic } from './modo-emergenza.js';
 import { clicCatturato } from './cattura-clic.js';
+import { conAvvisoStampa } from './avviso-attesa.js';
 
 const R = 4; // tolleranza in pixel attorno al clic
 
@@ -376,7 +377,7 @@ export function collegaScheda(map, moduli, contenitore, opzioni = {}) {
       try {
         const { generaPdfScheda } = await import('./scheda-pdf.js'); // caricato solo quando serve
         const testo = sel => contenitore.querySelector(sel)?.textContent?.trim() ?? '';
-        scaricaPdf(await generaPdfScheda(contenitore, { stralcio, titolo: testo('.scheda-testata h2'), coordinate: testo('.scheda-coordinate'), contesto: testo('.scheda-contesto') })); // i18n-ok: selettori CSS
+        scaricaPdf(await conAvvisoStampa(tr('avviso.stampaInCorso'), () => generaPdfScheda(contenitore, { stralcio, titolo: testo('.scheda-testata h2'), coordinate: testo('.scheda-coordinate'), contesto: testo('.scheda-contesto') }))); // i18n-ok: selettori CSS
       } catch (e) {
         console.error('Scheda: PDF non riuscito, si ripiega sulla stampa del browser', e); // i18n-ok: messaggio solo per la console
         const annuncio = contenitore.querySelector('.solo-lettori');

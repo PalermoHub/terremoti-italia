@@ -3,6 +3,7 @@
 // La mappa sotto il riquadro resta spostabile e ingrandibile: il riquadro resta fermo sullo schermo.
 import { t as tr, tl, localeIntl } from './i18n.js';
 import { FORMATI, SCALE_STAMPA, areaMappaMm, attribuzioniUniche, el, esportaFile, limiteLatoGpu, mmInPx, pixelRatioSicuro, stampaFoglio } from './stampa.js';
+import { conAvvisoStampa } from './avviso-attesa.js';
 import { evidenziaEventi, nascondiEvidenzaEventi } from './evidenza-eventi.js';
 import { coloreMagnitudo } from './magnitudo.js';
 import { coloreProfondita } from './profondita.js';
@@ -382,8 +383,8 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
       const { zoom } = inquadratura();
       const comuni = { formato: stato.formato, direzione: stato.direzione, scala: stato.scala, centro, zoom, titolo: stato.titolo };
       statoEsporta.hidden = true;
-      const riuscita = stato.uscita === 'stampa' ? await stampaFoglio(map, comuni)
-        : await esportaFile(map, { ...comuni, uscita: stato.uscita, dpi: stato.dpi, titolo: stato.titolo || tr('stampa.poster.titoloDefault'), sottotitolo: sottotitoloEffettivo(), elementi: stato.elementi, evento: eventoScelto(), stelle: stelleDaEventi(), scheda: schedaDaEvento() });
+      const riuscita = await conAvvisoStampa(tr('avviso.stampaInCorso'), () => stato.uscita === 'stampa' ? stampaFoglio(map, comuni)
+        : esportaFile(map, { ...comuni, uscita: stato.uscita, dpi: stato.dpi, titolo: stato.titolo || tr('stampa.poster.titoloDefault'), sottotitolo: sottotitoloEffettivo(), elementi: stato.elementi, evento: eventoScelto(), stelle: stelleDaEventi(), scheda: schedaDaEvento() }));
       statoEsporta.hidden = riuscita !== false; // cattura o scrittura fallite (di solito immagine troppo grande per il dispositivo)
     } finally { stato.occupato = false; esporta.disabled = false; esporta.textContent = etichetta; }
   });
