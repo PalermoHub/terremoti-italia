@@ -107,8 +107,9 @@
 }
 
 /* Mini-scala nella pillola «Legenda» chiusa (js/core/mini-scala.js): segmenti uguali, larghezza fissa */
-.mini-scala { display: inline-flex; width: 64px; height: 8px; border-radius: 4px; overflow: hidden; box-shadow: 0 0 0 1px var(--border-ui); }
-.mini-scala i { flex: 1; }
+.mini-scala { display: inline-flex; align-items: center; gap: 6px; font-size: var(--fs-xs); font-weight: 700; font-variant-numeric: tabular-nums; }
+.mini-scala-barra { display: inline-flex; width: 56px; height: 8px; border-radius: 4px; overflow: hidden; box-shadow: 0 0 0 1px var(--border-ui); }
+.mini-scala-barra i { flex: 1; }
 
 /* «Aggiorna ora»: rilegge subito i terremoti dall'INGV, senza aspettare il giro dei 2 minuti (js/layers/terremoti.js).
    Stessa forma dei pulsanti «oggi/domani» delle allerte; [hidden] esplicito perché display:inline-flex lo scavalcherebbe. */
