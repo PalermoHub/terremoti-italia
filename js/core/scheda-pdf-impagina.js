@@ -15,10 +15,17 @@ function righe(blocchi) {
       out.push({ voci: [{ id: b.id, colonna: 0 }, { id: successivo.id, colonna: 1 }], altezza: Math.max(b.altezza, successivo.altezza) });
       i++;
     } else {
-      out.push({ voci: [{ id: b.id, colonna: b.larghezza === 'meta' ? 0 : null }], altezza: b.altezza });
+      out.push({ voci: [{ id: b.id, colonna: b.larghezza === 'meta' ? 0 : null }], altezza: b.altezza, conSuccessivo: !!b.conSuccessivo });
     }
   }
-  return out;
+  // un titolo (conSuccessivo) si fonde con la riga che lo segue: si spostano insieme, mai un titolo solo in fondo alla pagina
+  const uniti = [];
+  for (let i = 0; i < out.length; i++) {
+    let r = out[i];
+    while (r.conSuccessivo && out[i + 1]) { const n = out[++i]; r = { voci: [...r.voci, ...n.voci], altezza: r.altezza + n.altezza, conSuccessivo: n.conSuccessivo }; }
+    uniti.push(r);
+  }
+  return uniti;
 }
 
 // `utile` = altezza disponibile per il corpo: prima pagina (banner pieno) e pagine successive (banner ridotto).
