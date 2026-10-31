@@ -28,6 +28,8 @@ export function collegaStrumenti(map) {
   document.getElementById('btn-home').addEventListener('click', () => {
     map.fitBounds(VISTA_ITALIA, { padding: 24, bearing: 0, pitch: 0 });
   });
+  document.getElementById('btn-zoom-piu').addEventListener('click', () => map.zoomIn()); // solo telefono: sostituiscono i + / − di MapLibre
+  document.getElementById('btn-zoom-meno').addEventListener('click', () => map.zoomOut());
   document.getElementById('btn-fs').addEventListener('click', () => {
     if (document.fullscreenElement) document.exitFullscreen();
     else document.documentElement.requestFullscreen?.();

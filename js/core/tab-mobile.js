@@ -1,4 +1,4 @@
-// Barra a quattro tab per telefono (fino a 720 px): Mappa, Strati, Aggiungi, Menu.
+// Barra di tab per telefono (fino a 720 px): Mappa, Strati, Lista (terremoti), Aggiungi, Menu.
 // Un solo foglio aperto alla volta: «Strati» (basi, layer, filtri), «Aggiungi» (i miei layer, catalogo RNDT, Geoimage)
 // e «Menu» (guide e pagine sul progetto). «Mappa» chiude tutto. Su schermi più larghi la barra non si vede
 // (CSS) e l'interfaccia resta quella a barre laterali.
@@ -8,6 +8,7 @@ import { t as tr } from './i18n.js';
 export const TAB = [
   { id: 'mappa', etichetta: tr('tab.mappa'), icona: 'mappa' },
   { id: 'strati', etichetta: tr('tab.strati'), icona: 'base' },
+  { id: 'tabella', etichetta: tr('tab.lista'), icona: 'elenco' }, // non è un foglio: apre e chiude la Lista Terremoti (#btn-tabella)
   { id: 'aggiungi', etichetta: tr('tab.aggiungi'), icona: 'miei' },
   { id: 'info', etichetta: tr('tab.menu'), icona: 'menu' },
 ];
@@ -15,7 +16,7 @@ export const TAB = [
 // Titolo del foglio «barra degli strati» in base al tab; quali riquadri compaiono lo decide il CSS con body[data-foglio].
 export const TITOLO_FOGLIO = { strati: tr('tab.strati'), aggiungi: tr('tab.aggiungi') };
 
-export function collegaTabMobile(doc, { barraTitolo, suCambio = () => {}, suMappa = () => {} } = {}) {
+export function collegaTabMobile(doc, { barraTitolo, comandoTabella = null, suCambio = () => {}, suMappa = () => {} } = {}) {
   const barra = doc.createElement('nav');
   barra.id = 'barra-tab';
   barra.setAttribute('aria-label', tr('tab.sezioni'));
@@ -29,7 +30,7 @@ export function collegaTabMobile(doc, { barraTitolo, suCambio = () => {}, suMapp
     corpo.classList.toggle('info-aperto', foglio === 'info');
     if (foglio) corpo.dataset.foglio = foglio; else delete corpo.dataset.foglio;
     if (barraTitolo && TITOLO_FOGLIO[foglio]) barraTitolo.textContent = TITOLO_FOGLIO[foglio];
-    for (const [id, b] of bottoni) b.setAttribute('aria-pressed', String(id === (foglio ?? 'mappa')));
+    for (const [id, b] of bottoni) if (id !== 'tabella') b.setAttribute('aria-pressed', String(id === (foglio ?? 'mappa')));
     suCambio(foglio);
   };
 
@@ -44,6 +45,18 @@ export function collegaTabMobile(doc, { barraTitolo, suCambio = () => {}, suMapp
       conta.setAttribute('aria-hidden', 'true');
       conta.textContent = '0';
       b.append(conta);
+    }
+    if (t.id === 'tabella') {
+      // il tab segue lo stato del comando (aria-pressed) e lo aziona: la tabella resta un cassetto, il foglio aperto si chiude
+      if (comandoTabella) {
+        const allinea = () => b.setAttribute('aria-pressed', String(comandoTabella.getAttribute('aria-pressed') === 'true'));
+        new MutationObserver(allinea).observe(comandoTabella, { attributes: true, attributeFilter: ['aria-pressed'] });
+        allinea();
+      }
+      b.addEventListener('click', () => { if (corrente) imposta(null); comandoTabella?.click(); });
+      bottoni.set(t.id, b);
+      barra.append(b);
+      continue;
     }
     b.addEventListener('click', () => {
       imposta(t.id === 'mappa' || t.id === corrente ? null : t.id);

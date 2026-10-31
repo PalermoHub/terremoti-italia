@@ -1,5 +1,7 @@
 /* Ritocchi della webapp Terremoti Italia sopra lo stile condiviso (app.css). */
-#barra-tab .tab-aggiungi, #barra-tab [data-tab="aggiungi"], #barra-tab [data-tab="info"] { display: none; }
+#barra-tab .tab-aggiungi, #barra-tab [data-tab="aggiungi"] { display: none; }
+#btn-zoom-piu, #btn-zoom-meno { display: none; } /* + e − nella colonna degli strumenti: solo telefono */
+#menu-info { display: none; } /* foglio del tab Menu: solo sul telefono (app.css lo mostra con body.info-aperto) */
 
 /* ==========================================================================
    Tabella dei dati (js/core/tabella-dati.js)
@@ -60,9 +62,11 @@
 @media (max-width: 720px) {
   /* a tabella aperta la colonna degli strumenti lascia il posto al cassetto: si chiude dalla × della tabella */
   body:has(#tabella-dati:not([hidden])) #barra-strumenti { display: none; }
-  /* con un foglio aperto la tabella è nascosta dal CSS: il pulsante non deve restare cliccabile a vuoto */
-  body.strati-aperti #btn-tabella, body.info-aperto #btn-tabella,
-  body:has(#scheda:not([hidden]):not(.collassato), #rndt-pannello:not([hidden]):not(.collassato), #geoimage-pannello:not([hidden]):not(.collassato), #tema-ui-pannello:not([hidden]):not(.collassato), #chatbot-pannello:not([hidden]):not(.collassato), #storico-pannello:not([hidden]):not(.collassato), #confronto-pannello:not([hidden]):not(.collassato)) #btn-tabella { display: none; }
+  /* sul telefono la Lista Terremoti si apre dal tab in basso (dopo «Strati»): il pulsante tra gli strumenti non serve */
+  body.info-aperto #menu-info button { justify-content: flex-start; gap: 14px; } /* voci del Menu: icona a sinistra, testo subito accanto */
+  #barra-strumenti :is(#btn-zoom-piu, #btn-zoom-meno) { display: flex; }
+  .maplibregl-ctrl-top-right { display: none; } /* i + / − di MapLibre lasciano il posto ai pulsanti sotto Home */
+  #barra-strumenti :is(#btn-tabella, #btn-info, #btn-condividi, #btn-stampa, #btn-tema, #switch-lingua) { display: none; } /* stanno nel tab Menu */
   #tabella-dati .tabella-conta { display: none; }
   #tabella-dati .tabella-titolo { flex: 1; }
   #tabella-dati .tabella-filtro { flex: 1 1 150px; width: auto; height: 38px; }
@@ -154,6 +158,18 @@
 @media (max-width: 720px) {
   #mappa-info #piede-coord { display: flex; flex-direction: column; align-items: flex-end; line-height: 1.15; }
   #mappa-info #piede-coord .piede-zoom { color: var(--text-muted); }
+}
+/* Telefono: riquadro a destra, chiuso mostra solo logo + freccia; il testo si apre verso sinistra, il logo resta fermo */
+@media (max-width: 720px) {
+  #mappa-info { flex-direction: row-reverse; cursor: pointer; bottom: calc(var(--tab-h, 60px) + var(--footer-h, 0px) + 40px); } /* sopra la scala */
+  #mappa-info .mappa-info-testi { max-width: 0; max-height: 0; opacity: 0; overflow: hidden; white-space: nowrap; transition: max-width var(--t-rapida), max-height var(--t-rapida), opacity var(--t-rapida); }
+  #mappa-info.aperto .mappa-info-testi { max-width: 200px; max-height: 60px; opacity: 1; }
+  #mappa-info { padding: 4px 8px; gap: 6px; }
+  #mappa-info #logo-ods img { height: 28px; width: auto; }
+  #mappa-info.aperto #logo-ods img { height: 34px; width: auto; }
+  /* freccia apri/chiudi come nella legenda: ◂ da chiuso (si apre verso sinistra), ▸ da aperto */
+  #mappa-info::after { content: '◂'; flex: none; font-size: var(--fs-xs); color: var(--text-muted); }
+  #mappa-info.aperto::after { content: '▸'; }
 }
 @media (max-width: 720px) { #minimappa-panoramica { display: none; } }
 @media print { #minimappa-panoramica { display: none !important; } }

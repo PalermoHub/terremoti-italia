@@ -13,6 +13,7 @@ import { collegaRicerca } from './core/ricerca.js';
 import { creaDifferiti } from './core/differiti.js';
 import { creaAvvisoAttesa } from './core/avviso-attesa.js';
 import { collegaTabMobile } from './core/tab-mobile.js';
+import { creaMenuMobile } from './core/menu-mobile.js';
 import { traduciModuli } from './core/traduci-moduli.js';
 import { collegaShakeMap } from './core/shakemap-mappa.js';
 import { caricaLiveZoom, collegaLiveZoom, creaInterruttoreLegenda as interruttoreLiveZoomLegenda } from './core/live-zoom.js';
@@ -51,8 +52,9 @@ import { collegaConfronto, apriConfronto } from './core/scheda-confronto.js';
 import base from './layers/base.js';
 
 // telefono: barra di tab e foglio degli strati; la legenda si può ridurre
-const tab = collegaTabMobile(document, { barraTitolo: document.querySelector('#barra-strati .barra-titolo') });
+const tab = collegaTabMobile(document, { barraTitolo: document.querySelector('#barra-strati .barra-titolo'), comandoTabella: document.getElementById('btn-tabella') });
 document.getElementById('corpo').append(tab.barra);
+document.body.append(creaMenuMobile(document, { chiudi: () => tab.imposta(null) })); // nel body: sopra lo sfondo oscurato del foglio Menu
 document.getElementById('chiudi-strati').addEventListener('click', () => tab.imposta(null));
 caricaLiveZoom(localStorage);
 caricaTema(localStorage);
@@ -120,6 +122,16 @@ map.once('style.load', async () => {
     { id: 'mappe', etichetta: t('rail.mappe'), pannello: mappePannello, apri: () => mappe.apri() },
   ]);
   document.addEventListener('scheda:mostra', () => document.getElementById('scheda').hidden = false);
+
+  // su telefono il riquadro logo+coordinate è chiuso (solo logo) e si apre verso destra al tocco
+  const mappaInfo = document.getElementById('mappa-info');
+  mappaInfo.addEventListener('click', (e) => {
+    if (!window.matchMedia('(max-width: 720px)').matches) return;
+    const aperto = mappaInfo.classList.contains('aperto');
+    if (aperto && e.target.closest('#logo-ods')) return; // da aperto il logo apre il link
+    e.preventDefault();
+    mappaInfo.classList.toggle('aperto', !aperto);
+  });
 
   // coordinate sotto il puntatore e zoom nel piè di pagina; lo zoom sta su una riga sua, così il riquadro resta stretto
   const piedeCoord = document.getElementById('piede-coord');
