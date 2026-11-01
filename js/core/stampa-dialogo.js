@@ -62,15 +62,19 @@ export function ridimensiona(r, dx, proporzione, vista) {
   return { ...r, w, h };
 }
 
-// Copia del fotogramma della mappa: il canvas WebGL si legge solo durante il render
+// Copia del fotogramma della mappa: il canvas WebGL si legge solo durante il render. Dopo uno zoom si attende l'arrivo dei tile
+// (al massimo 4 s), altrimenti l'anteprima mostrerebbe una mappa vuota.
 function fotogramma(map) {
   return new Promise(risolvi => {
-    map.once('render', () => {
+    const scatta = () => {
       const c = map.getCanvas();
       const copia = Object.assign(document.createElement('canvas'), { width: c.width, height: c.height });
       copia.getContext('2d').drawImage(c, 0, 0);
       risolvi(copia);
-    });
+    };
+    const t = setTimeout(() => { map.off('render', controlla); map.once('render', scatta); map.triggerRepaint(); }, 4000);
+    const controlla = () => { if (map.areTilesLoaded()) { clearTimeout(t); map.off('render', controlla); map.once('render', scatta); map.triggerRepaint(); } };
+    map.on('render', controlla);
     map.triggerRepaint();
   });
 }
@@ -125,17 +129,35 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
     stato.riquadro = { x: r.x + r.w / 2 - w / 2, y: r.y + r.h / 2 - h / 2, w, h };
     posiziona();
   };
-  // Se l'estensione della scala non sta nella parte libera della mappa (o è minuscola), si cambia lo zoom finché ci sta bene (la stampa non cambia)
-  const portaInVista = () => {
+  // La mappa si adatta alla scala: si cambia lo zoom finché l'estensione della scala riempie bene la parte libera (la stampa non cambia).
+  // `forza` = sempre (cambio di scala o di formato); altrimenti solo se l'estensione non sta o è minuscola.
+  const portaInVista = (forza = false) => {
     if (!stato.scala || !stato.riquadro) return;
     const v = vista();
     const r = stato.riquadro;
     const lib = { w: v.larghezza - (v.sinistra ?? 0), h: v.altezza - (v.alto ?? 0) };
-    if (r.w <= lib.w && r.h <= lib.h && (r.w >= lib.w * 0.3 || r.h >= lib.h * 0.3)) return; // sta e si vede bene
+    if (!forza && r.w <= lib.w && r.h <= lib.h && (r.w >= lib.w * 0.3 || r.h >= lib.h * 0.3)) return; // sta e si vede bene
     const k = Math.min(lib.w * 0.88 / r.w, lib.h * 0.88 / r.h);
     map.zoomTo(map.getZoom() + Math.log2(k), { duration: 0 });
     stato.riquadro = riquadroIniziale(v, proporzione());
     adattaAScala();
+  };
+  // Con una scala fissa il formato si adatta alla mappa: il foglio più piccolo (ISO, in orizzontale o in verticale) la cui area stampata
+  // copre quello che si vede ora nella parte libera della mappa, senza cambiare lo zoom. Se nessun formato basta (vista molto ampia) resta quello scelto e portaInVista() adatta lo zoom.
+  const adattaFormatoAScala = () => {
+    if (!stato.scala) return;
+    const v = vista();
+    const lib = { w: (v.larghezza - (v.sinistra ?? 0)) * 0.88, h: (v.altezza - (v.alto ?? 0)) * 0.88 };
+    const c = map.unproject([(v.sinistra ?? 0) + (v.larghezza - (v.sinistra ?? 0)) / 2, (v.alto ?? 0) + (v.altezza - (v.alto ?? 0)) / 2]);
+    const k = 2 ** (map.getZoom() - zoomPerScala(c.lat, stato.scala));
+    const areaDi = (f, d) => (stato.uscita === 'stampa' ? areaMappaMm(f, d) : areaMappaPoster(f, d));
+    const preferita = lib.w >= lib.h ? ['landscape', 'portrait'] : ['portrait', 'landscape']; // prima l'orientamento della vista
+    const copre = (f, d) => { const a = areaDi(f, d); return mmInPx(a.larghezza) * k >= lib.w && mmInPx(a.altezza) * k >= lib.h; };
+    const f = Object.keys(FORMATI).find(n => preferita.some(d => copre(n, d))) ?? stato.formato; // dal più piccolo al più grande; se nemmeno A0 copre la vista (zoom lontano) resta il formato scelto e si adatta lo zoom
+    const scelta = [f, preferita.find(d => copre(f, d)) ?? preferita[0]];
+    [stato.formato, stato.direzione] = scelta;
+    radice.querySelector('#stampa-formato').value = stato.formato;
+    radice.querySelector('#stampa-direzione').value = stato.direzione;
   };
   const proporzione = () => aspetto(stato.formato, stato.direzione, stato.uscita);
 
@@ -242,7 +264,7 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
     input.addEventListener('input', () => suCambio(input.value.trim()));
     return el('label', { className: 'stampa-campo', htmlFor: id }, el('span', { textContent: etichetta }), input);
   };
-  const dopoCambioProporzione = () => { stato.riquadro = adattaProporzione(stato.riquadro, proporzione(), vista()); posiziona(); adattaAScala(); portaInVista(); aggiornaVisibilita(); aggiornaRisoluzione(); riempiEventi(); aggiornaAnteprima(false); };
+  const dopoCambioProporzione = () => { stato.riquadro = adattaProporzione(stato.riquadro, proporzione(), vista()); posiziona(); adattaAScala(); portaInVista(true); aggiornaVisibilita(); aggiornaRisoluzione(); riempiEventi(); aggiornaAnteprima(false); };
   const campoSoloPoster = [];
   const elementi = el('fieldset', { className: 'stampa-elementi' }, el('legend', { textContent: tr('stampa.elementi') }),
     ...OPZIONI_ELEMENTI.map(k => {
@@ -373,7 +395,7 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
       sceltaDa('stampa-direzione', tr('html.stampa.orient'), [['landscape', tr('stampa.orizzontale')], ['portrait', tr('stampa.verticale')]], stato.direzione, v => { stato.direzione = v; dopoCambioProporzione(); })),
     el('div', { className: 'stampa-riga' },
       sceltaDa('stampa-uscita', tr('html.stampa.uscita'), ['png', 'jpg', 'pdf', 'stampa'].map(v => [v, tr(`stampa.uscita.${v}`)]), stato.uscita, v => { stato.uscita = v; dopoCambioProporzione(); }),
-      sceltaDa('stampa-scala', tr('html.stampa.scala'), [['', tr('stampa.vistaAttuale')], ...SCALE_STAMPA.map(n => [String(n), tr('stampa.opzioneScala', { n: n.toLocaleString(localeIntl()) })])], '', v => { stato.scala = +v || null; if (stato.scala) { adattaAScala(); portaInVista(); } else { riquadro.classList.remove('a-scala'); stato.riquadro = riquadroIniziale(vista(), proporzione()); posiziona(); } riempiEventi(); aggiornaAnteprima(false); })),
+      sceltaDa('stampa-scala', tr('html.stampa.scala'), [['', tr('stampa.vistaAttuale')], ...SCALE_STAMPA.map(n => [String(n), tr('stampa.opzioneScala', { n: n.toLocaleString(localeIntl()) })])], '', v => { stato.scala = +v || null; if (stato.scala) { adattaFormatoAScala(); stato.riquadro = adattaProporzione(stato.riquadro, proporzione(), vista()); adattaAScala(); portaInVista(); aggiornaRisoluzione(); } else { riquadro.classList.remove('a-scala'); stato.riquadro = riquadroIniziale(vista(), proporzione()); posiziona(); } riempiEventi(); aggiornaAnteprima(false); })),
     campoRisoluzione, infoRisoluzione,
     shake,
     campoScheda, notaScheda,
@@ -397,7 +419,7 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
     stato.riquadro = dentroVista({ ...r, x: (v.sinistra ?? 0) + (v.larghezza - (v.sinistra ?? 0) - r.w) / 2, y: (v.alto ?? 0) + (v.altezza - (v.alto ?? 0) - r.h) / 2 }, v);
     posiziona(); riempiEventi(); aggiornaAnteprima();
   });
-  adatta.addEventListener('click', () => { stato.riquadro = riquadroIniziale(vista(), proporzione()); posiziona(); adattaAScala(); portaInVista(); riempiEventi(); aggiornaAnteprima(); });
+  adatta.addEventListener('click', () => { stato.riquadro = riquadroIniziale(vista(), proporzione()); posiziona(); adattaAScala(); portaInVista(true); riempiEventi(); aggiornaAnteprima(); });
 
   esporta.addEventListener('click', async () => {
     if (stato.occupato) return;
