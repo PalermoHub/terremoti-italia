@@ -7,11 +7,11 @@ import { conAvvisoStampa } from './avviso-attesa.js';
 import { evidenziaEventi, nascondiEvidenzaEventi } from './evidenza-eventi.js';
 import { coloreMagnitudo } from './magnitudo.js';
 import { coloreProfondita } from './profondita.js';
-import { modoTema } from './tema-magnitudo.js';
+import { impostaTema, modoTema } from './tema-magnitudo.js';
 import { EVENTO_SHAKEMAP, contorniAttivi } from './shakemap-mappa.js';
 import { PRODOTTI_SHAKEMAP, fasciaEta, haShakeMap, modelloPopupTerremoto, raggioMagnitudo } from '../layers/scheda-terremoti.js';
 import { REPORT, applicaReport } from './stampa-report.js';
-import { SOGLIA_ELENCO, areaMappaPoster, caricaLogo, disegnaPoster, paginaMm, sottotitoloPredefinito, zoomPerPagina } from './stampa-poster.js';
+import { SOGLIA_ELENCO, areaMappaPoster, fasciaLiberaPoster, caricaLogo, disegnaPoster, paginaMm, sottotitoloPredefinito, zoomPerPagina } from './stampa-poster.js';
 
 const LARGHEZZA_GRANDE = 2000; // px del canvas dell'anteprima ingrandita
 const LARGHEZZA_ANTEPRIMA = 640; // px del canvas dell'anteprima (CSS lo adatta al pannello)
@@ -405,7 +405,8 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
   const campoMese = el('select', { id: 'stampa-report-mese' }, ...nomiMesi.map((n, i) => el('option', { value: String(i), textContent: n })));
   const campoAnno = el('select', { id: 'stampa-report-anno' }, ...Array.from({ length: ANNO_ORA - 1984 }, (_, i) => ANNO_ORA - i).map(a => el('option', { value: String(a), textContent: String(a) })));
   campoMese.value = String(new Date().getUTCMonth()); // di partenza il mese e l'anno in corso
-  const campiPeriodo = el('div', { className: 'stampa-riga', hidden: true }, campoData, campoMese, campoAnno);
+  const campoMagnitudo = el('select', { id: 'stampa-report-magnitudo', title: tr('stampa.report.magnitudo') }, ...[1, 2, 3, 4, 5].map(m => el('option', { value: String(m), textContent: tr('stampa.report.magnitudoMin', { m }) })));
+  const campiPeriodo = el('div', { className: 'stampa-riga stampa-report-periodo', hidden: true }, campoData, campoMese, campoAnno, campoMagnitudo);
   const mostraCampi = chiave => {
     campoData.hidden = chiave !== 'settimanale';
     campoMese.hidden = chiave !== 'mensile';
@@ -414,6 +415,61 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
   };
   const dataBreve = ts => new Date(ts).toLocaleDateString(localeIntl(), { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
   let chiaveReport = '';
+  // Con gli eventi del nuovo periodo in mappa, inquadra il riquadro in modo che stiano tutti nella fascia libera del poster
+  // (fuori da legenda, elenco, rosa e piede); a scala fissa l'inquadratura è decisa dalla scala e non si tocca
+  // La mappa ha limiti di navigazione che a schermo grande impediscono di allontanarsi quanto serve: per il report si sollevano
+  // finché il pannello è aperto
+  let limitiOriginali = null;
+  const ripristinaLimiti = () => { if (limitiOriginali) { const l = limitiOriginali; limitiOriginali = null; map.setMaxBounds(l); } };
+  let giroReport = 0;
+  const inquadraReport = async () => {
+    const giro = ++giroReport;
+    const pausa = ms => new Promise(ok => setTimeout(ok, ms));
+    const attuale = () => giro === giroReport && aperto && stato.riquadro;
+    // aspetta che il numero di eventi si fermi (le fonti rispondono a pezzi); `da` = quanti ne aveva l'ultima inquadratura
+    const attendi = async da => {
+      const inizio = Date.now();
+      let ultimo = -1, stabile = 0;
+      await pausa(800);
+      while (Date.now() - inizio < 9000 && attuale()) {
+        const n = eventi().length;
+        stabile = n === ultimo ? stabile + 1 : 0;
+        ultimo = n;
+        if (stabile >= 2 && n > 0 && n !== da) break;
+        if (stabile >= 6) break; // fermo da un po': nessun altro evento in arrivo
+        await pausa(350);
+      }
+      return ultimo;
+    };
+    let inquadrati = -1;
+    for (let tentativo = 0; tentativo < 4 && attuale(); tentativo++) {
+      const n = await attendi(inquadrati);
+      if (!attuale() || n === inquadrati || !n || stato.scala) break;
+      const punti = eventi().filter(p => Number.isFinite(p.lon) && Number.isFinite(p.lat));
+      if (!punti.length) break;
+      const r = stato.riquadro;
+      const area = areaMappaPoster(stato.formato, stato.direzione);
+      if (!limitiOriginali) { limitiOriginali = map.getMaxBounds(); map.setMaxBounds(null); }
+      const f = fasciaLiberaPoster(stato.formato, stato.direzione);
+      const k = r.w / area.larghezza; // px del riquadro per mm di poster
+      // Zoom e centro calcolati sulla proiezione Mercator: gli eventi devono stare dentro la fascia libera [f] del riquadro
+      const merc = punti.map(p => maplibregl.MercatorCoordinate.fromLngLat([p.lon, p.lat]));
+      const [x0, x1] = [Math.min(...merc.map(c => c.x)), Math.max(...merc.map(c => c.x))];
+      const [y0, y1] = [Math.min(...merc.map(c => c.y)), Math.max(...merc.map(c => c.y))];
+      const larghezzaFascia = (f.x1 - f.x0) * k, altezzaFascia = (f.y1 - f.y0) * k;
+      const mondo = Math.min(larghezzaFascia / Math.max(x1 - x0, 1e-9), altezzaFascia / Math.max(y1 - y0, 1e-9)); // px del mondo intero
+      const zoom = Math.min(8.5, Math.log2(mondo / 512));
+      // si porta al centro degli eventi e poi si sposta la mappa di quanto serve a mettere quel punto nel mezzo della fascia
+      // (il centro della mappa non è quello del contenitore: ha un padding per il pannello)
+      const centroEventi = new maplibregl.MercatorCoordinate((x0 + x1) / 2, (y0 + y1) / 2, 0).toLngLat();
+      map.jumpTo({ center: centroEventi, zoom });
+      const punto = map.project(centroEventi);
+      map.panBy([punto.x - (r.x + (f.x0 + f.x1) / 2 * k), punto.y - (r.y + (f.y0 + f.y1) / 2 * k)], { animate: false });
+      inquadrati = n;
+      await new Promise(ok => map.once('idle', ok));
+    }
+    if (giro === giroReport) aggiornaAnteprima(true);
+  };
   const applicaScelta = () => {
     const r = applicaReport(chiaveReport, scelta);
     stato.soglia = r ? r.elenco : SOGLIA_ELENCO;
@@ -422,20 +478,23 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
     campoTitolo.querySelector('input').value = stato.titolo;
     sottotitolo.querySelector('input').value = stato.sottotitolo;
     aggiornaAnteprima(false);
-    if (r) setTimeout(() => map.once('idle', () => aggiornaAnteprima(true)), 600); // il tempo di ricaricare gli eventi del nuovo periodo
+    if (!r) ripristinaLimiti();
+    if (r) { impostaTema('magnitudo'); inquadraReport(); } // i report sono sempre colorati per magnitudo
   };
   const leggiScelta = () => {
     scelta.data = campoData.value || undefined;
     scelta.anno = Number(campoAnno.value);
     scelta.mese = Number(campoMese.value);
+    scelta.magMin = Number(campoMagnitudo.value);
   };
   const sceltaReport = sceltaDa('stampa-report', tr('stampa.report'), [['', tr('stampa.report.nessuno')], ...Object.keys(REPORT).map(k => [k, tr(`stampa.report.${k}`)])], '', chiave => {
     chiaveReport = chiave;
     mostraCampi(chiave);
+    campoMagnitudo.value = String(REPORT[chiave]?.magMin ?? 3); // di partenza la magnitudo del preset
     leggiScelta();
     applicaScelta();
   });
-  for (const c of [campoData, campoMese, campoAnno]) c.addEventListener('change', () => { leggiScelta(); applicaScelta(); });
+  for (const c of [campoData, campoMese, campoAnno, campoMagnitudo]) c.addEventListener('change', () => { leggiScelta(); applicaScelta(); });
   radice.append( // il titolo è quello del tab, già nella sezione
     anteprima,
     el('p', { className: 'stampa-nota', textContent: tr('stampa.riquadro.nota') }),
@@ -500,7 +559,7 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
     riquadro.hidden = !apri;
     document.body.classList.toggle('stampa-pannello', apri); // su desktop nasconde legenda, minimappa, logo e scala della mappa
     aggiornaEvidenza(); // chiuso il pannello l'alone va via, i contorni restano
-    if (!apri) { map.off('moveend', sulMovimento); window.removeEventListener('resize', sulRidimensionamento); document.removeEventListener(EVENTO_SHAKEMAP, suContorni); return; }
+    if (!apri) { giroReport++; ripristinaLimiti(); map.off('moveend', sulMovimento); window.removeEventListener('resize', sulRidimensionamento); document.removeEventListener(EVENTO_SHAKEMAP, suContorni); return; }
     stato.riquadro = stato.riquadro ? adattaProporzione(stato.riquadro, proporzione(), vista()) : riquadroIniziale(vista(), proporzione());
     posiziona();
     map.on('moveend', sulMovimento);

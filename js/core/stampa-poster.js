@@ -133,6 +133,17 @@ export function areaMappaPoster(formato, direzione) {
   return { x: bordo, y: banner + bordo, larghezza: p.larghezza - 2 * bordo, altezza: p.altezza - banner - 2 * bordo, banner, bordo };
 }
 
+// Fascia centrale del poster che legenda, scala, elenco, rosa dei venti e piede lasciano libera (mm dall'angolo in alto a sinistra della mappa):
+// gli eventi dentro questa fascia non finiscono mai sotto un riquadro. Le misure replicano quelle di disegnaPoster.
+export function fasciaLiberaPoster(formato, direzione) {
+  const m = areaMappaPoster(formato, direzione);
+  const corpo = corpoTesto(paginaMm(formato, direzione).larghezza);
+  const margine = corpo * 1.3;
+  const sinistra = margine + corpo * 17.5 + corpo; // legenda
+  const destra = margine + Math.min(corpo * 29, m.larghezza * 0.32) + corpo; // elenco (la rosa sta nella stessa colonna)
+  return { x0: sinistra, x1: m.larghezza - destra, y0: corpo * 2, y1: m.altezza - margine - corpo * 12 }; // in basso il piede con le attribuzioni
+}
+
 // — proiezione Web Mercator per graticola e scala: stessa matematica di MapLibre (mondo = 512 px × 2^zoom) —
 const mercX = lng => (lng + 180) / 360;
 const mercY = lat => { const s = Math.sin(lat * Math.PI / 180); return 0.5 - Math.log((1 + s) / (1 - s)) / (4 * Math.PI); };

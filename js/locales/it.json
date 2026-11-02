@@ -3875,6 +3875,8 @@
   "stampa.el.elenco": "Elenco dei terremoti forti",
   "stampa.report": "Report periodico",
   "stampa.report.nessuno": "Nessuno (libero)",
+  "stampa.report.magnitudo": "Magnitudo minima",
+  "stampa.report.magnitudoMin": "M ≥ {m}",
   "stampa.report.settimanale": "Settimanale",
   "stampa.report.mensile": "Mensile",
   "stampa.report.annuale": "Annuale",

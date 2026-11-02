@@ -33,12 +33,13 @@ export function applicaReport(chiave, scelta = {}, adesso = new Date()) {
   const r = REPORT[chiave];
   if (!r) return null;
   const scelto = periodoReport(chiave, scelta);
-  filtro.magMin = r.magMin;
+  const magMin = Number.isFinite(scelta.magMin) ? scelta.magMin : r.magMin; // la magnitudo scelta vale più di quella del preset
+  filtro.magMin = magMin;
   filtro.magMax = null;
   filtro.finestra = null;
   if (scelto) filtro.periodo = scelto;
   else if (r.anno) filtro.periodo = periodoAnno(adesso.getUTCFullYear());
   else { filtro.periodo = null; filtro.giorni = r.giorni; }
   document.dispatchEvent(new CustomEvent(EVENTO_FILTRO));
-  return { ...r, periodo: scelto };
+  return { ...r, magMin, elenco: Math.max(r.elenco, magMin), periodo: scelto };
 }

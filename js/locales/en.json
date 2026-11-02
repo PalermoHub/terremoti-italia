@@ -3875,6 +3875,8 @@
   "stampa.el.elenco": "List of strong earthquakes",
   "stampa.report": "Periodic report",
   "stampa.report.nessuno": "None (free)",
+  "stampa.report.magnitudo": "Minimum magnitude",
+  "stampa.report.magnitudoMin": "M ≥ {m}",
   "stampa.report.settimanale": "Weekly",
   "stampa.report.mensile": "Monthly",
   "stampa.report.annuale": "Yearly",
