@@ -10,7 +10,7 @@ import { coloreProfondita } from './profondita.js';
 import { modoTema } from './tema-magnitudo.js';
 import { EVENTO_SHAKEMAP, contorniAttivi } from './shakemap-mappa.js';
 import { PRODOTTI_SHAKEMAP, fasciaEta, haShakeMap, modelloPopupTerremoto, raggioMagnitudo } from '../layers/scheda-terremoti.js';
-import { areaMappaPoster, caricaLogo, disegnaPoster, paginaMm, sottotitoloPredefinito, zoomPerPagina } from './stampa-poster.js';
+import { SOGLIA_ELENCO, areaMappaPoster, caricaLogo, disegnaPoster, paginaMm, sottotitoloPredefinito, zoomPerPagina } from './stampa-poster.js';
 
 const LARGHEZZA_GRANDE = 2000; // px del canvas dell'anteprima ingrandita
 const LARGHEZZA_ANTEPRIMA = 640; // px del canvas dell'anteprima (CSS lo adatta al pannello)
@@ -82,7 +82,7 @@ function fotogramma(map) {
 const SOGLIA_STELLA = 5; // dalla magnitudo in su un evento è una stella nel poster, come in legenda
 const SOGLIA_FORTI = 5; // «tutti gli eventi dell'area» = magnitudo uguale o superiore a questa
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
-const OPZIONI_ELEMENTI = ['legenda', 'scala', 'rosa', 'griglia']; // logo, fonte, attribuzioni e cornice non si tolgono
+const OPZIONI_ELEMENTI = ['legenda', 'scala', 'rosa', 'griglia', 'ml', 'elenco']; // logo, fonte, attribuzioni e cornice non si tolgono
 
 export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } = {}) {
   const contenitore = map.getContainer();
@@ -229,7 +229,7 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
       pagina, formato: stato.formato, direzione: stato.direzione, titolo: stato.titolo || tr('stampa.poster.titoloDefault'),
       sottotitolo: sottotitoloEffettivo() || sottotitoloPredefinito(vista.centro, data),
       attribuzioni: attribuzioniUniche([...document.querySelectorAll('#mappa .maplibregl-ctrl-attrib-inner')].map(a => a.textContent)),
-      logo, data, elementi: stato.elementi, evento: eventoScelto(), stelle: stelleDaEventi(), scheda: schedaDaEvento(), mappa: { immagine: ultimoFotogramma, ritaglio }, vista,
+      logo, data, elementi: stato.elementi, evento: eventoScelto(), stelle: stelleDaEventi(), forti: fortiDaEventi(), scheda: schedaDaEvento(), mappa: { immagine: ultimoFotogramma, ritaglio }, vista,
     });
   }
   async function aggiornaAnteprima(nuovoFotogramma = true) {
@@ -304,9 +304,19 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
   };
   // Stelle del poster: gli eventi in elenco con magnitudo da SOGLIA_STELLA, col colore che hanno in mappa nel modo «Tematizza per» in corso
   const stelleDaEventi = () => {
-    const modo = modoTema();
-    const colore = p => (modo === 'magnitudo' ? coloreMagnitudo(p.mag) : modo === 'profondita' ? coloreProfondita(p.prof) : fasciaEta(p.ts).colore);
+    const colore = coloreEvento();
     return eventi().filter(p => p.mag >= SOGLIA_STELLA && Number.isFinite(p.lon) && Number.isFinite(p.lat)).map(p => ({ lon: p.lon, lat: p.lat, colore: colore(p) }));
+  };
+  // Colore di un evento in mappa nel modo «Tematizza per» in corso
+  const coloreEvento = () => {
+    const modo = modoTema();
+    return p => (modo === 'magnitudo' ? coloreMagnitudo(p.mag) : modo === 'profondita' ? coloreProfondita(p.prof) : fasciaEta(p.ts).colore);
+  };
+  // Eventi da SOGLIA_ELENCO in su: la magnitudo scritta nel simbolo e l'elenco del poster (il poster tiene solo quelli dentro l'area stampata)
+  const fortiDaEventi = () => {
+    const colore = coloreEvento();
+    return eventi().filter(p => p.mag >= SOGLIA_ELENCO && Number.isFinite(p.lon) && Number.isFinite(p.lat))
+      .map(p => ({ id: String(p.id), lon: p.lon, lat: p.lat, mag: p.mag, ts: p.ts, luogo: p.luogo || '', colore: colore(p) }));
   };
   // Scheda di un solo evento sul poster (il contenuto del suo tooltip): si sceglie tra gli eventi dentro il riquadro, i più forti per primi
   const eventiScheda = new Map();
@@ -433,7 +443,7 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
       const comuni = { formato: stato.formato, direzione: stato.direzione, scala: stato.scala, centro, zoom, titolo: stato.titolo };
       statoEsporta.hidden = true;
       const riuscita = await conAvvisoStampa(tr('avviso.stampaInCorso'), () => stato.uscita === 'stampa' ? stampaFoglio(map, comuni)
-        : esportaFile(map, { ...comuni, uscita: stato.uscita, dpi: stato.dpi, titolo: stato.titolo || tr('stampa.poster.titoloDefault'), sottotitolo: sottotitoloEffettivo(), elementi: stato.elementi, evento: eventoScelto(), stelle: stelleDaEventi(), scheda: schedaDaEvento() }));
+        : esportaFile(map, { ...comuni, uscita: stato.uscita, dpi: stato.dpi, titolo: stato.titolo || tr('stampa.poster.titoloDefault'), sottotitolo: sottotitoloEffettivo(), elementi: stato.elementi, evento: eventoScelto(), stelle: stelleDaEventi(), forti: fortiDaEventi(), scheda: schedaDaEvento() }));
       statoEsporta.hidden = riuscita !== false; // cattura o scrittura fallite (di solito immagine troppo grande per il dispositivo)
     } finally { stato.occupato = false; esporta.disabled = false; esporta.textContent = etichetta; }
   });

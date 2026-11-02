@@ -4,7 +4,7 @@
 // sono citati come INGV e la mappa risulta realizzata con l'applicazione di OpenDataSicilia.
 // Ispirato a Layout Composer (Defani Arman Alfitriansyah, MIT, https://github.com/Defani/Layout-Composer): nessun codice copiato.
 import { t as tr, localeIntl } from './i18n.js';
-import { CLASSI_MAGNITUDO } from './magnitudo.js';
+import { CLASSI_MAGNITUDO, raggioMagnitudo } from './magnitudo.js';
 import { FORMATI, barraScala, scalaDaZoom } from './stampa.js';
 import { scala } from './mini-scala.js';
 import { UNITA, contorniAttivi, contorniDati } from './shakemap-mappa.js';
@@ -12,6 +12,8 @@ import { modoTema } from './tema-magnitudo.js';
 import { ICONE } from './icone.js';
 import { FASCE } from '../layers/scheda-terremoti.js';
 
+// Dalla magnitudo in su un evento entra nell'elenco del poster e porta la ML scritta nel simbolo
+export const SOGLIA_ELENCO = 4;
 const MM_PX_CSS = 25.4 / 96; // lato di un pixel CSS sul foglio, in mm
 const BLU = '#0b4f7a';
 const LOGO = 'img/opendatasicilia.png';
@@ -240,10 +242,11 @@ function cornice(ctx, m, proj, corpo, conGriglia, scuro = false) {
 
 // Gli eventi forti (M ≥ 5) in mappa sono cerchi come gli altri: sul poster, come in legenda, diventano stelle del colore del tema.
 // `stelle` = [{ lon, lat, colore }]; la stella è più grande del cerchio sottostante (14 px a zoom 7,5: 0,8 volte a zoom 6, 1,6 a zoom 12).
+const moltiplicatoreZoom = zoom => Math.min(1.6, Math.max(0.8, 0.8 + (zoom - 6) * (0.8 / 6)));
+const raggioStella = (zoom, corpo) => Math.max(corpo * 0.9, 14 * moltiplicatoreZoom(zoom) * MM_PX_CSS * 1.6);
 function disegnaStelle(ctx, m, proj, stelle, zoom, corpo) {
   if (!stelle.length) return;
-  const moltiplicatore = Math.min(1.6, Math.max(0.8, 0.8 + (zoom - 6) * (0.8 / 6)));
-  const R = Math.max(corpo * 0.9, 14 * moltiplicatore * MM_PX_CSS * 1.6);
+  const R = raggioStella(zoom, corpo);
   ctx.save();
   ctx.beginPath(); ctx.rect(m.x, m.y, m.larghezza, m.altezza); ctx.clip();
   ctx.lineJoin = 'round';
@@ -256,6 +259,87 @@ function disegnaStelle(ctx, m, proj, stelle, zoom, corpo) {
     ctx.strokeStyle = '#1f2937'; ctx.lineWidth = 0.25; ctx.stroke();
   }
   ctx.restore();
+}
+
+const formatoMl = mag => Number(mag).toLocaleString(localeIntl(), { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+const COLORE_ESADECIMALE = /^#[0-9a-f]{6}$/i;
+
+// Magnitudo (ML) scritta dentro il simbolo di ogni evento da SOGLIA_ELENCO: cerchio o stella, col testo chiaro o scuro a seconda del colore
+function disegnaMl(ctx, m, proj, forti, zoom, corpo) {
+  const R = raggioStella(zoom, corpo);
+  ctx.save();
+  ctx.beginPath(); ctx.rect(m.x, m.y, m.larghezza, m.altezza); ctx.clip();
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const scritti = []; // simboli già etichettati: se due si sovrappongono resta solo la magnitudo più alta (si parte dai più forti)
+  for (const e of [...forti].sort((a, b) => b.mag - a.mag)) {
+    const { x, y } = proj.verso(e.lon, e.lat);
+    if (x < 0 || y < 0 || x > m.larghezza || y > m.altezza) continue;
+    const stellaForte = e.mag >= 5;
+    const r = stellaForte ? R : raggioMagnitudo(e.mag) * moltiplicatoreZoom(zoom) * MM_PX_CSS;
+    if (scritti.some(o => Math.hypot(o.x - x, o.y - y) < o.r + r)) continue;
+    scritti.push({ x, y, r });
+    const fontMl = stellaForte ? r * 0.5 : r * 0.9; // la stella ha il corpo pieno più piccolo del raggio delle punte
+    if (fontMl < 1) continue; // più piccolo di 1 mm non si legge
+    ctx.font = `bold ${fontMl}px Montserrat, sans-serif`;
+    ctx.fillStyle = COLORE_ESADECIMALE.test(e.colore) ? testoSuColore(e.colore) : '#1f2937';
+    ctx.fillText(formatoMl(e.mag), m.x + x, m.y + y + (stellaForte ? r * 0.08 : 0));
+  }
+  ctx.restore();
+}
+
+// Riquadro con gli eventi da SOGLIA_ELENCO dentro l'area della mappa, i più forti per primi, alla destra fra la rosa dei venti e il piede.
+// Se non entrano tutti l'ultima riga dice quanti mancano; se non c'è posto per almeno due righe non si disegna.
+function disegnaElenco(ctx, u, m, proj, forti, corpo, alto, basso, occupati) {
+  const visti = new Set();
+  const voci = forti.filter(e => {
+    const { x, y } = proj.verso(e.lon, e.lat);
+    return x >= 0 && y >= 0 && x <= m.larghezza && y <= m.altezza && !visti.has(e.id) && visti.add(e.id);
+  }).sort((a, b) => b.mag - a.mag || b.ts - a.ts);
+  if (!voci.length) return;
+  const margine = corpo * 1.3;
+  const w = Math.min(corpo * 29, m.larghezza * 0.32);
+  const testata = corpo * 2.4, riga = corpo * 1.75, respiro = corpo * 0.5;
+  const entrano = Math.floor((basso - alto - testata - respiro) / riga);
+  if (entrano < 2) return;
+  const tutte = voci.length <= entrano;
+  const mostrate = tutte ? voci : voci.slice(0, entrano - 1); // l'ultima riga è «+ altri N»
+  const h = testata + respiro + (mostrate.length + (tutte ? 0 : 1)) * riga;
+  const x = m.x + m.larghezza - margine - w;
+  const y = basso - h;
+  carta(ctx, u, x, y, w, h, corpo * 0.8);
+  occupati.push({ x, y, w, h });
+  ctx.fillStyle = BLU; ctx.beginPath(); ctx.roundRect(x, y, w, testata, [corpo * 0.8, corpo * 0.8, 0, 0]); ctx.fill();
+  ctx.fillStyle = '#f5a623'; ctx.fillRect(x, y + testata - corpo * 0.2, w, corpo * 0.2);
+  ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
+  ctx.font = `bold ${corpo * 1.1}px Montserrat, sans-serif`;
+  ctx.fillText(tr('stampa.poster.elencoTitolo', { soglia: SOGLIA_ELENCO }), x + corpo, y + testata * 0.46, w - 2 * corpo);
+  const quando = ts => new Date(ts).toLocaleString(localeIntl(), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  const riduci = (testo, max) => { // accorcia con «…» finché sta in `max`
+    if (ctx.measureText(testo).width <= max) return testo;
+    let t = testo;
+    while (t.length > 1 && ctx.measureText(`${t}…`).width > max) t = t.slice(0, -1);
+    return `${t.trimEnd()}…`;
+  };
+  const wPillola = corpo * 3.2;
+  mostrate.forEach((e, i) => {
+    const cy = y + testata + respiro + i * riga + riga / 2;
+    if (i) { ctx.strokeStyle = 'rgba(15,23,42,.1)'; ctx.lineWidth = 0.1; ctx.beginPath(); ctx.moveTo(x + corpo, cy - riga / 2); ctx.lineTo(x + w - corpo, cy - riga / 2); ctx.stroke(); }
+    const colore = COLORE_ESADECIMALE.test(e.colore) ? e.colore : '#94a3b8';
+    ctx.fillStyle = colore; ctx.beginPath(); ctx.roundRect(x + corpo, cy - corpo * 0.6, wPillola, corpo * 1.2, corpo * 0.6); ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 0.12; ctx.stroke();
+    ctx.font = `bold ${corpo * 0.85}px Montserrat, sans-serif`; ctx.fillStyle = testoSuColore(colore); ctx.textAlign = 'center';
+    ctx.fillText(formatoMl(e.mag), x + corpo + wPillola / 2, cy + corpo * 0.04);
+    ctx.font = `${corpo * 0.78}px ${MONO}`; ctx.textAlign = 'right'; ctx.fillStyle = '#64748b';
+    const tempo = quando(e.ts);
+    const wTempo = ctx.measureText(tempo).width;
+    ctx.fillText(tempo, x + w - corpo, cy);
+    ctx.font = `${corpo * 0.9}px Montserrat, sans-serif`; ctx.textAlign = 'left'; ctx.fillStyle = '#1e293b';
+    ctx.fillText(riduci(e.luogo || '—', w - corpo * 3 - wPillola - wTempo - corpo * 0.8), x + corpo * 1.8 + wPillola, cy);
+  });
+  if (!tutte) {
+    ctx.font = `italic ${corpo * 0.85}px Montserrat, sans-serif`; ctx.fillStyle = '#64748b'; ctx.textAlign = 'left';
+    ctx.fillText(tr('stampa.poster.elencoAltri', { n: voci.length - mostrate.length }), x + corpo, y + testata + respiro + mostrate.length * riga + riga / 2);
+  }
 }
 
 // Scheda di un evento: replica il popup che si apre in mappa (testata con marchio e sezione, titolo, badge della fascia d'età, righe
@@ -365,7 +449,7 @@ function disegnaScheda(ctx, u, m, proj, scheda, corpo, occupati) {
 // `vista` = { centro, zoom } con cui la mappa è stata resa: servono per la graticola e la barra di scala.
 export function disegnaPoster(canvas, opzioni) {
   const { pagina, formato, direzione, titolo, sottotitolo, attribuzioni, logo, data, mappa, vista } = opzioni;
-  const el = { legenda: true, scala: true, rosa: true, griglia: true, ...opzioni.elementi }; // cornice, fonte dei dati, logo e attribuzioni ci sono sempre
+  const el = { legenda: true, scala: true, rosa: true, griglia: true, ml: true, elenco: true, ...opzioni.elementi }; // cornice, fonte dei dati, logo e attribuzioni ci sono sempre
   const ctx = canvas.getContext('2d');
   const u = canvas.width / pagina.larghezza;
   ctx.save();
@@ -386,6 +470,7 @@ export function disegnaPoster(canvas, opzioni) {
   const proj = proiettore(vista.centro, vista.zoom, m);
   cornice(ctx, m, proj, corpo, el.griglia, mappa?.immagine ? luminosita(mappa.immagine, mappa.ritaglio) < 120 : false);
   disegnaStelle(ctx, m, proj, opzioni.stelle ?? [], vista.zoom, corpo);
+  if (el.ml) disegnaMl(ctx, m, proj, opzioni.forti ?? [], vista.zoom, corpo);
 
   // Banner del titolo: sfumatura blu, onda sismica in filigrana e filo ambra
   const gb = ctx.createLinearGradient(0, 0, L, 0);
@@ -566,6 +651,8 @@ export function disegnaPoster(canvas, opzioni) {
     ctx.drawImage(logo, xP + corpo * 1.1, yP + (hRighe - hl) / 2, hl * (logo.naturalWidth / logo.naturalHeight), hl);
   }
 
+  if (el.elenco) disegnaElenco(ctx, u, m, proj, opzioni.forti ?? [], corpo, m.y + margine + (el.rosa ? corpo * 7.2 : 0), yP - corpo * 0.9, occupati);
+
   if (opzioni.scheda) disegnaScheda(ctx, u, m, proj, opzioni.scheda, corpo, occupati);
 
   // Filetto esterno della pagina
@@ -609,7 +696,7 @@ function scarica(blob, nome) {
 // Sottotitolo di riserva: centro della mappa e data
 export const sottotitoloPredefinito = (centro, data) => tr('stampa.poster.sottotitolo', { lat: centro.lat.toFixed(3), lng: centro.lng.toFixed(3), data });
 
-export async function esportaPoster({ immagineUrl, uscita, formato, direzione, titolo, sottotitolo, elementi, evento, stelle, scheda, attribuzioni, centro, zoom }) {
+export async function esportaPoster({ immagineUrl, uscita, formato, direzione, titolo, sottotitolo, elementi, evento, stelle, forti, scheda, attribuzioni, centro, zoom }) {
   const pagina = paginaMm(formato, direzione);
   const area = areaMappaPoster(formato, direzione);
   const mappa = await caricaImmagine(immagineUrl);
@@ -617,7 +704,7 @@ export async function esportaPoster({ immagineUrl, uscita, formato, direzione, t
   const canvas = Object.assign(document.createElement('canvas'), { width: Math.round(pagina.larghezza * k), height: Math.round(pagina.altezza * k) });
   const data = new Date().toLocaleDateString(localeIntl(), { day: 'numeric', month: 'long', year: 'numeric' });
   disegnaPoster(canvas, {
-    pagina, formato, direzione, titolo, attribuzioni, data, logo: await caricaLogo(), elementi, evento, stelle, scheda,
+    pagina, formato, direzione, titolo, attribuzioni, data, logo: await caricaLogo(), elementi, evento, stelle, forti, scheda,
     mappa: { immagine: mappa }, vista: { centro, zoom },
     sottotitolo: sottotitolo || sottotitoloPredefinito(centro, data),
   });
