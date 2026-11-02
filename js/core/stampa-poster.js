@@ -289,7 +289,7 @@ function disegnaMl(ctx, m, proj, forti, zoom, corpo) {
 
 // Riquadro con gli eventi da SOGLIA_ELENCO dentro l'area della mappa, i più forti per primi, alla destra fra la rosa dei venti e il piede.
 // Se non entrano tutti l'ultima riga dice quanti mancano; se non c'è posto per almeno due righe non si disegna.
-function disegnaElenco(ctx, u, m, proj, forti, corpo, alto, basso, occupati) {
+function disegnaElenco(ctx, u, m, proj, forti, corpo, alto, basso, occupati, soglia) {
   const visti = new Set();
   const voci = forti.filter(e => {
     const { x, y } = proj.verso(e.lon, e.lat);
@@ -312,7 +312,7 @@ function disegnaElenco(ctx, u, m, proj, forti, corpo, alto, basso, occupati) {
   ctx.fillStyle = '#f5a623'; ctx.fillRect(x, y + testata - corpo * 0.2, w, corpo * 0.2);
   ctx.fillStyle = '#fff'; ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
   ctx.font = `bold ${corpo * 1.1}px Montserrat, sans-serif`;
-  ctx.fillText(tr('stampa.poster.elencoTitolo', { soglia: SOGLIA_ELENCO }), x + corpo, y + testata * 0.46, w - 2 * corpo);
+  ctx.fillText(tr('stampa.poster.elencoTitolo', { soglia }), x + corpo, y + testata * 0.46, w - 2 * corpo);
   const quando = ts => new Date(ts).toLocaleString(localeIntl(), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
   const riduci = (testo, max) => { // accorcia con «…» finché sta in `max`
     if (ctx.measureText(testo).width <= max) return testo;
@@ -651,7 +651,7 @@ export function disegnaPoster(canvas, opzioni) {
     ctx.drawImage(logo, xP + corpo * 1.1, yP + (hRighe - hl) / 2, hl * (logo.naturalWidth / logo.naturalHeight), hl);
   }
 
-  if (el.elenco) disegnaElenco(ctx, u, m, proj, opzioni.forti ?? [], corpo, m.y + margine + (el.rosa ? corpo * 7.2 : 0), yP - corpo * 0.9, occupati);
+  if (el.elenco) disegnaElenco(ctx, u, m, proj, opzioni.forti ?? [], corpo, m.y + margine + (el.rosa ? corpo * 7.2 : 0), yP - corpo * 0.9, occupati, opzioni.soglia ?? SOGLIA_ELENCO);
 
   if (opzioni.scheda) disegnaScheda(ctx, u, m, proj, opzioni.scheda, corpo, occupati);
 
@@ -696,7 +696,7 @@ function scarica(blob, nome) {
 // Sottotitolo di riserva: centro della mappa e data
 export const sottotitoloPredefinito = (centro, data) => tr('stampa.poster.sottotitolo', { lat: centro.lat.toFixed(3), lng: centro.lng.toFixed(3), data });
 
-export async function esportaPoster({ immagineUrl, uscita, formato, direzione, titolo, sottotitolo, elementi, evento, stelle, forti, scheda, attribuzioni, centro, zoom }) {
+export async function esportaPoster({ immagineUrl, uscita, formato, direzione, titolo, sottotitolo, elementi, evento, stelle, forti, soglia, scheda, attribuzioni, centro, zoom }) {
   const pagina = paginaMm(formato, direzione);
   const area = areaMappaPoster(formato, direzione);
   const mappa = await caricaImmagine(immagineUrl);
@@ -704,7 +704,7 @@ export async function esportaPoster({ immagineUrl, uscita, formato, direzione, t
   const canvas = Object.assign(document.createElement('canvas'), { width: Math.round(pagina.larghezza * k), height: Math.round(pagina.altezza * k) });
   const data = new Date().toLocaleDateString(localeIntl(), { day: 'numeric', month: 'long', year: 'numeric' });
   disegnaPoster(canvas, {
-    pagina, formato, direzione, titolo, attribuzioni, data, logo: await caricaLogo(), elementi, evento, stelle, forti, scheda,
+    pagina, formato, direzione, titolo, attribuzioni, data, logo: await caricaLogo(), elementi, evento, stelle, forti, soglia, scheda,
     mappa: { immagine: mappa }, vista: { centro, zoom },
     sottotitolo: sottotitolo || sottotitoloPredefinito(centro, data),
   });

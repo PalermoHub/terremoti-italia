@@ -10,6 +10,7 @@ import { coloreProfondita } from './profondita.js';
 import { modoTema } from './tema-magnitudo.js';
 import { EVENTO_SHAKEMAP, contorniAttivi } from './shakemap-mappa.js';
 import { PRODOTTI_SHAKEMAP, fasciaEta, haShakeMap, modelloPopupTerremoto, raggioMagnitudo } from '../layers/scheda-terremoti.js';
+import { REPORT, applicaReport } from './stampa-report.js';
 import { SOGLIA_ELENCO, areaMappaPoster, caricaLogo, disegnaPoster, paginaMm, sottotitoloPredefinito, zoomPerPagina } from './stampa-poster.js';
 
 const LARGHEZZA_GRANDE = 2000; // px del canvas dell'anteprima ingrandita
@@ -86,7 +87,7 @@ const OPZIONI_ELEMENTI = ['legenda', 'scala', 'rosa', 'griglia', 'ml', 'elenco']
 
 export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } = {}) {
   const contenitore = map.getContainer();
-  const stato = { formato: 'A4', direzione: 'landscape', uscita: 'png', dpi: 150, scala: null, titolo: '', sottotitolo: '', elementi: Object.fromEntries(OPZIONI_ELEMENTI.map(k => [k, true])), riquadro: null, occupato: false };
+  const stato = { formato: 'A4', direzione: 'landscape', uscita: 'png', dpi: 150, scala: null, titolo: '', sottotitolo: '', elementi: Object.fromEntries(OPZIONI_ELEMENTI.map(k => [k, true])), riquadro: null, occupato: false, soglia: SOGLIA_ELENCO };
   let logo = null;
   let ultimoFotogramma = null;
   let aperto = false;
@@ -229,7 +230,7 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
       pagina, formato: stato.formato, direzione: stato.direzione, titolo: stato.titolo || tr('stampa.poster.titoloDefault'),
       sottotitolo: sottotitoloEffettivo() || sottotitoloPredefinito(vista.centro, data),
       attribuzioni: attribuzioniUniche([...document.querySelectorAll('#mappa .maplibregl-ctrl-attrib-inner')].map(a => a.textContent)),
-      logo, data, elementi: stato.elementi, evento: eventoScelto(), stelle: stelleDaEventi(), forti: fortiDaEventi(), scheda: schedaDaEvento(), mappa: { immagine: ultimoFotogramma, ritaglio }, vista,
+      logo, data, elementi: stato.elementi, evento: eventoScelto(), stelle: stelleDaEventi(), forti: fortiDaEventi(), soglia: stato.soglia, scheda: schedaDaEvento(), mappa: { immagine: ultimoFotogramma, ritaglio }, vista,
     });
   }
   async function aggiornaAnteprima(nuovoFotogramma = true) {
@@ -315,7 +316,7 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
   // Eventi da SOGLIA_ELENCO in su: la magnitudo scritta nel simbolo e l'elenco del poster (il poster tiene solo quelli dentro l'area stampata)
   const fortiDaEventi = () => {
     const colore = coloreEvento();
-    return eventi().filter(p => p.mag >= SOGLIA_ELENCO && Number.isFinite(p.lon) && Number.isFinite(p.lat))
+    return eventi().filter(p => p.mag >= stato.soglia && Number.isFinite(p.lon) && Number.isFinite(p.lat))
       .map(p => ({ id: String(p.id), lon: p.lon, lat: p.lat, mag: p.mag, ts: p.ts, luogo: p.luogo || '', colore: colore(p) }));
   };
   // Scheda di un solo evento sul poster (il contenuto del suo tooltip): si sceglie tra gli eventi dentro il riquadro, i più forti per primi
@@ -395,10 +396,51 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
   const centra = el('button', { type: 'button', className: 'stampa-centra', textContent: tr('stampa.centra'), title: tr('stampa.centra.titolo') });
   const adatta = el('button', { type: 'button', className: 'stampa-adatta', textContent: tr('stampa.riquadro.adatta') });
 
+  // Report periodico: periodo, magnitudo del filtro, soglia di elenco e ML e titolo; la mappa ricarica gli eventi e l'anteprima segue
+  const campoTitolo = campoTesto('stampa-titolo', tr('html.stampa.titolo'), v => { stato.titolo = v; aggiornaAnteprima(false); }, tr('stampa.poster.titoloDefault'));
+  const scelta = {};
+  const ANNO_ORA = new Date().getUTCFullYear();
+  const nomiMesi = Array.from({ length: 12 }, (_, i) => new Date(Date.UTC(2000, i, 1)).toLocaleDateString(localeIntl(), { month: 'long', timeZone: 'UTC' }));
+  const campoData = el('input', { type: 'date', id: 'stampa-report-data', max: new Date().toISOString().slice(0, 10) });
+  const campoMese = el('select', { id: 'stampa-report-mese' }, ...nomiMesi.map((n, i) => el('option', { value: String(i), textContent: n })));
+  const campoAnno = el('select', { id: 'stampa-report-anno' }, ...Array.from({ length: ANNO_ORA - 1984 }, (_, i) => ANNO_ORA - i).map(a => el('option', { value: String(a), textContent: String(a) })));
+  campoMese.value = String(new Date().getUTCMonth()); // di partenza il mese e l'anno in corso
+  const campiPeriodo = el('div', { className: 'stampa-riga', hidden: true }, campoData, campoMese, campoAnno);
+  const mostraCampi = chiave => {
+    campoData.hidden = chiave !== 'settimanale';
+    campoMese.hidden = chiave !== 'mensile';
+    campoAnno.hidden = chiave !== 'mensile' && chiave !== 'annuale';
+    campiPeriodo.hidden = !REPORT[chiave];
+  };
+  const dataBreve = ts => new Date(ts).toLocaleDateString(localeIntl(), { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+  let chiaveReport = '';
+  const applicaScelta = () => {
+    const r = applicaReport(chiaveReport, scelta);
+    stato.soglia = r ? r.elenco : SOGLIA_ELENCO;
+    stato.titolo = r ? tr(`stampa.report.titolo.${chiaveReport}`, { mag: r.magMin }) : '';
+    stato.sottotitolo = r?.periodo ? `${dataBreve(r.periodo.da)} – ${dataBreve(r.periodo.a)}` : '';
+    campoTitolo.querySelector('input').value = stato.titolo;
+    sottotitolo.querySelector('input').value = stato.sottotitolo;
+    aggiornaAnteprima(false);
+    if (r) setTimeout(() => map.once('idle', () => aggiornaAnteprima(true)), 600); // il tempo di ricaricare gli eventi del nuovo periodo
+  };
+  const leggiScelta = () => {
+    scelta.data = campoData.value || undefined;
+    scelta.anno = Number(campoAnno.value);
+    scelta.mese = Number(campoMese.value);
+  };
+  const sceltaReport = sceltaDa('stampa-report', tr('stampa.report'), [['', tr('stampa.report.nessuno')], ...Object.keys(REPORT).map(k => [k, tr(`stampa.report.${k}`)])], '', chiave => {
+    chiaveReport = chiave;
+    mostraCampi(chiave);
+    leggiScelta();
+    applicaScelta();
+  });
+  for (const c of [campoData, campoMese, campoAnno]) c.addEventListener('change', () => { leggiScelta(); applicaScelta(); });
   radice.append( // il titolo è quello del tab, già nella sezione
     anteprima,
     el('p', { className: 'stampa-nota', textContent: tr('stampa.riquadro.nota') }),
-    campoTesto('stampa-titolo', tr('html.stampa.titolo'), v => { stato.titolo = v; aggiornaAnteprima(false); }, tr('stampa.poster.titoloDefault')),
+    sceltaReport, campiPeriodo,
+    campoTitolo,
     sottotitolo,
     el('div', { className: 'stampa-riga' },
       sceltaDa('stampa-formato', tr('html.stampa.formato'), Object.keys(FORMATI).map(f => [f, f]), stato.formato, v => { stato.formato = v; dopoCambioProporzione(); }),
@@ -443,7 +485,7 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
       const comuni = { formato: stato.formato, direzione: stato.direzione, scala: stato.scala, centro, zoom, titolo: stato.titolo };
       statoEsporta.hidden = true;
       const riuscita = await conAvvisoStampa(tr('avviso.stampaInCorso'), () => stato.uscita === 'stampa' ? stampaFoglio(map, comuni)
-        : esportaFile(map, { ...comuni, uscita: stato.uscita, dpi: stato.dpi, titolo: stato.titolo || tr('stampa.poster.titoloDefault'), sottotitolo: sottotitoloEffettivo(), elementi: stato.elementi, evento: eventoScelto(), stelle: stelleDaEventi(), forti: fortiDaEventi(), scheda: schedaDaEvento() }));
+        : esportaFile(map, { ...comuni, uscita: stato.uscita, dpi: stato.dpi, titolo: stato.titolo || tr('stampa.poster.titoloDefault'), sottotitolo: sottotitoloEffettivo(), elementi: stato.elementi, evento: eventoScelto(), stelle: stelleDaEventi(), forti: fortiDaEventi(), soglia: stato.soglia, scheda: schedaDaEvento() }));
       statoEsporta.hidden = riuscita !== false; // cattura o scrittura fallite (di solito immagine troppo grande per il dispositivo)
     } finally { stato.occupato = false; esporta.disabled = false; esporta.textContent = etichetta; }
   });
