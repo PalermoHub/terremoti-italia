@@ -2,7 +2,7 @@
 // finisce nel file; il pannello sceglie formato, uscita, titolo ed elementi e mostra un'anteprima che si aggiorna da sola.
 // La mappa sotto il riquadro resta spostabile e ingrandibile: il riquadro resta fermo sullo schermo.
 import { t as tr, tl, localeIntl } from './i18n.js';
-import { FORMATI, SCALE_STAMPA, areaMappaMm, attribuzioniUniche, el, esportaFile, limiteLatoGpu, mmInPx, pixelRatioSicuro, stampaFoglio, zoomPerScala } from './stampa.js';
+import { FORMATI, SCALE_STAMPA, areaMappaMm, attribuzioniUniche, el, esportaFile, layerPcAttivo, limiteLatoGpu, mmInPx, pixelRatioSicuro, stampaFoglio, zoomPerScala } from './stampa.js';
 import { conAvvisoStampa } from './avviso-attesa.js';
 import { evidenziaEventi, nascondiEvidenzaEventi } from './evidenza-eventi.js';
 import { coloreMagnitudo } from './magnitudo.js';
@@ -230,7 +230,7 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
       pagina, formato: stato.formato, direzione: stato.direzione, titolo: stato.titolo || tr('stampa.poster.titoloDefault'),
       sottotitolo: sottotitoloEffettivo() || sottotitoloPredefinito(vista.centro, data),
       attribuzioni: attribuzioniUniche([...document.querySelectorAll('#mappa .maplibregl-ctrl-attrib-inner')].map(a => a.textContent)),
-      logo, data, elementi: stato.elementi, evento: eventoScelto(), stelle: stelleDaEventi(), forti: fortiDaEventi(), soglia: stato.soglia, scheda: schedaDaEvento(), mappa: { immagine: ultimoFotogramma, ritaglio }, vista,
+      logo, data, protezioneCivile: layerPcAttivo(map), elementi: stato.elementi, evento: eventoScelto(), stelle: stelleDaEventi(), forti: fortiDaEventi(), soglia: stato.soglia, scheda: schedaDaEvento(), mappa: { immagine: ultimoFotogramma, ritaglio }, vista,
     });
   }
   async function aggiornaAnteprima(nuovoFotogramma = true) {

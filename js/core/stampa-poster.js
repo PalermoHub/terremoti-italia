@@ -1,5 +1,5 @@
 // Stampa «poster» in PNG o PDF: mappa a tutta pagina con banner del titolo, legenda a riquadro (grandezza dei cerchi e
-// colore del modo «Tematizza per»), barra di scala, rosa dei venti e piede con fonte dei dati, crediti della stampa e
+// colore del modo «Tematizza per»), barra di scala, rosa dei venti e banner con fonte dei dati, crediti della stampa e
 // attribuzioni delle basi cartografiche. Impaginazione ispirata alle mappe mensili dell'INGV; nessun logo INGV: i dati
 // sono citati come INGV e la mappa risulta realizzata con l'applicazione di OpenDataSicilia.
 // Ispirato a Layout Composer (Defani Arman Alfitriansyah, MIT, https://github.com/Defani/Layout-Composer): nessun codice copiato.
@@ -129,7 +129,7 @@ export function areaMappaPoster(formato, direzione) {
   const p = paginaMm(formato, direzione);
   const corpo = corpoTesto(p.larghezza);
   const bordo = corpo * 3;
-  const banner = corpo * 4.2;
+  const banner = corpo * 6.4; // alto abbastanza per logo, titolo e le due colonne di fonte/avvertenza
   return { x: bordo, y: banner + bordo, larghezza: p.larghezza - 2 * bordo, altezza: p.altezza - banner - 2 * bordo, banner, bordo };
 }
 
@@ -141,7 +141,7 @@ export function fasciaLiberaPoster(formato, direzione) {
   const margine = corpo * 1.3;
   const sinistra = margine + corpo * 17.5 + corpo; // legenda
   const destra = margine + Math.min(corpo * 29, m.larghezza * 0.32) + corpo; // elenco (la rosa sta nella stessa colonna)
-  return { x0: sinistra, x1: m.larghezza - destra, y0: corpo * 2, y1: m.altezza - margine - corpo * 12 }; // in basso il piede con le attribuzioni
+  return { x0: sinistra, x1: m.larghezza - destra, y0: corpo * 2, y1: m.altezza - margine - corpo * 2 }; // il piede non c'è più: fonte e avvertenza stanno nel banner
 }
 
 // — proiezione Web Mercator per graticola e scala: stessa matematica di MapLibre (mondo = 512 px × 2^zoom) —
@@ -459,7 +459,7 @@ function disegnaScheda(ctx, u, m, proj, scheda, corpo, occupati) {
 // Le misure sono in mm: il contesto è scalato di `u` px/mm. `mappa` = { immagine, ritaglio? } con ritaglio opzionale { x, y, w, h } in px dell'immagine.
 // `vista` = { centro, zoom } con cui la mappa è stata resa: servono per la graticola e la barra di scala.
 export function disegnaPoster(canvas, opzioni) {
-  const { pagina, formato, direzione, titolo, sottotitolo, attribuzioni, logo, data, mappa, vista } = opzioni;
+  const { pagina, formato, direzione, titolo, sottotitolo, attribuzioni, logo, data, mappa, vista, protezioneCivile } = opzioni;
   const el = { legenda: true, scala: true, rosa: true, griglia: true, ml: true, elenco: true, ...opzioni.elementi }; // cornice, fonte dei dati, logo e attribuzioni ci sono sempre
   const ctx = canvas.getContext('2d');
   const u = canvas.width / pagina.larghezza;
@@ -487,31 +487,48 @@ export function disegnaPoster(canvas, opzioni) {
   const gb = ctx.createLinearGradient(0, 0, L, 0);
   gb.addColorStop(0, '#093a5c'); gb.addColorStop(0.55, BLU); gb.addColorStop(1, '#2a8fc4');
   ctx.fillStyle = gb; ctx.fillRect(0, 0, L, m.banner);
-  ctx.save();
-  ctx.beginPath(); ctx.rect(0, 0, L, m.banner); ctx.clip();
-  ctx.strokeStyle = 'rgba(255,255,255,.22)'; ctx.lineWidth = 0.35; ctx.lineJoin = 'round';
-  ctx.beginPath();
-  const x0 = L * 0.52, yc = m.banner * 0.5, passi = 140;
-  for (let i = 0; i <= passi; i++) {
-    const t = i / passi;
-    const spike = Math.exp(-(((t - 0.72) / 0.035) ** 2)) * Math.sin(i * 1.7) * m.banner * 0.42; // la scossa
-    const rumore = Math.sin(i * 2.3) * Math.sin(i * 0.37) * m.banner * 0.07 * (0.4 + t);
-    const px = x0 + t * (L - x0);
-    i ? ctx.lineTo(px, yc + spike + rumore) : ctx.moveTo(px, yc + spike + rumore);
-  }
-  ctx.stroke();
-  ctx.restore();
   ctx.fillStyle = '#f5a623'; ctx.fillRect(0, m.banner - corpo * 0.3, L, corpo * 0.3);
-  ctx.fillStyle = '#f5a623'; ctx.fillRect(corpo * 1.5, corpo * 0.9, corpo * 0.35, m.banner * 0.58);
+  // Logo a sinistra, a inizio banner
+  const hBanner = m.banner - corpo * 0.3;
+  let xTit = corpo * 1.5;
+  if (logo) {
+    const hl = hBanner - corpo * 1.2;
+    const wl = hl * (logo.naturalWidth / logo.naturalHeight);
+    ctx.drawImage(logo, corpo * 1.5, (hBanner - hl) / 2, wl, hl);
+    xTit = corpo * 1.5 + wl + corpo * 1.2;
+  }
+  ctx.fillStyle = '#f5a623'; ctx.fillRect(xTit, corpo * 1.0, corpo * 0.35, hBanner - corpo * 2.0);
+  xTit += corpo * 1.1;
+  // Colonne a destra: fonte e crediti | avvertenza
+  const wCol = corpo * 34, gap = corpo * 2;
+  const xC2 = L - corpo * 1.5 - wCol, xC1 = xC2 - gap - wCol;
+  const wTit = xC1 - corpo * 1.5 - xTit;
   ctx.fillStyle = '#fff'; ctx.textAlign = 'left';
   ctx.font = `bold ${corpo * 2.2}px Montserrat, sans-serif`;
   ctx.save(); ctx.shadowColor = 'rgba(0,0,0,.35)'; ctx.shadowBlur = 0.8 * u; ctx.shadowOffsetY = 0.25 * u;
-  ctx.fillText(titolo, corpo * 2.6, m.banner * 0.4, L * 0.55);
+  ctx.fillText(titolo, xTit, hBanner * 0.4, wTit);
   ctx.restore();
-  ctx.font = `${corpo * 0.95}px Montserrat, sans-serif`;
+  ctx.font = `${corpo * 1.3}px Montserrat, sans-serif`;
   ctx.fillStyle = 'rgba(255,255,255,.88)';
-  ctx.fillText(sottotitolo, corpo * 2.6, m.banner * 0.74, L * 0.55);
-
+  ctx.fillText(sottotitolo, xTit, hBanner * 0.75, wTit);
+  const fs = corpo * 0.72, lh = corpo * 0.98;
+  ctx.font = `${fs}px Montserrat, sans-serif`;
+  const attrib = protezioneCivile ? attribuzioni : attribuzioni.filter(a => !/protezione civile/i.test(a)); // la sua attribuzione vale solo a layer acceso
+  const col1 = [tr(protezioneCivile ? 'stampa.poster.fonteDatiPc' : 'stampa.poster.fonteDati'), tr('stampa.poster.realizzazione', { data }), URL_APP, ...spezzaRighe(ctx, attrib.join(' · '), wCol)];
+  ctx.font = `italic ${fs}px Montserrat, sans-serif`;
+  const col2 = spezzaRighe(ctx, tr(protezioneCivile ? 'stampa.poster.avvertenzaPc' : 'stampa.poster.avvertenza'), wCol);
+  const disegnaCol = (righe, x, grassetto) => {
+    const y0 = (hBanner - righe.length * lh) / 2 + lh / 2;
+    righe.forEach((r, i) => {
+      ctx.font = `${grassetto && i < 3 ? 'bold ' : ''}${grassetto ? '' : 'italic '}${fs}px Montserrat, sans-serif`;
+      ctx.fillStyle = grassetto && i >= 3 ? 'rgba(255,255,255,.78)' : 'rgba(255,255,255,.95)';
+      ctx.fillText(r, x, y0 + i * lh, wCol);
+    });
+  };
+  disegnaCol(col1, xC1, true);
+  disegnaCol(col2, xC2, false);
+  ctx.strokeStyle = 'rgba(255,255,255,.4)'; ctx.lineWidth = 0.15;
+  ctx.beginPath(); ctx.moveTo(xC2 - gap / 2, corpo * 1.0); ctx.lineTo(xC2 - gap / 2, hBanner - corpo * 1.0); ctx.stroke();
 
   const occupati = []; // riquadri coperti da legenda, scala, rosa e piede: la scheda dell'evento li evita
   const sx = m.x + margine; // origine degli elementi dentro la mappa
@@ -628,41 +645,7 @@ export function disegnaPoster(canvas, opzioni) {
   if (el.rosa) occupati.push({ x: m.x + m.larghezza - margine - corpo * 5, y: m.y + margine + corpo * 1.4, w: corpo * 4.8, h: corpo * 5.2 });
   if (el.rosa) roseDeiVenti(ctx, u, m.x + m.larghezza - margine - corpo * 2.6, m.y + margine + corpo * 4, corpo * 1.9);
 
-  // Piede in basso a destra: fonte dei dati, realizzazione, link all'app, attribuzioni delle basi, logo ODS
-  const wPiede = Math.min(m.larghezza * 0.5, corpo * 75);
-  const xTesto = corpo * 6.4; // spazio per il logo
-  ctx.font = `${corpo * 0.95}px Montserrat, sans-serif`;
-  const righe = [
-    tr('stampa.poster.fonteDati'),
-    tr('stampa.poster.realizzazione', { data }),
-    URL_APP,
-    ...spezzaRighe(ctx, attribuzioni.join(' · '), wPiede - xTesto - corpo * 0.8),
-  ];
-  ctx.font = `italic ${corpo * 0.8}px Montserrat, sans-serif`;
-  const avviso = spezzaRighe(ctx, tr('stampa.poster.avvertenza'), wPiede - xTesto - corpo * 0.8);
-  const hRighe = righe.length * corpo * 1.25 + corpo * 1.0;
-  const hPiede = hRighe + avviso.length * corpo * 1.0 + corpo * 1.2;
-  const xP = m.x + m.larghezza - margine - wPiede;
-  const yP = fondo - hPiede;
-  carta(ctx, u, xP, yP, wPiede, hPiede, corpo * 0.8);
-  occupati.push({ x: xP, y: yP, w: wPiede, h: hPiede });
-  ctx.fillStyle = BLU; ctx.beginPath(); ctx.roundRect(xP, yP, corpo * 0.45, hPiede, [corpo * 0.8, 0, 0, corpo * 0.8]); ctx.fill();
-  ctx.textAlign = 'left';
-  righe.forEach((r, i) => {
-    ctx.font = `${i < 3 ? 'bold ' : ''}${corpo * 0.95}px Montserrat, sans-serif`;
-    ctx.fillStyle = i === 2 ? '#1d6fa5' : i < 2 ? '#0f172a' : '#475569';
-    ctx.fillText(r, xP + xTesto, yP + corpo * 1.2 + i * corpo * 1.25, wPiede - xTesto - corpo * 0.5);
-  });
-  ctx.strokeStyle = 'rgba(15,23,42,.18)'; ctx.lineWidth = 0.12;
-  ctx.beginPath(); ctx.moveTo(xP + xTesto, yP + hRighe); ctx.lineTo(xP + wPiede - corpo * 0.8, yP + hRighe); ctx.stroke();
-  ctx.font = `italic ${corpo * 0.8}px Montserrat, sans-serif`; ctx.fillStyle = '#64748b';
-  avviso.forEach((r, i) => ctx.fillText(r, xP + xTesto, yP + hRighe + corpo * 1.0 + i * corpo * 1.0, wPiede - xTesto - corpo * 0.5));
-  if (logo) {
-    const hl = Math.min(hRighe - corpo * 0.4, corpo * 4.8);
-    ctx.drawImage(logo, xP + corpo * 1.1, yP + (hRighe - hl) / 2, hl * (logo.naturalWidth / logo.naturalHeight), hl);
-  }
-
-  if (el.elenco) disegnaElenco(ctx, u, m, proj, opzioni.forti ?? [], corpo, m.y + margine + (el.rosa ? corpo * 7.2 : 0), yP - corpo * 0.9, occupati, opzioni.soglia ?? SOGLIA_ELENCO);
+  if (el.elenco) disegnaElenco(ctx, u, m, proj, opzioni.forti ?? [], corpo, m.y + margine + (el.rosa ? corpo * 7.2 : 0), fondo - corpo * 0.9, occupati, opzioni.soglia ?? SOGLIA_ELENCO);
 
   if (opzioni.scheda) disegnaScheda(ctx, u, m, proj, opzioni.scheda, corpo, occupati);
 
@@ -707,7 +690,7 @@ function scarica(blob, nome) {
 // Sottotitolo di riserva: centro della mappa e data
 export const sottotitoloPredefinito = (centro, data) => tr('stampa.poster.sottotitolo', { lat: centro.lat.toFixed(3), lng: centro.lng.toFixed(3), data });
 
-export async function esportaPoster({ immagineUrl, uscita, formato, direzione, titolo, sottotitolo, elementi, evento, stelle, forti, soglia, scheda, attribuzioni, centro, zoom }) {
+export async function esportaPoster({ immagineUrl, uscita, formato, direzione, titolo, sottotitolo, elementi, evento, stelle, forti, soglia, scheda, attribuzioni, centro, zoom, protezioneCivile }) {
   const pagina = paginaMm(formato, direzione);
   const area = areaMappaPoster(formato, direzione);
   const mappa = await caricaImmagine(immagineUrl);
@@ -715,7 +698,7 @@ export async function esportaPoster({ immagineUrl, uscita, formato, direzione, t
   const canvas = Object.assign(document.createElement('canvas'), { width: Math.round(pagina.larghezza * k), height: Math.round(pagina.altezza * k) });
   const data = new Date().toLocaleDateString(localeIntl(), { day: 'numeric', month: 'long', year: 'numeric' });
   disegnaPoster(canvas, {
-    pagina, formato, direzione, titolo, attribuzioni, data, logo: await caricaLogo(), elementi, evento, stelle, forti, soglia, scheda,
+    pagina, formato, direzione, titolo, attribuzioni, data, logo: await caricaLogo(), elementi, evento, stelle, forti, soglia, scheda, protezioneCivile,
     mappa: { immagine: mappa }, vista: { centro, zoom },
     sottotitolo: sottotitolo || sottotitoloPredefinito(centro, data),
   });
