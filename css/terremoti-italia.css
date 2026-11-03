@@ -345,3 +345,6 @@ input, textarea, [contenteditable] { caret-color: var(--accent-strong); }
 .lg-terremoti .legenda-fasce .monumenti-cat:has(input:not(:checked)) { opacity: .25; }
 .lg-terremoti .legenda-fasce .monumenti-cat:has(input:not(:checked)) > :not(input) { filter: none; }
 :root[data-tema="scuro"] .lg-terremoti .legenda-fasce .monumenti-cat { box-shadow: inset 0 0 0 1px rgb(255 255 255 / .3); }
+
+/* Pillola «Legenda» chiusa e scheda «Ultimo evento» (#ultimo-peek) affiancate: stessi angoli */
+#legende-box.ridotta { border-radius: var(--r-lg); }
