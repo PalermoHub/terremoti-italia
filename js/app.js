@@ -23,7 +23,7 @@ import { EVENTO_FILTRO } from './layers/scheda-terremoti-dom.js';
 import { collegaMinimappa } from './core/minimappa.js';
 import { caricaTema } from './core/tema-magnitudo.js';
 import { creaMiniScala } from './core/mini-scala.js';
-import { FASCE } from './layers/scheda-terremoti.js';
+import { FASCE, filtro } from './layers/scheda-terremoti.js';
 import { t } from './core/i18n.js';
 import { collegaCondividi, applicaStatoDaUrl, tieniAggiornatoIndirizzo } from './core/condividi.js';
 import protezioneCivile from './layers/protezione-civile.js';
@@ -66,7 +66,12 @@ caricaTema(localStorage);
 document.addEventListener(EVENTO_FILTRO, () => { if (raggioAttivo()) document.dispatchEvent(new Event(EVENTO_RAGGIO)); });
 document.getElementById('legende-raggio').append(interruttoreLiveZoomLegenda(localStorage), creaRegolatoreRaggio(localStorage));
 const riduciLegenda = document.getElementById('legende-riduci');
-const miniScala = creaMiniScala(FASCE);
+// i segmenti della mini-scala filtrano come le voci della legenda aperta: stesso stato (età in terremoti.js, magnitudo e profondità in `filtro`)
+// e la mappa si porta sugli eventi rimasti
+const dopoFiltro = () => terremoti.inquadraVisibili();
+const filtroEvento = chiave => ({ accese: () => filtro[chiave], imposta(v) { filtro[chiave] = v; document.dispatchEvent(new CustomEvent(EVENTO_FILTRO)); dopoFiltro(); } });
+const filtroEta = { accese: terremoti.fasceEta.accese, imposta(v) { terremoti.fasceEta.imposta(v); dopoFiltro(); } };
+const miniScala = creaMiniScala(FASCE, { eta: filtroEta, magnitudo: filtroEvento('classi'), profondita: filtroEvento('fasce') }, EVENTO_FILTRO);
 const mostraLegendaRidotta = ridotta => {
   document.getElementById('legende-box').classList.toggle('ridotta', ridotta);
   riduciLegenda.setAttribute('aria-expanded', String(!ridotta));

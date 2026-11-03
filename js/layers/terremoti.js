@@ -424,6 +424,24 @@ export default {
     for (const casella of bloccoFasce?.querySelectorAll('input[type=checkbox]') ?? []) casella.checked = true;
     document.dispatchEvent(new CustomEvent(EVENTO_FILTRO));
   },
+  // Fasce d'età accese come insieme di indici (null = tutte): la mini-scala della legenda chiusa le legge e le cambia
+  fasceEta: {
+    accese: () => (fasceAccese.size >= FASCE.length ? null : new Set(FASCE.flatMap((f, i) => (fasceAccese.has(f.colore) ? [i] : [])))),
+    imposta(indici) {
+      fasceAccese.clear();
+      FASCE.forEach((f, i) => { if (!indici || indici.has(i)) fasceAccese.add(f.colore); });
+      [...(bloccoFasce?.querySelectorAll('input[type=checkbox]') ?? [])].forEach((c, i) => { c.checked = !indici || indici.has(i); });
+      document.dispatchEvent(new CustomEvent(EVENTO_FILTRO)); // applica il filtro e avvisa chi ne mostra lo stato
+    },
+  },
+  // Porta la vista sugli eventi che i filtri lasciano in mappa (dopo un tocco sulla mini-scala); senza eventi non si muove
+  inquadraVisibili() {
+    if (!mappa || !acceso) return;
+    const v = visibili();
+    if (!v.length) return;
+    const lon = v.map(p => p.lon), lat = v.map(p => p.lat);
+    mappa.fitBounds([[Math.min(...lon), Math.min(...lat)], [Math.max(...lon), Math.max(...lat)]], { padding: 60, maxZoom: 9, duration: 600 });
+  },
   avvia() { aggiorna(); pianifica(); },
   strati: [{
     id: 'terremoti', etichetta: 'Terremoti in tempo reale', layers: [PUNTI], attivo: true, legendaPannello: '.lg-terremoti',

@@ -5,6 +5,8 @@ const ZERO = { top: 0, right: 0, bottom: 0, left: 0 };
 const SINISTRA = ['#barra-strati', '#pannello', '#legende-box']; // la legenda in mappa copre i punti sotto di sé: il centro dei popup cade nella parte libera
 const DESTRA = ['#rail-pannelli', '#scheda', '#rndt-pannello', '#geoimage-pannello', '#tema-ui-pannello', '#chatbot-pannello', '#storico-pannello', '#confronto-pannello'];
 const MOBILE = '(max-width: 720px)';
+const MOBILE_ALTO = ['#cerca'];
+const MOBILE_BASSO = ['#legende-box', '#ultimo-peek', '#barra-tab', '#scheda']; // i riquadri che sul telefono stanno sopra la mappa, in basso
 
 const rettangolo = (doc, sel) => {
   const r = doc.querySelector(sel)?.getBoundingClientRect();
@@ -14,10 +16,16 @@ const rettangolo = (doc, sel) => {
 // Margine in pixel della mappa `tela` (il suo elemento) dato lo stato attuale dei pannelli.
 export function calcolaPadding(doc, tela, mobile) {
   const m = tela.getBoundingClientRect();
-  if (mobile) { // la scheda è un foglio basso (a tutto schermo la mappa non si vede: nessun margine)
-    const scheda = rettangolo(doc, '#scheda');
-    if (!scheda || scheda.top <= m.top || doc.querySelector('#scheda')?.classList.contains('scheda-piena')) return ZERO;
-    return { ...ZERO, bottom: Math.round(m.bottom - scheda.top) };
+  if (mobile) {
+    // A tutto schermo la scheda copre la mappa: nessun margine
+    if (doc.querySelector('#scheda')?.classList.contains('scheda-piena')) return ZERO;
+    // In alto la ricerca, in basso il più alto tra legenda, scheda «Ultimo evento», tab e foglio della scheda: il centro è quello dello spazio libero.
+    // Un tetto per lato evita che una legenda aperta o un foglio alto lascino alla mappa una fessura.
+    const alto = rettangolo(doc, '#cerca');
+    const bassi = MOBILE_BASSO.map(s => rettangolo(doc, s)).filter(r => r && r.top > m.top).map(r => m.bottom - r.top);
+    const top = alto ? Math.max(0, Math.round(alto.bottom - m.top + 8)) : 0;
+    const bottom = Math.max(0, Math.round(Math.max(0, ...bassi)));
+    return { ...ZERO, top: Math.min(top, Math.round(m.height * 0.25)), bottom: Math.min(bottom, Math.round(m.height * 0.55)) };
   }
   const sx = SINISTRA.map(s => rettangolo(doc, s)).filter(Boolean).map(r => r.right - m.left);
   const dx = DESTRA.map(s => rettangolo(doc, s)).filter(Boolean).map(r => m.right - r.left);
@@ -56,7 +64,7 @@ export function collegaPaddingMappa(map) {
   };
   const ro = new ResizeObserver(pianifica);
   const mo = new MutationObserver(pianifica);
-  for (const sel of [...SINISTRA, ...DESTRA]) {
+  for (const sel of [...SINISTRA, ...DESTRA, ...MOBILE_ALTO, ...MOBILE_BASSO]) {
     const e = document.querySelector(sel);
     if (!e) continue;
     ro.observe(e);
