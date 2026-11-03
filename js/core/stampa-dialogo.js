@@ -11,6 +11,8 @@ import { impostaTema, modoTema } from './tema-magnitudo.js';
 import { EVENTO_SHAKEMAP, contorniAttivi } from './shakemap-mappa.js';
 import { PRODOTTI_SHAKEMAP, fasciaEta, haShakeMap, modelloPopupTerremoto, raggioMagnitudo } from '../layers/scheda-terremoti.js';
 import { REPORT, applicaReport } from './stampa-report.js';
+import { LAYOUT } from './stampa-layout.js';
+import { datiPannelli } from './stampa-dati.js';
 import { SOGLIA_ELENCO, areaMappaPoster, fasciaLiberaPoster, caricaLogo, disegnaPoster, paginaMm, sottotitoloPredefinito, zoomPerPagina } from './stampa-poster.js';
 
 const LARGHEZZA_GRANDE = 2000; // px del canvas dell'anteprima ingrandita
@@ -19,8 +21,8 @@ const LARGHEZZA_MIN_RIQUADRO = 80;
 const MARGINE_INIZIALE = 0.12;
 
 // Proporzione larghezza/altezza dell'area stampata: la mappa dentro la cornice per il poster, l'area sopra i testi per il foglio
-export function aspetto(formato, direzione, uscita) {
-  const a = uscita === 'stampa' ? areaMappaMm(formato, direzione) : areaMappaPoster(formato, direzione);
+export function aspetto(formato, direzione, uscita, layout = 'poster') {
+  const a = uscita === 'stampa' ? areaMappaMm(formato, direzione) : areaMappaPoster(formato, direzione, layout);
   return a.larghezza / a.altezza;
 }
 
@@ -87,7 +89,7 @@ const OPZIONI_ELEMENTI = ['legenda', 'scala', 'rosa', 'griglia', 'ml', 'elenco']
 
 export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } = {}) {
   const contenitore = map.getContainer();
-  const stato = { formato: 'A4', direzione: 'landscape', uscita: 'png', dpi: 150, scala: null, titolo: '', sottotitolo: '', elementi: Object.fromEntries(OPZIONI_ELEMENTI.map(k => [k, true])), riquadro: null, occupato: false, soglia: SOGLIA_ELENCO };
+  const stato = { layout: 'poster', formato: 'A4', direzione: 'landscape', uscita: 'png', dpi: 150, scala: null, titolo: '', sottotitolo: '', elementi: Object.fromEntries(OPZIONI_ELEMENTI.map(k => [k, true])), riquadro: null, occupato: false, soglia: SOGLIA_ELENCO };
   let logo = null;
   let ultimoFotogramma = null;
   let aperto = false;
@@ -122,7 +124,7 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
     riquadro.classList.toggle('a-scala', Boolean(stato.scala));
     if (!stato.scala || !stato.riquadro) return;
     const r = stato.riquadro;
-    const area = stato.uscita === 'stampa' ? areaMappaMm(stato.formato, stato.direzione) : areaMappaPoster(stato.formato, stato.direzione);
+    const area = stato.uscita === 'stampa' ? areaMappaMm(stato.formato, stato.direzione) : areaMappaPoster(stato.formato, stato.direzione, stato.layout);
     const centro = map.unproject([r.x + r.w / 2, r.y + r.h / 2]);
     const k = 2 ** (map.getZoom() - zoomPerScala(centro.lat, stato.scala)); // pixel dello schermo per pixel del foglio
     const w = mmInPx(area.larghezza) * k;
@@ -151,7 +153,7 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
     const lib = { w: (v.larghezza - (v.sinistra ?? 0)) * 0.88, h: (v.altezza - (v.alto ?? 0)) * 0.88 };
     const c = map.unproject([(v.sinistra ?? 0) + (v.larghezza - (v.sinistra ?? 0)) / 2, (v.alto ?? 0) + (v.altezza - (v.alto ?? 0)) / 2]);
     const k = 2 ** (map.getZoom() - zoomPerScala(c.lat, stato.scala));
-    const areaDi = (f, d) => (stato.uscita === 'stampa' ? areaMappaMm(f, d) : areaMappaPoster(f, d));
+    const areaDi = (f, d) => (stato.uscita === 'stampa' ? areaMappaMm(f, d) : areaMappaPoster(f, d, stato.layout));
     const preferita = lib.w >= lib.h ? ['landscape', 'portrait'] : ['portrait', 'landscape']; // prima l'orientamento della vista
     const copre = (f, d) => { const a = areaDi(f, d); return mmInPx(a.larghezza) * k >= lib.w && mmInPx(a.altezza) * k >= lib.h; };
     const f = Object.keys(FORMATI).find(n => preferita.some(d => copre(n, d))) ?? stato.formato; // dal più piccolo al più grande; se nemmeno A0 copre la vista (zoom lontano) resta il formato scelto e si adatta lo zoom
@@ -160,7 +162,7 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
     radice.querySelector('#stampa-formato').value = stato.formato;
     radice.querySelector('#stampa-direzione').value = stato.direzione;
   };
-  const proporzione = () => aspetto(stato.formato, stato.direzione, stato.uscita);
+  const proporzione = () => aspetto(stato.formato, stato.direzione, stato.uscita, stato.layout);
 
   // — riquadro sulla mappa —
   const maniglia = el('span', { className: 'stampa-maniglia', title: tr('stampa.maniglia') });
@@ -196,7 +198,7 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
   // Centro e zoom con cui il riquadro verrebbe reso: gli stessi dell'esportazione, così la graticola dell'anteprima è quella vera
   const inquadratura = () => {
     const r = stato.riquadro;
-    const area = stato.uscita === 'stampa' ? areaMappaMm(stato.formato, stato.direzione) : areaMappaPoster(stato.formato, stato.direzione);
+    const area = stato.uscita === 'stampa' ? areaMappaMm(stato.formato, stato.direzione) : areaMappaPoster(stato.formato, stato.direzione, stato.layout);
     return {
       centro: map.unproject([r.x + r.w / 2, r.y + r.h / 2]),
       zoom: zoomPerPagina(map.getZoom(), { larghezza: r.w, altezza: r.h }, { larghezza: mmInPx(area.larghezza), altezza: mmInPx(area.altezza) }),
@@ -230,7 +232,7 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
       pagina, formato: stato.formato, direzione: stato.direzione, titolo: stato.titolo || tr('stampa.poster.titoloDefault'),
       sottotitolo: sottotitoloEffettivo() || sottotitoloPredefinito(vista.centro, data),
       attribuzioni: attribuzioniUniche([...document.querySelectorAll('#mappa .maplibregl-ctrl-attrib-inner')].map(a => a.textContent)),
-      logo, data, protezioneCivile: layerPcAttivo(map), elementi: stato.elementi, evento: eventoScelto(), stelle: stelleDaEventi(), forti: fortiDaEventi(), soglia: stato.soglia, scheda: schedaDaEvento(), mappa: { immagine: ultimoFotogramma, ritaglio }, vista,
+      logo, data, protezioneCivile: layerPcAttivo(map), elementi: stato.elementi, evento: eventoScelto(), stelle: stelleDaEventi(), forti: fortiDaEventi(), soglia: stato.soglia, scheda: schedaDaEvento(), layout: stato.layout, dati: stato.layout === 'poster' ? null : datiPannelli(eventi()), mappa: { immagine: ultimoFotogramma, ritaglio }, vista,
     });
   }
   async function aggiornaAnteprima(nuovoFotogramma = true) {
@@ -276,11 +278,15 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
     el('p', { className: 'stampa-nota', textContent: tr('stampa.el.nota') }));
   const sottotitolo = campoTesto('stampa-sottotitolo', tr('stampa.sottotitolo'), v => { stato.sottotitolo = v; aggiornaAnteprima(false); }, tr('stampa.sottotitolo.segnaposto'));
   campoSoloPoster.push(sottotitolo, elementi);
+  // Layout della stampa: quello classico (mappa a tutta pagina) o uno a pannelli; cambia l'area della mappa, quindi il riquadro e,
+  // se c'è un report, l'inquadratura dell'Italia
+  const sceltaLayout = sceltaDa('stampa-layout', tr('stampa.layout'), LAYOUT.map(k => [k, tr(`stampa.layout.${k}`)]), stato.layout, v => { stato.layout = v; dopoCambioProporzione(); if (chiaveReport) inquadraReport(); });
+  campoSoloPoster.push(sceltaLayout);
   const aggiornaVisibilita = () => campoSoloPoster.forEach(n => { n.hidden = stato.uscita === 'stampa'; });
   // Risoluzione di uscita: la dimensione in pixel dell'immagine; il dispositivo ha un limite alla cattura, che qui si dichiara
   const infoRisoluzione = el('p', { className: 'stampa-nota' });
   const aggiornaRisoluzione = () => {
-    const ratio = pixelRatioSicuro(stato.dpi / 96, areaMappaPoster(stato.formato, stato.direzione), limiteLatoGpu(map));
+    const ratio = pixelRatioSicuro(stato.dpi / 96, areaMappaPoster(stato.formato, stato.direzione, stato.layout), limiteLatoGpu(map));
     const pagina = paginaMm(stato.formato, stato.direzione);
     const px = mm => Math.round(mm / 25.4 * ratio * 96).toLocaleString(localeIntl());
     const effettivi = Math.round(ratio * 96);
@@ -415,60 +421,73 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
   };
   const dataBreve = ts => new Date(ts).toLocaleDateString(localeIntl(), { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
   let chiaveReport = '';
-  // Con gli eventi del nuovo periodo in mappa, inquadra il riquadro in modo che stiano tutti nella fascia libera del poster
-  // (fuori da legenda, elenco, rosa e piede); a scala fissa l'inquadratura è decisa dalla scala e non si tocca
+  // Il report inquadra sempre l'Italia intera (VISTA_ITALIA, isole minori comprese), dentro la fascia libera del poster
+  // (fuori da legenda, elenco, rosa e piede), qualunque sia il periodo e dove cadano gli eventi; a scala fissa l'inquadratura
+  // è decisa dalla scala e non si tocca.
   // La mappa ha limiti di navigazione che a schermo grande impediscono di allontanarsi quanto serve: per il report si sollevano
   // finché il pannello è aperto
   let limitiOriginali = null;
   const ripristinaLimiti = () => { if (limitiOriginali) { const l = limitiOriginali; limitiOriginali = null; map.setMaxBounds(l); } };
   let giroReport = 0;
+  // Nei report la mappa mostra anche i contorni ShakeMap MMI dell'evento più forte del periodo (tra quelli che hanno una ShakeMap),
+  // senza spostare l'inquadratura sull'Italia. Si spengono lasciando il report, ma solo se li ha accesi lui.
+  let contorniDaReport = false;
+  const spegniContorniReport = () => {
+    if (!contorniDaReport) return;
+    contorniDaReport = false;
+    document.dispatchEvent(new CustomEvent(EVENTO_SHAKEMAP, { detail: { prodotto: null } }));
+  };
+  const accendiContorniReport = () => {
+    const p = eventi().filter(e => Number.isFinite(e.mag)).sort((a, b) => b.mag - a.mag || b.ts - a.ts).find(haShakeMap);
+    if (!p) { spegniContorniReport(); return; }
+    noti.set(String(p.id), p);
+    contorniDaReport = true;
+    document.dispatchEvent(new CustomEvent(EVENTO_SHAKEMAP, { detail: { id: String(p.id), prodotto: 'mmi', inquadra: false } }));
+  };
+  // aspetta che gli eventi del periodo finiscano di arrivare (le fonti rispondono a pezzi): conteggio fermo per ~1 s, al massimo 9 s
+  const attendiEventi = async giro => {
+    const inizio = Date.now();
+    let ultimo = -1, fermo = 0;
+    await new Promise(ok => setTimeout(ok, 800));
+    while (giro === giroReport && aperto && Date.now() - inizio < 9000) {
+      const n = eventi().length;
+      fermo = n === ultimo ? fermo + 1 : 0;
+      ultimo = n;
+      if (fermo >= 3 && n > 0) break;
+      if (fermo >= 8) break; // nessun evento in arrivo
+      await new Promise(ok => setTimeout(ok, 350));
+    }
+  };
+  const inquadraItalia = async (VISTA_ITALIA, giro) => {
+    const r = stato.riquadro;
+    const area = areaMappaPoster(stato.formato, stato.direzione, stato.layout);
+    if (!limitiOriginali) { limitiOriginali = map.getMaxBounds(); map.setMaxBounds(null); }
+    const f = fasciaLiberaPoster(stato.formato, stato.direzione, stato.layout);
+    const k = r.w / area.larghezza; // px del riquadro per mm di poster
+    // Zoom e centro calcolati sulla proiezione Mercator: l'Italia deve stare dentro la fascia libera [f] del riquadro
+    const [[ovest, sud], [est, nord]] = VISTA_ITALIA;
+    const sudOvest = maplibregl.MercatorCoordinate.fromLngLat([ovest, sud]);
+    const nordEst = maplibregl.MercatorCoordinate.fromLngLat([est, nord]);
+    const [x0, x1] = [sudOvest.x, nordEst.x], [y0, y1] = [nordEst.y, sudOvest.y]; // y Mercator cresce verso sud
+    const larghezzaFascia = (f.x1 - f.x0) * k, altezzaFascia = (f.y1 - f.y0) * k;
+    const mondo = Math.min(larghezzaFascia / (x1 - x0), altezzaFascia / (y1 - y0)); // px del mondo intero
+    const zoom = Math.min(8.5, Math.log2(mondo / 512));
+    // si porta al centro dell'Italia e poi si sposta la mappa di quanto serve a mettere quel punto nel mezzo della fascia
+    // (il centro della mappa non è quello del contenitore: ha un padding per il pannello)
+    const centro = new maplibregl.MercatorCoordinate((x0 + x1) / 2, (y0 + y1) / 2, 0).toLngLat();
+    map.jumpTo({ center: centro, zoom });
+    const punto = map.project(centro);
+    map.panBy([punto.x - (r.x + (f.x0 + f.x1) / 2 * k), punto.y - (r.y + (f.y0 + f.y1) / 2 * k)], { animate: false });
+    await new Promise(ok => map.once('idle', ok));
+    if (giro === giroReport) aggiornaAnteprima(true);
+  };
   const inquadraReport = async () => {
     const giro = ++giroReport;
-    const pausa = ms => new Promise(ok => setTimeout(ok, ms));
-    const attuale = () => giro === giroReport && aperto && stato.riquadro;
-    // aspetta che il numero di eventi si fermi (le fonti rispondono a pezzi); `da` = quanti ne aveva l'ultima inquadratura
-    const attendi = async da => {
-      const inizio = Date.now();
-      let ultimo = -1, stabile = 0;
-      await pausa(800);
-      while (Date.now() - inizio < 9000 && attuale()) {
-        const n = eventi().length;
-        stabile = n === ultimo ? stabile + 1 : 0;
-        ultimo = n;
-        if (stabile >= 2 && n > 0 && n !== da) break;
-        if (stabile >= 6) break; // fermo da un po': nessun altro evento in arrivo
-        await pausa(350);
-      }
-      return ultimo;
-    };
-    let inquadrati = -1;
-    for (let tentativo = 0; tentativo < 4 && attuale(); tentativo++) {
-      const n = await attendi(inquadrati);
-      if (!attuale() || n === inquadrati || !n || stato.scala) break;
-      const punti = eventi().filter(p => Number.isFinite(p.lon) && Number.isFinite(p.lat));
-      if (!punti.length) break;
-      const r = stato.riquadro;
-      const area = areaMappaPoster(stato.formato, stato.direzione);
-      if (!limitiOriginali) { limitiOriginali = map.getMaxBounds(); map.setMaxBounds(null); }
-      const f = fasciaLiberaPoster(stato.formato, stato.direzione);
-      const k = r.w / area.larghezza; // px del riquadro per mm di poster
-      // Zoom e centro calcolati sulla proiezione Mercator: gli eventi devono stare dentro la fascia libera [f] del riquadro
-      const merc = punti.map(p => maplibregl.MercatorCoordinate.fromLngLat([p.lon, p.lat]));
-      const [x0, x1] = [Math.min(...merc.map(c => c.x)), Math.max(...merc.map(c => c.x))];
-      const [y0, y1] = [Math.min(...merc.map(c => c.y)), Math.max(...merc.map(c => c.y))];
-      const larghezzaFascia = (f.x1 - f.x0) * k, altezzaFascia = (f.y1 - f.y0) * k;
-      const mondo = Math.min(larghezzaFascia / Math.max(x1 - x0, 1e-9), altezzaFascia / Math.max(y1 - y0, 1e-9)); // px del mondo intero
-      const zoom = Math.min(8.5, Math.log2(mondo / 512));
-      // si porta al centro degli eventi e poi si sposta la mappa di quanto serve a mettere quel punto nel mezzo della fascia
-      // (il centro della mappa non è quello del contenitore: ha un padding per il pannello)
-      const centroEventi = new maplibregl.MercatorCoordinate((x0 + x1) / 2, (y0 + y1) / 2, 0).toLngLat();
-      map.jumpTo({ center: centroEventi, zoom });
-      const punto = map.project(centroEventi);
-      map.panBy([punto.x - (r.x + (f.x0 + f.x1) / 2 * k), punto.y - (r.y + (f.y0 + f.y1) / 2 * k)], { animate: false });
-      inquadrati = n;
-      await new Promise(ok => map.once('idle', ok));
-    }
-    if (giro === giroReport) aggiornaAnteprima(true);
+    const { VISTA_ITALIA } = await import('./config.js'); // config.js legge window: caricato qui perché i test in Node importano il dialogo
+    if (giro !== giroReport || !aperto) return;
+    if (stato.riquadro && !stato.scala) await inquadraItalia(VISTA_ITALIA, giro); // a scala fissa l'inquadratura è decisa dalla scala
+    await attendiEventi(giro);
+    if (giro === giroReport && aperto) accendiContorniReport();
   };
   const applicaScelta = () => {
     const r = applicaReport(chiaveReport, scelta);
@@ -478,7 +497,7 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
     campoTitolo.querySelector('input').value = stato.titolo;
     sottotitolo.querySelector('input').value = stato.sottotitolo;
     aggiornaAnteprima(false);
-    if (!r) ripristinaLimiti();
+    if (!r) { ripristinaLimiti(); spegniContorniReport(); }
     if (r) { impostaTema('magnitudo'); inquadraReport(); } // i report sono sempre colorati per magnitudo
   };
   const leggiScelta = () => {
@@ -501,9 +520,10 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
     sceltaReport, campiPeriodo,
     campoTitolo,
     sottotitolo,
+    sceltaLayout,
     el('div', { className: 'stampa-riga' },
-      sceltaDa('stampa-formato', tr('html.stampa.formato'), Object.keys(FORMATI).map(f => [f, f]), stato.formato, v => { stato.formato = v; dopoCambioProporzione(); }),
-      sceltaDa('stampa-direzione', tr('html.stampa.orient'), [['landscape', tr('stampa.orizzontale')], ['portrait', tr('stampa.verticale')]], stato.direzione, v => { stato.direzione = v; dopoCambioProporzione(); })),
+      sceltaDa('stampa-formato', tr('html.stampa.formato'), Object.keys(FORMATI).map(f => [f, f]), stato.formato, v => { stato.formato = v; dopoCambioProporzione(); if (chiaveReport) inquadraReport(); }),
+      sceltaDa('stampa-direzione', tr('html.stampa.orient'), [['landscape', tr('stampa.orizzontale')], ['portrait', tr('stampa.verticale')]], stato.direzione, v => { stato.direzione = v; dopoCambioProporzione(); if (chiaveReport) inquadraReport(); })),
     el('div', { className: 'stampa-riga' },
       sceltaDa('stampa-uscita', tr('html.stampa.uscita'), ['png', 'jpg', 'pdf', 'stampa'].map(v => [v, tr(`stampa.uscita.${v}`)]), stato.uscita, v => { stato.uscita = v; dopoCambioProporzione(); }),
       sceltaDa('stampa-scala', tr('html.stampa.scala'), [['', tr('stampa.vistaAttuale')], ...SCALE_STAMPA.map(n => [String(n), tr('stampa.opzioneScala', { n: n.toLocaleString(localeIntl()) })])], '', v => { stato.scala = +v || null; if (stato.scala) { adattaFormatoAScala(); stato.riquadro = adattaProporzione(stato.riquadro, proporzione(), vista()); adattaAScala(); portaInVista(); aggiornaRisoluzione(); } else { riquadro.classList.remove('a-scala'); stato.riquadro = riquadroIniziale(vista(), proporzione()); posiziona(); } riempiEventi(); aggiornaAnteprima(false); })),
@@ -544,7 +564,7 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
       const comuni = { formato: stato.formato, direzione: stato.direzione, scala: stato.scala, centro, zoom, titolo: stato.titolo };
       statoEsporta.hidden = true;
       const riuscita = await conAvvisoStampa(tr('avviso.stampaInCorso'), () => stato.uscita === 'stampa' ? stampaFoglio(map, comuni)
-        : esportaFile(map, { ...comuni, uscita: stato.uscita, dpi: stato.dpi, titolo: stato.titolo || tr('stampa.poster.titoloDefault'), sottotitolo: sottotitoloEffettivo(), elementi: stato.elementi, evento: eventoScelto(), stelle: stelleDaEventi(), forti: fortiDaEventi(), soglia: stato.soglia, scheda: schedaDaEvento() }));
+        : esportaFile(map, { ...comuni, uscita: stato.uscita, dpi: stato.dpi, titolo: stato.titolo || tr('stampa.poster.titoloDefault'), sottotitolo: sottotitoloEffettivo(), elementi: stato.elementi, evento: eventoScelto(), stelle: stelleDaEventi(), forti: fortiDaEventi(), soglia: stato.soglia, scheda: schedaDaEvento(), layout: stato.layout, dati: stato.layout === 'poster' ? null : datiPannelli(eventi()) }));
       statoEsporta.hidden = riuscita !== false; // cattura o scrittura fallite (di solito immagine troppo grande per il dispositivo)
     } finally { stato.occupato = false; esporta.disabled = false; esporta.textContent = etichetta; }
   });
@@ -559,7 +579,7 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
     riquadro.hidden = !apri;
     document.body.classList.toggle('stampa-pannello', apri); // su desktop nasconde legenda, minimappa, logo e scala della mappa
     aggiornaEvidenza(); // chiuso il pannello l'alone va via, i contorni restano
-    if (!apri) { giroReport++; ripristinaLimiti(); map.off('moveend', sulMovimento); window.removeEventListener('resize', sulRidimensionamento); document.removeEventListener(EVENTO_SHAKEMAP, suContorni); return; }
+    if (!apri) { giroReport++; ripristinaLimiti(); spegniContorniReport(); map.off('moveend', sulMovimento); window.removeEventListener('resize', sulRidimensionamento); document.removeEventListener(EVENTO_SHAKEMAP, suContorni); return; }
     stato.riquadro = stato.riquadro ? adattaProporzione(stato.riquadro, proporzione(), vista()) : riquadroIniziale(vista(), proporzione());
     posiziona();
     map.on('moveend', sulMovimento);

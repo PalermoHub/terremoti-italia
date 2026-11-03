@@ -11,13 +11,15 @@ import { UNITA, contorniAttivi, contorniDati } from './shakemap-mappa.js';
 import { modoTema } from './tema-magnitudo.js';
 import { ICONE } from './icone.js';
 import { FASCE } from '../layers/scheda-terremoti.js';
+import { geometriaLayout, fasciaLiberaLayout, layoutAPannelli } from './stampa-layout.js';
+import { disegnaPannelli } from './stampa-pannelli.js';
 
 // Dalla magnitudo in su un evento entra nell'elenco del poster e porta la ML scritta nel simbolo
 export const SOGLIA_ELENCO = 4;
-const MM_PX_CSS = 25.4 / 96; // lato di un pixel CSS sul foglio, in mm
-const BLU = '#0b4f7a';
+export const MM_PX_CSS = 25.4 / 96; // lato di un pixel CSS sul foglio, in mm
+export const BLU = '#0b4f7a';
 const LOGO = 'img/opendatasicilia.png';
-const URL_APP = 'https://palermohub.opendatasicilia.it/terremoti_italia.html';
+export const URL_APP = 'https://palermohub.opendatasicilia.it/terremoti_italia.html';
 
 // Pagina intera (senza margini) in mm
 export function paginaMm(formato, direzione) {
@@ -31,7 +33,7 @@ export function zoomPerPagina(zoomVista, vistaPx, paginaPx) {
 }
 
 // Etichetta di una classe di magnitudo letta dalle stesse stringhe della scheda evento
-const etichettaClasse = c => tr(`terremoti.ev.mag.${c.chiave}`);
+export const etichettaClasse = c => tr(`terremoti.ev.mag.${c.chiave}`);
 
 // Dispone `testo` su più righe di larghezza massima `max` (nell'unità del contesto corrente)
 export function spezzaRighe(ctx, testo, max) {
@@ -46,7 +48,7 @@ export function spezzaRighe(ctx, testo, max) {
 }
 
 // Contorni ShakeMap in mappa: titolo e una riga (colore, valore) per ogni linea, dalla più forte alla più debole; null se non ce ne sono
-function legendaContorni(evento) {
+export function legendaContorni(evento) {
   const attivo = contorniAttivi();
   const dati = contorniDati();
   if (!attivo || !dati) return null;
@@ -62,13 +64,13 @@ function legendaContorni(evento) {
 }
 
 // Scala del modo «Tematizza per» in corso: stessi colori e testi della mini-scala della legenda
-function scalaTema() {
+export function scalaTema() {
   const modo = modoTema();
   const { colori, nomi } = scala(modo, FASCE);
   return { modo, nome: tr(`tema.mini.modo.${modo}`), voci: colori.map((colore, i) => ({ colore, testo: nomi[i] })) };
 }
 
-function stella(ctx, x, y, r) {
+export function stella(ctx, x, y, r) {
   ctx.beginPath();
   for (let i = 0; i < 10; i++) {
     const raggio = i % 2 ? r * 0.42 : r;
@@ -79,7 +81,7 @@ function stella(ctx, x, y, r) {
 }
 
 // Scheda arrotondata con ombra morbida (u = px per mm: l'ombra non segue la scala del contesto)
-function carta(ctx, u, x, y, w, h, r = 1.2, riempimento = 'rgba(255,255,255,.95)') {
+export function carta(ctx, u, x, y, w, h, r = 1.2, riempimento = 'rgba(255,255,255,.95)') {
   ctx.save();
   ctx.shadowColor = 'rgba(15,23,42,.38)'; ctx.shadowBlur = 1.8 * u; ctx.shadowOffsetY = 0.6 * u;
   ctx.fillStyle = riempimento;
@@ -90,7 +92,7 @@ function carta(ctx, u, x, y, w, h, r = 1.2, riempimento = 'rgba(255,255,255,.95)
 }
 
 // Cerchio con sfumatura radiale e bordo: i simboli della legenda delle grandezze
-function pallino(ctx, x, y, r, chiaro, scuro, bordo) {
+export function pallino(ctx, x, y, r, chiaro, scuro, bordo) {
   const g = ctx.createRadialGradient(x - r * 0.35, y - r * 0.35, r * 0.1, x, y, r);
   g.addColorStop(0, chiaro); g.addColorStop(1, scuro);
   ctx.fillStyle = g; ctx.strokeStyle = bordo; ctx.lineWidth = 0.2;
@@ -98,7 +100,7 @@ function pallino(ctx, x, y, r, chiaro, scuro, bordo) {
 }
 
 // Bussola: disco bianco, anello, stella a quattro punte con il nord evidenziato
-function roseDeiVenti(ctx, u, x, y, r) {
+export function roseDeiVenti(ctx, u, x, y, r) {
   carta(ctx, u, x - r * 1.25, y - r * 1.25, r * 2.5, r * 2.5, r * 1.25);
   ctx.strokeStyle = BLU; ctx.lineWidth = 0.25;
   ctx.beginPath(); ctx.arc(x, y, r * 1.02, 0, 2 * Math.PI); ctx.stroke();
@@ -125,7 +127,8 @@ function roseDeiVenti(ctx, u, x, y, r) {
 export const corpoTesto = larghezzaPagina => Math.max(2.4, larghezzaPagina / 120);
 
 // Area della mappa sulla pagina (mm): sotto il banner del titolo, con attorno la fascia della cornice e delle coordinate
-export function areaMappaPoster(formato, direzione) {
+export function areaMappaPoster(formato, direzione, layout = 'poster') {
+  if (layoutAPannelli(layout)) return geometriaLayout(layout, formato, direzione).mappa;
   const p = paginaMm(formato, direzione);
   const corpo = corpoTesto(p.larghezza);
   const bordo = corpo * 3;
@@ -135,7 +138,8 @@ export function areaMappaPoster(formato, direzione) {
 
 // Fascia centrale del poster che legenda, scala, elenco, rosa dei venti e piede lasciano libera (mm dall'angolo in alto a sinistra della mappa):
 // gli eventi dentro questa fascia non finiscono mai sotto un riquadro. Le misure replicano quelle di disegnaPoster.
-export function fasciaLiberaPoster(formato, direzione) {
+export function fasciaLiberaPoster(formato, direzione, layout = 'poster') {
+  if (layoutAPannelli(layout)) return fasciaLiberaLayout(layout, formato, direzione);
   const m = areaMappaPoster(formato, direzione);
   const corpo = corpoTesto(paginaMm(formato, direzione).larghezza);
   const margine = corpo * 1.3;
@@ -194,7 +198,7 @@ export function luminosita(immagine, ritaglio) {
   return somma / (d.length / 4);
 }
 
-function cornice(ctx, m, proj, corpo, conGriglia, scuro = false) {
+export function cornice(ctx, m, proj, corpo, conGriglia, scuro = false) {
   const fascia = corpo * 0.4;
   const { x, y, larghezza: w, altezza: h } = m;
   const estremi = { lngMin: proj.lng(0), lngMax: proj.lng(w), latMax: proj.lat(0), latMin: proj.lat(h) };
@@ -255,7 +259,7 @@ function cornice(ctx, m, proj, corpo, conGriglia, scuro = false) {
 // `stelle` = [{ lon, lat, colore }]; la stella è più grande del cerchio sottostante (14 px a zoom 7,5: 0,8 volte a zoom 6, 1,6 a zoom 12).
 const moltiplicatoreZoom = zoom => Math.min(1.6, Math.max(0.8, 0.8 + (zoom - 6) * (0.8 / 6)));
 const raggioStella = (zoom, corpo) => Math.max(corpo * 0.9, 14 * moltiplicatoreZoom(zoom) * MM_PX_CSS * 1.6);
-function disegnaStelle(ctx, m, proj, stelle, zoom, corpo) {
+export function disegnaStelle(ctx, m, proj, stelle, zoom, corpo) {
   if (!stelle.length) return;
   const R = raggioStella(zoom, corpo);
   ctx.save();
@@ -276,7 +280,7 @@ const formatoMl = mag => Number(mag).toLocaleString(localeIntl(), { minimumFract
 const COLORE_ESADECIMALE = /^#[0-9a-f]{6}$/i;
 
 // Magnitudo (ML) scritta dentro il simbolo di ogni evento da SOGLIA_ELENCO: cerchio o stella, col testo chiaro o scuro a seconda del colore
-function disegnaMl(ctx, m, proj, forti, zoom, corpo) {
+export function disegnaMl(ctx, m, proj, forti, zoom, corpo) {
   const R = raggioStella(zoom, corpo);
   ctx.save();
   ctx.beginPath(); ctx.rect(m.x, m.y, m.larghezza, m.altezza); ctx.clip();
@@ -459,6 +463,7 @@ function disegnaScheda(ctx, u, m, proj, scheda, corpo, occupati) {
 // Le misure sono in mm: il contesto è scalato di `u` px/mm. `mappa` = { immagine, ritaglio? } con ritaglio opzionale { x, y, w, h } in px dell'immagine.
 // `vista` = { centro, zoom } con cui la mappa è stata resa: servono per la graticola e la barra di scala.
 export function disegnaPoster(canvas, opzioni) {
+  if (layoutAPannelli(opzioni.layout)) return disegnaPannelli(canvas, opzioni); // report, bacheca, murale: impaginazione a pannelli
   const { pagina, formato, direzione, titolo, sottotitolo, attribuzioni, logo, data, mappa, vista, protezioneCivile } = opzioni;
   const el = { legenda: true, scala: true, rosa: true, griglia: true, ml: true, elenco: true, ...opzioni.elementi }; // cornice, fonte dei dati, logo e attribuzioni ci sono sempre
   const ctx = canvas.getContext('2d');
@@ -500,7 +505,8 @@ export function disegnaPoster(canvas, opzioni) {
   ctx.fillStyle = '#f5a623'; ctx.fillRect(xTit, corpo * 1.0, corpo * 0.35, hBanner - corpo * 2.0);
   xTit += corpo * 1.1;
   // Colonne a destra: fonte e crediti | avvertenza
-  const wCol = corpo * 34, gap = corpo * 2;
+  const gap = corpo * 2;
+  const wCol = Math.min(corpo * 34, (L * 0.62 - gap - corpo * 3) / 2); // su pagine strette le colonne cedono spazio al titolo
   const xC2 = L - corpo * 1.5 - wCol, xC1 = xC2 - gap - wCol;
   const wTit = xC1 - corpo * 1.5 - xTit;
   ctx.fillStyle = '#fff'; ctx.textAlign = 'left';
@@ -511,12 +517,22 @@ export function disegnaPoster(canvas, opzioni) {
   ctx.font = `${corpo * 1.3}px Montserrat, sans-serif`;
   ctx.fillStyle = 'rgba(255,255,255,.88)';
   ctx.fillText(sottotitolo, xTit, hBanner * 0.75, wTit);
-  const fs = corpo * 0.72, lh = corpo * 0.98;
-  ctx.font = `${fs}px Montserrat, sans-serif`;
   const attrib = protezioneCivile ? attribuzioni : attribuzioni.filter(a => !/protezione civile/i.test(a)); // la sua attribuzione vale solo a layer acceso
-  const col1 = [tr(protezioneCivile ? 'stampa.poster.fonteDatiPc' : 'stampa.poster.fonteDati'), tr('stampa.poster.realizzazione', { data }), URL_APP, ...spezzaRighe(ctx, attrib.join(' · '), wCol)];
-  ctx.font = `italic ${fs}px Montserrat, sans-serif`;
-  const col2 = spezzaRighe(ctx, tr(protezioneCivile ? 'stampa.poster.avvertenzaPc' : 'stampa.poster.avvertenza'), wCol);
+  const testoFonte = [tr(protezioneCivile ? 'stampa.poster.fonteDatiPc' : 'stampa.poster.fonteDati'), tr('stampa.poster.realizzazione', { data }), URL_APP];
+  const testoAvvertenza = tr(protezioneCivile ? 'stampa.poster.avvertenzaPc' : 'stampa.poster.avvertenza');
+  // Fonte dei dati e avvertenza non devono mai sparire né uscire dal banner: se le righe non ci stanno, il corpo si riduce
+  // finché entrano (minimo 0,4×corpo, circa 4 pt su A4 orizzontale)
+  let fs = corpo * 0.72, col1, col2;
+  const altezzaUtile = hBanner - corpo * 1.0;
+  for (;;) {
+    ctx.font = `${fs}px Montserrat, sans-serif`;
+    col1 = [...testoFonte, ...spezzaRighe(ctx, attrib.join(' · '), wCol)];
+    ctx.font = `italic ${fs}px Montserrat, sans-serif`;
+    col2 = spezzaRighe(ctx, testoAvvertenza, wCol);
+    if (Math.max(col1.length, col2.length) * fs * 1.36 <= altezzaUtile || fs <= corpo * 0.4) break;
+    fs *= 0.94;
+  }
+  const lh = fs * 1.36;
   const disegnaCol = (righe, x, grassetto) => {
     const y0 = (hBanner - righe.length * lh) / 2 + lh / 2;
     righe.forEach((r, i) => {
@@ -690,15 +706,15 @@ function scarica(blob, nome) {
 // Sottotitolo di riserva: centro della mappa e data
 export const sottotitoloPredefinito = (centro, data) => tr('stampa.poster.sottotitolo', { lat: centro.lat.toFixed(3), lng: centro.lng.toFixed(3), data });
 
-export async function esportaPoster({ immagineUrl, uscita, formato, direzione, titolo, sottotitolo, elementi, evento, stelle, forti, soglia, scheda, attribuzioni, centro, zoom, protezioneCivile }) {
+export async function esportaPoster({ immagineUrl, uscita, formato, direzione, titolo, sottotitolo, elementi, evento, stelle, forti, soglia, scheda, attribuzioni, centro, zoom, protezioneCivile, layout = 'poster', dati }) {
   const pagina = paginaMm(formato, direzione);
-  const area = areaMappaPoster(formato, direzione);
+  const area = areaMappaPoster(formato, direzione, layout);
   const mappa = await caricaImmagine(immagineUrl);
   const k = mappa.naturalWidth / area.larghezza; // px per mm della mappa catturata
   const canvas = Object.assign(document.createElement('canvas'), { width: Math.round(pagina.larghezza * k), height: Math.round(pagina.altezza * k) });
   const data = new Date().toLocaleDateString(localeIntl(), { day: 'numeric', month: 'long', year: 'numeric' });
   disegnaPoster(canvas, {
-    pagina, formato, direzione, titolo, attribuzioni, data, logo: await caricaLogo(), elementi, evento, stelle, forti, soglia, scheda, protezioneCivile,
+    pagina, formato, direzione, titolo, attribuzioni, data, logo: await caricaLogo(), elementi, evento, stelle, forti, soglia, scheda, protezioneCivile, layout, dati,
     mappa: { immagine: mappa }, vista: { centro, zoom },
     sottotitolo: sottotitolo || sottotitoloPredefinito(centro, data),
   });

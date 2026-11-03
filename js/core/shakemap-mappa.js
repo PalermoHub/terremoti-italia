@@ -1,5 +1,5 @@
 // Contorni della ShakeMap INGV di un evento, disegnati sopra la mappa quando l'utente li sceglie dalla scheda dell'evento.
-// La scheda manda `scheda:shakemap` con detail { id, prodotto } (prodotto null = toglili); i file stanno nel ramo `shakemap`
+// La scheda manda `scheda:shakemap` con detail { id, prodotto, inquadra? } (prodotto null = toglili; inquadra false = non spostare la mappa); i file stanno nel ramo `shakemap`
 // (copiati da scripts/shakemap.mjs, perché shakemap.ingv.it non ha CORS). Linee e valori hanno i colori dell'INGV.
 import { t, lingua } from './i18n.js';
 
@@ -92,7 +92,7 @@ export function collegaShakeMap(map) {
   // i contorni valgono finché la scheda è aperta (anche passando a un altro evento): chiusa la scheda, legenda e linee vanno via
   document.addEventListener('scheda:chiusa', () => document.dispatchEvent(new CustomEvent(EVENTO_SHAKEMAP, { detail: { prodotto: null } })));
   document.addEventListener(EVENTO_SHAKEMAP, async e => {
-    const { id, prodotto } = e.detail ?? {};
+    const { id, prodotto, inquadra: adatta = true } = e.detail ?? {}; // `inquadra: false` = la mappa resta dov'è (i report restano su tutta l'Italia)
     const mia = ++richiesta;
     attivo = prodotto ? { id, prodotto } : null;
     scriviChip();
@@ -106,7 +106,7 @@ export function collegaShakeMap(map) {
       map.getSource(SRC).setData(dati);
       ultimiDati = dati;
       scriviLegenda(dati);
-      inquadra(map, dati);
+      if (adatta) inquadra(map, dati);
     } catch { if (mia === richiesta) { ultimiDati = null; map.getSource(SRC)?.setData(VUOTO); scriviLegenda(null); } }
   });
 }
