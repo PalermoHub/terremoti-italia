@@ -33,7 +33,7 @@ export function collegaRicerca(map, { terremoti = null, storico = null, comuni =
 
   let indice = null;
   let scelta = { ...SCELTA_VUOTA };
-  let soloEventi = false;
+  let soloEventi = true; // di default scegliere un'area restringe anche i terremoti
   let giro = 0; // ogni scelta annulla le attese di quella prima
 
   // ---- mappa: confini dei comuni (invisibili finché non c'è una scelta) ----
@@ -115,7 +115,7 @@ export function collegaRicerca(map, { terremoti = null, storico = null, comuni =
 
   // ---- filtri a cascata ----
   const selezioni = {};
-  const casellaEventi = Object.assign(el('input'), { type: 'checkbox', id: 'cerca-solo-eventi' });
+  const casellaEventi = Object.assign(el('input'), { type: 'checkbox', id: 'cerca-solo-eventi', checked: true });
   const nodoEventi = el('label', 'cerca-solo-eventi');
   nodoEventi.append(casellaEventi, ' ', t('filtri.soloEventi'));
   pannello.append(el('h2', null, t('filtri.titolo')));
@@ -194,8 +194,8 @@ export function collegaRicerca(map, { terremoti = null, storico = null, comuni =
     chiudiElenco();
     pannello.hidden = true;
     bottoneFiltri.setAttribute('aria-expanded', 'false');
-    casellaEventi.checked = false;
-    soloEventi = false;
+    casellaEventi.checked = true;
+    soloEventi = true;
     const anno = document.getElementById('filtro-anno');
     if (anno) anno.value = '';
     annoScelto = '';
