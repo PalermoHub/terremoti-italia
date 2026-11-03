@@ -1,6 +1,7 @@
 import { tl, t, localeIntl } from '../core/i18n.js';
 import { AREA_EVENTI, HIT_COMUNI, SRC_COMUNI, STRATO_COMUNI } from '../core/config.js';
 import { filtroInsieme, voceFiltro } from '../core/legenda.js';
+import { scala as scalaMini } from '../core/mini-scala.js';
 import { primo } from '../core/scheda-util.js';
 import { FASCE, GIORNI_MAX, scaricaEventi, filtro, FILTRO_INIZIALE, profonditaDaFiltro, passaFiltro, espressioneFiltro, eventoDaIngv, quantoTempoFa, distanzaKm, modelloPopupTerremoto, voceTerremoto, voceSerie, voceAltri, riassuntoTerremoti, proprietaStorico, colonneTabellaTerremoti, caricaShakeMap } from './scheda-terremoti.js';
 import { voceComune } from './scheda-comune.js';
@@ -227,14 +228,17 @@ function creaLegenda() {
   ultimoEvento.type = 'button';
   ultimoEvento.hidden = true;
   bloccoFasce = el('div', 'legenda-fasce');
-  for (const f of FASCE) {
-    const chip = el('i', 'incendi-campione');
-    chip.style.background = f.colore;
-    bloccoFasce.append(voceFiltro(chip, f.nome, acceso => {
+  const limiti = scalaMini('eta', FASCE).limiti; // «<1 h», «<24 h», «<72 h», «≥72 h»: come i segmenti della mini-scala
+  FASCE.forEach((f, i) => {
+    const riga = voceFiltro(el('i', 'incendi-campione'), f.nome, acceso => {
       acceso ? fasceAccese.add(f.colore) : fasceAccese.delete(f.colore);
       applicaFiltro();
-    }));
-  }
+    });
+    riga.style.setProperty('--fascia', f.colore);
+    riga.title = tl(f.nome);
+    riga.lastChild.textContent = limiti[i]; // il nome per esteso resta nel tooltip
+    bloccoFasce.append(riga);
+  });
   pannelloPf = pannelloFiltro(() => eventi, () => mappa, {
     // evento forte durante la riproduzione: la mappa lo porta in vista (se serve) e ne apre il popup
     mostraEvento(p) {
@@ -246,7 +250,7 @@ function creaLegenda() {
     },
     nascondiEvento: () => popup.chiudi(),
   });
-  legenda.append(titolo, ultimoEvento, bloccoFasce, pannelloPf.nodo, menuFiltro({ magnitudo: false }), el('p', 'uffici-nota', t('terremoti.clicca')));
+  legenda.append(titolo, bloccoFasce, ultimoEvento, pannelloPf.nodo, menuFiltro({ magnitudo: false }), el('p', 'uffici-nota', t('terremoti.clicca')));
   nota = el('p', 'uffici-nota');
   bottoneAggiorna = el('button', 'legenda-aggiorna');
   bottoneAggiorna.type = 'button';

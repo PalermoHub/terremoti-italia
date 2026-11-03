@@ -337,3 +337,11 @@ input, textarea, [contenteditable] { caret-color: var(--accent-strong); }
 
 /* Pannello «Stampa» aperto su desktop: legenda, minimappa, logo e scala sparirebbero dal poster e confondono rispetto al riquadro. */
 @media (min-width: 721px) { body.stampa-pannello :is(#legende-box, #minimappa-panoramica, #mappa-info, .maplibregl-ctrl-scale) { display: none; } }
+
+/* Legenda aperta: le fasce d'età sono quattro pulsanti colorati in fila, come i segmenti della mini-scala (js/layers/terremoti.js) */
+.lg-terremoti .legenda-fasce { display: flex; gap: 3px; margin: 4px 0 6px; }
+.lg-terremoti .legenda-fasce .monumenti-cat { flex: 1; min-width: 0; justify-content: center; padding: 0; height: 28px; border-radius: 4px; background: var(--fascia); color: #1a1a1a; font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; box-shadow: inset 0 0 0 1px rgb(0 0 0 / .14); }
+.lg-terremoti .legenda-fasce .monumenti-cat > i { display: none; }
+.lg-terremoti .legenda-fasce .monumenti-cat:has(input:not(:checked)) { opacity: .25; }
+.lg-terremoti .legenda-fasce .monumenti-cat:has(input:not(:checked)) > :not(input) { filter: none; }
+:root[data-tema="scuro"] .lg-terremoti .legenda-fasce .monumenti-cat { box-shadow: inset 0 0 0 1px rgb(255 255 255 / .3); }
