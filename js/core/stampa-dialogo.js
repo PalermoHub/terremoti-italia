@@ -12,6 +12,7 @@ import { EVENTO_SHAKEMAP, contorniAttivi } from './shakemap-mappa.js';
 import { PRODOTTI_SHAKEMAP, fasciaEta, haShakeMap, modelloPopupTerremoto, raggioMagnitudo } from '../layers/scheda-terremoti.js';
 import { REPORT, applicaReport } from './stampa-report.js';
 import { LAYOUT } from './stampa-layout.js';
+import { caricaMinimappa, minimappaPronta } from './stampa-minimappa.js';
 import { datiPannelli } from './stampa-dati.js';
 import { SOGLIA_ELENCO, areaMappaPoster, fasciaLiberaPoster, caricaLogo, disegnaPoster, paginaMm, sottotitoloPredefinito, zoomPerPagina } from './stampa-poster.js';
 
@@ -85,7 +86,7 @@ function fotogramma(map) {
 const SOGLIA_STELLA = 5; // dalla magnitudo in su un evento è una stella nel poster, come in legenda
 const SOGLIA_FORTI = 5; // «tutti gli eventi dell'area» = magnitudo uguale o superiore a questa
 const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
-const OPZIONI_ELEMENTI = ['legenda', 'scala', 'rosa', 'griglia', 'ml', 'elenco']; // logo, fonte, attribuzioni e cornice non si tolgono
+const OPZIONI_ELEMENTI = ['legenda', 'scala', 'rosa', 'minimappa', 'griglia', 'ml', 'elenco']; // logo, fonte, attribuzioni e cornice non si tolgono
 
 export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } = {}) {
   const contenitore = map.getContainer();
@@ -232,7 +233,7 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
       pagina, formato: stato.formato, direzione: stato.direzione, titolo: stato.titolo || tr('stampa.poster.titoloDefault'),
       sottotitolo: sottotitoloEffettivo() || sottotitoloPredefinito(vista.centro, data),
       attribuzioni: attribuzioniUniche([...document.querySelectorAll('#mappa .maplibregl-ctrl-attrib-inner')].map(a => a.textContent)),
-      logo, data, protezioneCivile: layerPcAttivo(map), elementi: stato.elementi, evento: eventoScelto(), stelle: stelleDaEventi(), forti: fortiDaEventi(), soglia: stato.soglia, scheda: schedaDaEvento(), layout: stato.layout, dati: stato.layout === 'poster' ? null : datiPannelli(eventi()), mappa: { immagine: ultimoFotogramma, ritaglio }, vista,
+      logo, data, protezioneCivile: layerPcAttivo(map), elementi: stato.elementi, evento: eventoScelto(), stelle: stelleDaEventi(), forti: fortiDaEventi(), soglia: stato.soglia, scheda: schedaDaEvento(), layout: stato.layout, dati: stato.layout === 'poster' ? null : datiPannelli(eventi()), minimappa: minimappaPronta(), mappa: { immagine: ultimoFotogramma, ritaglio }, vista,
     });
   }
   async function aggiornaAnteprima(nuovoFotogramma = true) {
@@ -584,6 +585,7 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
     posiziona();
     map.on('moveend', sulMovimento);
     document.addEventListener(EVENTO_SHAKEMAP, suContorni);
+    if (!minimappaPronta()) caricaMinimappa().then(img => { if (img && aperto) aggiornaAnteprima(false); }); // confini dei comuni per la minimappa: si rende una volta sola
     window.addEventListener('resize', sulRidimensionamento);
     riempiEventi();
     aggiornaEvidenza();

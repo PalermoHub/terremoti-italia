@@ -1,11 +1,11 @@
 // Disegno dei layout a pannelli della stampa (report, bacheca, murale): intestazione, mappa incorniciata, zona dei pannelli dati
-// (riquadri, evento più forte, serie, legenda, elenco) e piede con fonte dei dati e avvertenza, sempre presenti.
+// (riquadri, evento più forte, serie, elenco) e piede con fonte dei dati e avvertenza, sempre presenti.
 // Le misure sono in mm; `dati` = { totale, magMax, profMediana, massimo, top, serie, unita } calcolato dagli eventi in elenco.
 import { t as tr, localeIntl } from './i18n.js';
-import { CLASSI_MAGNITUDO, coloreMagnitudo } from './magnitudo.js';
-import { barraScala, scalaDaZoom } from './stampa.js';
+import { coloreMagnitudo } from './magnitudo.js';
 import { geometriaLayout } from './stampa-layout.js';
-import { BLU, URL_APP, MM_PX_CSS, carta, cornice, disegnaStelle, disegnaMl, roseDeiVenti, scalaTema, legendaContorni, etichettaClasse, proiettore, luminosita, spezzaRighe, stella, pallino } from './stampa-poster.js';
+import { BLU, URL_APP, carta, cornice, disegnaStelle, disegnaMl, roseDeiVenti, proiettore, luminosita, spezzaRighe } from './stampa-poster.js';
+import { disegnaBlocchi } from './stampa-legenda.js';
 
 const TESTO = '#1e293b';
 const SOFFOCATO = '#475569';
@@ -155,59 +155,6 @@ function pannelloSerie(ctx, u, c, r, d) {
   });
 }
 
-// Legenda sulla mappa: cerchi e stelle delle classi di magnitudo e, se il tema non è la magnitudo, le voci della scala del colore;
-// `tema` = scalaTema(), `r` = riquadro (altezza da `altezzaLegenda`)
-function pannelloLegenda(ctx, u, c, r, tema, contorni) {
-  carta(ctx, u, r.x, r.y, r.w, r.h, c * 0.8);
-  const p = c;
-  intestazione(ctx, c, r.x + p, r.y + p, r.w - 2 * p, tr('terremoti.ev.magnitudo'));
-  const voci = [
-    ...CLASSI_MAGNITUDO.map(k => ({ tipo: 'classe', k })),
-    ...(tema.modo === 'magnitudo' ? [] : [{ tipo: 'titolo', testo: tema.nome }, ...tema.voci.map(v => ({ tipo: 'voce', v }))]),
-    ...(contorni ? [{ tipo: 'titolo', testo: contorni.titolo, gruppo: 1 }, { tipo: 'evento', testo: contorni.evento.riga1, gruppo: 1 }, ...contorni.voci.map(v => ({ tipo: 'linea', v, gruppo: 1 }))] : []),
-  ];
-  const nBase = voci.filter(v => !v.gruppo).length, nContorni = voci.length - nBase;
-  const colonne = Math.max(1, Math.min(voci.length, Math.floor((r.w - 2 * p) / (c * 11))));
-  const aGruppi = colonne >= 2 && nContorni > 0; // i contorni ShakeMap hanno una colonna tutta loro
-  const righe = aGruppi ? Math.max(nBase, nContorni) : Math.ceil(voci.length / colonne);
-  const altezzaRiga = Math.min(c * 2.6, (r.h - 2 * p - c * 2) / righe);
-  const larghezzaColonna = (r.w - 2 * p) / colonne;
-  voci.forEach((voce, i) => {
-    const colonna = aGruppi ? (voce.gruppo ? 1 : 0) : Math.floor(i / righe);
-    const riga = aGruppi ? (voce.gruppo ? i - nBase : i) : i % righe;
-    const x = r.x + p + colonna * larghezzaColonna, y = r.y + p + c * 2 + riga * altezzaRiga + altezzaRiga / 2;
-    ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillStyle = TESTO;
-    if (voce.tipo === 'titolo') { ctx.font = `bold ${c * 0.9}px Montserrat, sans-serif`; ctx.fillStyle = BLU; ctx.fillText(voce.testo, x, y, larghezzaColonna - c); return; }
-    const cx = x + c * 1.2;
-    if (voce.tipo === 'evento') { ctx.font = `${c * 0.8}px Montserrat, sans-serif`; ctx.fillStyle = SOFFOCATO; ctx.fillText(tronca(ctx, voce.testo, larghezzaColonna - c), x, y); return; }
-    if (voce.tipo === 'linea') { // contorno ShakeMap: tratto colorato con filo scuro, come in mappa
-      ctx.lineCap = 'round';
-      ctx.strokeStyle = 'rgba(31,42,68,.55)'; ctx.lineWidth = c * 0.5; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + c * 2.2, y); ctx.stroke();
-      ctx.strokeStyle = voce.v.colore; ctx.lineWidth = c * 0.3; ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + c * 2.2, y); ctx.stroke();
-      ctx.font = `${c * 0.9}px Montserrat, sans-serif`; ctx.fillStyle = TESTO; ctx.fillText(voce.v.testo, x + c * 3, y, larghezzaColonna - c * 3.4);
-      return;
-    }
-    if (voce.tipo === 'voce') {
-      ctx.fillStyle = voce.v.colore; ctx.beginPath(); ctx.roundRect(x, y - c * 0.4, c * 2.2, c * 0.8, c * 0.4); ctx.fill();
-      ctx.strokeStyle = 'rgba(15,23,42,.35)'; ctx.lineWidth = 0.1; ctx.stroke();
-      ctx.font = `${c * 0.9}px Montserrat, sans-serif`; ctx.fillStyle = TESTO; ctx.fillText(voce.v.testo, x + c * 3, y, larghezzaColonna - c * 3.4);
-      return;
-    }
-    const k = voce.k, raggio = Math.min(k.raggio * MM_PX_CSS * 1.25, altezzaRiga * 0.42);
-    const magnitudo = tema.modo === 'magnitudo';
-    if (k.a === Infinity) {
-      stella(ctx, cx, y, Math.max(raggio * 1.3, c * 0.6));
-      ctx.fillStyle = magnitudo ? k.colore : '#94a3b8'; ctx.strokeStyle = TESTO; ctx.lineWidth = 0.2; ctx.fill(); ctx.stroke();
-    } else if (magnitudo) pallino(ctx, cx, y, raggio, '#fff', k.colore, TESTO);
-    else pallino(ctx, cx, y, raggio, '#f8fafc', '#94a3b8', SOFFOCATO);
-    ctx.font = `${c * 0.95}px Montserrat, sans-serif`; ctx.fillStyle = TESTO;
-    ctx.fillText(etichettaClasse(k), x + c * 2.8, y, larghezzaColonna - c * 3.2);
-  });
-}
-
-const RIGA_LEGENDA = 2.2; // altezza di una riga della legenda sulla mappa, in corpi
-const altezzaLegenda = (c, tema, contorni) => c * (2 * 1 + 2 + RIGA_LEGENDA * (CLASSI_MAGNITUDO.length + (tema.modo === 'magnitudo' ? 0 : tema.voci.length + 1) + (contorni ? contorni.voci.length + 2 : 0)));
-
 // Elenco degli eventi più forti: magnitudo in una pillola colorata, luogo e data; tante righe quante ne stanno
 function pannelloTop(ctx, u, c, r, d) {
   carta(ctx, u, r.x, r.y, r.w, r.h, c * 0.8);
@@ -293,30 +240,10 @@ function disegnaPiede(ctx, g, opzioni, data) {
   colonna(col2, b + wCol + gap, false);
 }
 
-// Barra di scala compatta nell'angolo in basso a sinistra della mappa
-function disegnaScala(ctx, u, c, m, vista) {
-  const reale = scalaDaZoom(vista.zoom, vista.centro.lat);
-  const b = barraScala(reale, 60);
-  const h = c * 3.4, margine = c * 1.3;
-  const x = m.x + margine, y = m.y + m.altezza - margine - h;
-  carta(ctx, u, x, y, b.mm + c * 8, h, c * 0.7);
-  const bx = x + c * 1.2, by = y + c * 1.5, sp = c * 0.5, segmenti = 4;
-  for (let i = 0; i < segmenti; i++) { ctx.fillStyle = i % 2 ? '#fff' : TESTO; ctx.fillRect(bx + i * b.mm / segmenti, by, b.mm / segmenti, sp); }
-  ctx.strokeStyle = TESTO; ctx.lineWidth = 0.15; ctx.strokeRect(bx, by, b.mm, sp);
-  ctx.fillStyle = TESTO; ctx.font = `${c * 0.8}px Montserrat, sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
-  const km = b.metri >= 1000, div = km ? 1000 : 1;
-  ctx.fillText('0', bx, by - c * 0.2);
-  ctx.fillText(`${(b.metri / div).toLocaleString(localeIntl())} ${km ? 'km' : 'm'}`, bx + b.mm, by - c * 0.2);
-  ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.fillStyle = SOFFOCATO; ctx.font = `bold ${c * 0.85}px Montserrat, sans-serif`;
-  const cifre = 10 ** (Math.floor(Math.log10(reale)) - 1);
-  ctx.fillText(`1:${(Math.round(reale / cifre) * cifre).toLocaleString(localeIntl())}`, bx, by + sp + c * 0.9);
-  return y; // bordo alto della scala: la legenda si appoggia sopra
-}
-
 // Disegna un layout a pannelli sulla pagina `canvas` (stessa interfaccia di disegnaPoster)
 export function disegnaPannelli(canvas, opzioni) {
   const { pagina, formato, direzione, layout, titolo, sottotitolo, logo, data, mappa, vista } = opzioni;
-  const el = { legenda: true, scala: true, rosa: true, griglia: true, ml: true, elenco: true, ...opzioni.elementi };
+  const el = { legenda: true, scala: true, rosa: true, griglia: true, ml: true, elenco: true, minimappa: true, ...opzioni.elementi };
   const d = { ...DATI_VUOTI, ...opzioni.dati };
   const g = geometriaLayout(layout, formato, direzione);
   const { c, L, A, mappa: m } = g;
@@ -338,17 +265,7 @@ export function disegnaPannelli(canvas, opzioni) {
   disegnaStelle(ctx, m, proj, opzioni.stelle ?? [], vista.zoom, c);
   if (el.ml) disegnaMl(ctx, m, proj, opzioni.forti ?? [], vista.zoom, c);
   if (el.rosa) roseDeiVenti(ctx, u, m.x + m.larghezza - c * 1.3 - c * 2.6, m.y + c * 1.3 + c * 4, c * 1.9);
-  const sopraScala = el.scala ? disegnaScala(ctx, u, c, m, vista) : m.y + m.altezza - c * 1.3;
-  if (el.legenda) {
-    const tema = scalaTema(), contorni = legendaContorni(opzioni.evento);
-    let w = c * 17.5, h = altezzaLegenda(c, tema, contorni);
-    const disponibile = sopraScala - c * 0.9 - (m.y + c * 1.3);
-    if (h > disponibile) { // con i contorni ShakeMap la colonna è troppo alta: due colonne
-      const nBase = CLASSI_MAGNITUDO.length + (tema.modo === 'magnitudo' ? 0 : tema.voci.length + 1);
-      w = c * 33; h = c * (4 + RIGA_LEGENDA * Math.max(nBase, contorni ? contorni.voci.length + 2 : 0));
-    }
-    pannelloLegenda(ctx, u, c, { x: m.x + c * 1.3, y: sopraScala - c * 0.9 - h, w, h }, tema, contorni);
-  }
+  disegnaBlocchi(ctx, u, c, m, proj, vista, el, opzioni); // minimappa e scheda compatta di legenda e scala
 
   // Testata
   const gb = ctx.createLinearGradient(0, 0, L, 0);

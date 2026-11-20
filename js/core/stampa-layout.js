@@ -7,11 +7,11 @@ export const LAYOUT = ['poster', 'report', 'bacheca', 'murale'];
 
 // `testata` = altezza del banner in unità di corpo; `zona` = quota della larghezza riservata ai pannelli con la pagina orizzontale,
 // `zonaV` = la loro altezza (in corpi) con la pagina verticale, quanto basta al contenuto; `pannelli` = in ordine di lettura.
-// La legenda non è un pannello: sta sulla mappa, sopra la barra di scala
+// La legenda non è un pannello: sta sulla mappa in una scheda compatta (js/core/stampa-legenda.js), insieme a scala e minimappa
 const CONFIG = {
-  report: { testata: 6, zona: 0.27, zonaV: 24, pannelli: ['kpi', 'top'] },
-  bacheca: { testata: 8, zona: 0.24, zonaV: 19, pannelli: ['hero', 'serie'] },
-  murale: { testata: 14, zona: 0.26, zonaV: 30, pannelli: ['hero', 'serie', 'top'] },
+  report: { testata: 5.5, zona: 0.21, zonaV: 21, pannelli: ['kpi', 'top'] },
+  bacheca: { testata: 6.5, zona: 0.21, zonaV: 17, pannelli: ['hero', 'serie'] },
+  murale: { testata: 9, zona: 0.21, zonaV: 22, pannelli: ['hero', 'serie', 'top'] },
 };
 
 export const configLayout = layout => CONFIG[layout] ?? null;
@@ -39,16 +39,9 @@ export function geometriaLayout(layout, formato, direzione) {
     mappa = { x: b, y: alto, larghezza: L - 3 * b - zw, altezza: libero };
     zona = { x: b + mappa.larghezza + b, y: alto, w: zw, h: libero };
   } else {
-    const zh = Math.min(Math.round(c * cfg.zonaV), (libero - b) * 0.5);
+    const zh = Math.min(Math.round(c * cfg.zonaV), (libero - b) * 0.32); // la mappa ha sempre almeno i due terzi
     mappa = { x: b, y: alto, larghezza: L - 2 * b, altezza: libero - b - zh };
     zona = { x: b, y: alto + mappa.altezza + b, w: L - 2 * b, h: zh };
   }
   return { L, A, c, b, testata, orizzontale, piede, zona, pannelli: cfg.pannelli, mappa: { ...mappa, banner: testata, bordo: b } };
-}
-
-// Fascia della mappa che nessun elemento sovrappone (mm dall'angolo in alto a sinistra della mappa): la rosa dei venti sta in alto a
-// destra, legenda e scala in basso a sinistra (colonna larga 17,5 corpi), il resto della mappa è libero
-export function fasciaLiberaLayout(layout, formato, direzione) {
-  const g = geometriaLayout(layout, formato, direzione);
-  return { x0: g.c * 20, x1: g.mappa.larghezza - g.c * 7, y0: g.c, y1: g.mappa.altezza - g.c };
 }
