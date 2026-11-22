@@ -36,15 +36,14 @@ export function collegaMappe(pannello, voci) {
   const bottoni = new Map();
   let corrente = voci[0]?.id;
   // Pulsante «Terremoti in tempo reale»: riaccende (o spegne) lo strato che accendere una mappa ha spento
-  const tempoReale = el('button', 'mappe-tempo-reale');
+  const tempoReale = el('button', 'mappe-tab-btn mappe-tempo-reale');
   tempoReale.type = 'button';
   const allineaTempoReale = () => {
     const acceso = !!casella(STRATO_TEMPO_REALE)?.checked;
     tempoReale.setAttribute('aria-pressed', String(acceso));
-    tempoReale.textContent = t(acceso ? 'mappe.tempoReale.acceso' : 'mappe.tempoReale.spento');
+    tempoReale.textContent = t('mappe.tempoReale.etichetta');
     tempoReale.title = t(acceso ? 'mappe.tempoReale.spegni' : 'mappe.tempoReale.riaccendi');
   };
-  testata.append(tempoReale);
   tempoReale.addEventListener('click', () => { const c = casella(STRATO_TEMPO_REALE); if (c) { c.checked = !c.checked; c.dispatchEvent(new Event('change', { bubbles: true })); } });
 
   const mostra = () => {
@@ -70,6 +69,7 @@ export function collegaMappe(pannello, voci) {
     tab.append(b);
     if (v.nodo) corpo.append(v.nodo);
   }
+  tab.append(tempoReale); // ultimo della riga: come i tab, ma è un interruttore e non sceglie una mappa
   pannello.replaceChildren(testata, corpo);
   mostra();
   allineaTempoReale();

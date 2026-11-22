@@ -2751,8 +2751,8 @@ details.scheda-sez-evento .scheda-sez-testo { display: contents; }
 
 /* Pannello «Mappe»: un tab per mappa sotto il titolo */
 .mappe-tab { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
-.mappe-tempo-reale { display: block; margin-top: 8px; padding: 5px 12px; border: 1px dashed var(--border-ui); border-radius: 999px; background: none; color: var(--text-muted); font: inherit; font-size: var(--fs-sm, .85em); cursor: pointer; }
-.mappe-tempo-reale[aria-pressed="true"] { border-style: solid; border-color: var(--accent); color: var(--text); }
+.mappe-tempo-reale { border-style: dashed; }
+.mappe-tempo-reale[aria-pressed="true"] { border-style: solid; border-color: var(--accent); background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--text); font-weight: 700; }
 .mappe-tab-btn { padding: 4px 10px; border: 1px solid var(--border-ui); border-radius: 999px; background: none; color: var(--text-muted); font: inherit; font-size: var(--fs-sm, .85em); cursor: pointer; }
 .mappe-tab-btn[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: #1f1300; font-weight: 700; }
 #mappe-pannello .terremoti-filtri { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
