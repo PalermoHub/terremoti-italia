@@ -9,7 +9,8 @@ import { SEMILARGHEZZE_KM, SEZIONI_PREDEFINITE, coloreProfondita, fascia, riquad
 import { graficoSezione } from './grafico-sezione.js';
 import { creaInterazione } from './scheda-terremoti-dom.js';
 import { creaEvidenzaMappa } from '../core/evidenza-eventi.js';
-import { creditoIngv, elencoEventi, legendaProfondita, legendaMappa } from './terremoti-periodo.js';
+import { creditoIngv, elencoEventi, legendaProfondita, legendaMappa, vociProfonditaStampa, bloccoStampa } from './terremoti-periodo.js';
+import { registraStampaMappa } from '../core/stampa-densita.js';
 import { catturaClic } from '../core/cattura-clic.js';
 import { registraTooltipStrati } from '../core/tooltip.js';
 import { apriGuidaSezione, chiudiGuidaSezione } from './sezione-guida.js';
@@ -40,6 +41,9 @@ let controlli = null;
 let legenda = null;
 let interazione = null; // evidenza in mappa dell'evento sotto il mouse nel grafico
 let elenco = null;
+
+// Legenda per la stampa: le classi di profondità; si stampa la vista attuale (la linea di sezione), non l'Italia intera
+registraStampaMappa(() => (acceso ? { titolo: t('terremoti.sez.titolo'), sottotitolo: t('stampa.mappa.nEventi', { n: eventiTabella.length.toLocaleString(localeIntl()) }), nomeLegenda: t('terremoti.sez.titolo'), voci: vociProfonditaStampa(), rampa: null, nota: '' } : null));
 
 const el = (tag, classe, testo) => {
   const e = document.createElement(tag);
@@ -131,7 +135,7 @@ function costruisciPannello() {
   aggiorna.addEventListener('click', ricarica); // il periodo si applica qui: quello personalizzato non scatta da solo
   for (const c of [mag, larghezza]) c.nodo.addEventListener('change', ricarica);
 
-  nodo.append(el('strong', null, t('terremoti.sez.titolo')), el('p', 'uffici-nota', t('terremoti.sez.intro')), filtri, azioni, nota, messaggio, grafico, elenco.nodo, el('p', 'uffici-nota', t('terremoti.arc.utc')), creditoIngv());
+  nodo.append(el('strong', null, t('terremoti.sez.titolo')), el('p', 'uffici-nota', t('terremoti.sez.intro')), filtri, azioni, nota, messaggio, grafico, bloccoStampa(), elenco.nodo, el('p', 'uffici-nota', t('terremoti.arc.utc')), creditoIngv());
   return { nodo, predefinita: () => preset.click(), annulla: finisciTracciamento };
 }
 

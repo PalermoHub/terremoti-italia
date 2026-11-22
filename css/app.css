@@ -1712,6 +1712,7 @@ body { grid-auto-rows: 0; } /* righe in più, se ce ne sono, non rubano spazio *
 #gruppo-stampa .stampa-shakemap { display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 6px 10px 8px; border: 1px solid var(--border-ui); border-radius: var(--r-sm, 4px); }
 #gruppo-stampa .stampa-elementi label { display: flex; align-items: center; gap: 6px; padding: 0; }
 #gruppo-stampa .stampa-elementi .stampa-nota { grid-column: 1 / -1; }
+#gruppo-stampa .stampa-non-disponibile { opacity: .45; }
 #gruppo-stampa .stampa-azioni { position: sticky; bottom: -10px; display: flex; justify-content: space-between; gap: 8px; margin: 0 -14px -10px; padding: 8px 14px 10px; background: var(--surface); border-top: 1px solid var(--border-ui); }
 #gruppo-stampa button.stampa-esporta { padding: 6px 16px; font: inherit; font-weight: 600; color: var(--accent-ink); background: var(--accent); border: 1px solid var(--accent); border-radius: var(--r-sm, 4px); cursor: pointer; }
 #gruppo-stampa button.stampa-adatta, #gruppo-stampa button.stampa-centra { padding: 6px 12px; font: inherit; color: var(--text); background: var(--surface); border: 1px solid var(--border-ui); border-radius: var(--r-sm, 4px); cursor: pointer; }

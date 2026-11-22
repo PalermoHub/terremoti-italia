@@ -6,7 +6,8 @@ import { caricaTerritorio } from '../core/territorio-eventi.js';
 import { amministrazioneDi } from '../core/territorio.js';
 import { aggregaTerritorio, RAMPA_COLORI } from './scheda-mappe.js';
 import { scelta } from './terremoti-archivio.js';
-import { eventiPeriodo, pannelloPeriodo, elencoEventi, legendaMappa, el, numero } from './terremoti-periodo.js';
+import { eventiPeriodo, pannelloPeriodo, elencoEventi, legendaMappa, bloccoStampa, el, numero } from './terremoti-periodo.js';
+import { registraStampaMappa } from '../core/stampa-densita.js';
 
 // Mappa coropletica dei terremoti: le province (o le regioni) colorate per numero di eventi o per magnitudo massima, su un anno o
 // un periodo dell'archivio. Il territorio di ogni evento viene dall'indice dei comuni (core/territorio.js): gli eventi in mare non contano.
@@ -48,6 +49,21 @@ function legendaRampa() {
   return nodo;
 }
 
+// Legenda per la stampa: la rampa del conteggio o della magnitudo massima per territorio
+registraStampaMappa(() => {
+  if (!acceso || !righe.length) return null;
+  const magMax = metrica?.valore() === 1;
+  return {
+    senzaEventi: true, italiaIntera: true,
+    titolo: t('terremoti.coro.titolo'),
+    sottotitolo: t('stampa.mappa.nEventi', { n: numero(eventiMostrati.length) }),
+    nomeLegenda: t(magMax ? 'terremoti.den.magMax' : 'terremoti.den.conteggio'),
+    voci: [],
+    rampa: { colori: RAMPA_COLORI, testo: massimo > 0 ? `0 – ${numero(massimo, magMax ? 1 : 0)}${magMax ? '' : ` ${t('terremoti.den.eventi')}`}` : '' },
+    nota: '',
+  };
+});
+
 let metrica = null;
 async function carica({ periodo, mag }) {
   const mia = ++richiesta;
@@ -73,7 +89,7 @@ function creaPannello() {
   metrica = scelta(t('terremoti.den.misura'), [0, 1], 0, v => t(v ? 'terremoti.den.magMax' : 'terremoti.den.conteggio'));
   elenco = elencoEventi(() => eventiMostrati, () => mappa);
   legenda = legendaMappa('terremoti-coropletica', t('terremoti.coro.titolo'), [legendaRampa()]);
-  pannello = pannelloPeriodo({ titolo: t('terremoti.coro.titolo'), extra: [livello, metrica], alMostra: carica, ancora: [legendaRampa(), elenco.nodo] });
+  pannello = pannelloPeriodo({ titolo: t('terremoti.coro.titolo'), extra: [livello, metrica], alMostra: carica, ancora: [legendaRampa(), bloccoStampa(), elenco.nodo] });
 }
 
 const riga = p => righe.find(r => chiave(r.nome) === chiave(p[CAMPO[livelloMostrato]]));

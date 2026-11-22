@@ -14,6 +14,7 @@ import { REPORT, applicaReport } from './stampa-report.js';
 import { LAYOUT } from './stampa-layout.js';
 import { caricaMinimappa, minimappaPronta } from './stampa-minimappa.js';
 import { datiPannelli } from './stampa-dati.js';
+import { mappaPerStampa } from './stampa-densita.js';
 import { SOGLIA_ELENCO, areaMappaPoster, fasciaLiberaPoster, caricaLogo, disegnaPoster, paginaMm, sottotitoloPredefinito, zoomPerPagina } from './stampa-poster.js';
 
 const LARGHEZZA_GRANDE = 2000; // px del canvas dell'anteprima ingrandita
@@ -94,6 +95,11 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
   let logo = null;
   let ultimoFotogramma = null;
   let aperto = false;
+  // Mappe senza singoli eventi (esagoni, territori): niente simboli ML né elenco, la mappa non è fatta di eventi
+  const notaMappa = el('p', { className: 'stampa-nota', hidden: true });
+  const senzaEventi = () => !!mappaPerStampa()?.senzaEventi;
+  const elementiEffettivi = () => (senzaEventi() ? { ...stato.elementi, ml: false, elenco: false } : stato.elementi);
+  let titoliDaMappa = false; // titolo e sottotitolo scritti da una mappa del tab «Mappe»: si tolgono quando non c'è più
 
   // Area della mappa in cui sta il riquadro: quella libera accanto al pannello (a destra del pannello sul desktop, sopra il foglio
   // basso sul telefono), così riquadro e maniglia non finiscono mai sotto il pannello
@@ -233,7 +239,7 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
       pagina, formato: stato.formato, direzione: stato.direzione, titolo: stato.titolo || tr('stampa.poster.titoloDefault'),
       sottotitolo: sottotitoloEffettivo() || sottotitoloPredefinito(vista.centro, data),
       attribuzioni: attribuzioniUniche([...document.querySelectorAll('#mappa .maplibregl-ctrl-attrib-inner')].map(a => a.textContent)),
-      logo, data, protezioneCivile: layerPcAttivo(map), elementi: stato.elementi, evento: eventoScelto(), stelle: stelleDaEventi(), forti: fortiDaEventi(), soglia: stato.soglia, scheda: schedaDaEvento(), layout: stato.layout, dati: stato.layout === 'poster' ? null : datiPannelli(eventi()), minimappa: minimappaPronta(), mappa: { immagine: ultimoFotogramma, ritaglio }, vista,
+      logo, data, protezioneCivile: layerPcAttivo(map), elementi: elementiEffettivi(), evento: eventoScelto(), stelle: stelleDaEventi(), forti: fortiDaEventi(), soglia: stato.soglia, scheda: schedaDaEvento(), layout: stato.layout, dati: stato.layout === 'poster' ? null : datiPannelli(eventi()), densita: mappaPerStampa(), minimappa: minimappaPronta(), mappa: { immagine: ultimoFotogramma, ritaglio }, vista,
     });
   }
   async function aggiornaAnteprima(nuovoFotogramma = true) {
@@ -281,7 +287,7 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
   campoSoloPoster.push(sottotitolo, elementi);
   // Layout della stampa: quello classico (mappa a tutta pagina) o uno a pannelli; cambia l'area della mappa, quindi il riquadro e,
   // se c'è un report, l'inquadratura dell'Italia
-  const sceltaLayout = sceltaDa('stampa-layout', tr('stampa.layout'), LAYOUT.map(k => [k, tr(`stampa.layout.${k}`)]), stato.layout, v => { stato.layout = v; dopoCambioProporzione(); if (chiaveReport) inquadraReport(); });
+  const sceltaLayout = sceltaDa('stampa-layout', tr('stampa.layout'), LAYOUT.map(k => [k, tr(`stampa.layout.${k}`)]), stato.layout, v => { stato.layout = v; dopoCambioProporzione(); reinquadra(); });
   campoSoloPoster.push(sceltaLayout);
   const aggiornaVisibilita = () => campoSoloPoster.forEach(n => { n.hidden = stato.uscita === 'stampa'; });
   // Risoluzione di uscita: la dimensione in pixel dell'immagine; il dispositivo ha un limite alla cattura, che qui si dichiara
@@ -312,6 +318,7 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
   };
   // Stelle del poster: gli eventi in elenco con magnitudo da SOGLIA_STELLA, col colore che hanno in mappa nel modo «Tematizza per» in corso
   const stelleDaEventi = () => {
+    if (senzaEventi()) return []; // esagoni e territori non hanno cerchi né stelle degli eventi
     const colore = coloreEvento();
     return eventi().filter(p => p.mag >= SOGLIA_STELLA && Number.isFinite(p.lon) && Number.isFinite(p.lat)).map(p => ({ lon: p.lon, lat: p.lat, colore: colore(p) }));
   };
@@ -322,6 +329,7 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
   };
   // Eventi da SOGLIA_ELENCO in su: la magnitudo scritta nel simbolo e l'elenco del poster (il poster tiene solo quelli dentro l'area stampata)
   const fortiDaEventi = () => {
+    if (senzaEventi()) return [];
     const colore = coloreEvento();
     return eventi().filter(p => p.mag >= stato.soglia && Number.isFinite(p.lon) && Number.isFinite(p.lat))
       .map(p => ({ id: String(p.id), lon: p.lon, lat: p.lat, mag: p.mag, ts: p.ts, luogo: p.luogo || '', colore: colore(p) }));
@@ -463,7 +471,7 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
     const r = stato.riquadro;
     const area = areaMappaPoster(stato.formato, stato.direzione, stato.layout);
     if (!limitiOriginali) { limitiOriginali = map.getMaxBounds(); map.setMaxBounds(null); }
-    const f = fasciaLiberaPoster(stato.formato, stato.direzione, stato.layout);
+    const f = fasciaLiberaPoster(stato.formato, stato.direzione, stato.layout, mappaPerStampa());
     const k = r.w / area.larghezza; // px del riquadro per mm di poster
     // Zoom e centro calcolati sulla proiezione Mercator: l'Italia deve stare dentro la fascia libera [f] del riquadro
     const [[ovest, sud], [est, nord]] = VISTA_ITALIA;
@@ -490,6 +498,14 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
     await attendiEventi(giro);
     if (giro === giroReport && aperto) accendiContorniReport();
   };
+  // Mappe che coprono tutta l'Italia: l'Italia intera, centrata in verticale (e in orizzontale) nella fascia libera, qualunque sia il formato
+  const inquadraDensita = async () => {
+    const giro = ++giroReport;
+    const { VISTA_ITALIA } = await import('./config.js');
+    if (giro !== giroReport || !aperto) return;
+    if (stato.riquadro && !stato.scala) await inquadraItalia(VISTA_ITALIA, giro);
+  };
+  const reinquadra = () => { if (chiaveReport) inquadraReport(); else if (mappaPerStampa()?.italiaIntera) inquadraDensita(); };
   const applicaScelta = () => {
     const r = applicaReport(chiaveReport, scelta);
     stato.soglia = r ? r.elenco : SOGLIA_ELENCO;
@@ -518,13 +534,14 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
   radice.append( // il titolo è quello del tab, già nella sezione
     anteprima,
     el('p', { className: 'stampa-nota', textContent: tr('stampa.riquadro.nota') }),
+    notaMappa,
     sceltaReport, campiPeriodo,
     campoTitolo,
     sottotitolo,
     sceltaLayout,
     el('div', { className: 'stampa-riga' },
-      sceltaDa('stampa-formato', tr('html.stampa.formato'), Object.keys(FORMATI).map(f => [f, f]), stato.formato, v => { stato.formato = v; dopoCambioProporzione(); if (chiaveReport) inquadraReport(); }),
-      sceltaDa('stampa-direzione', tr('html.stampa.orient'), [['landscape', tr('stampa.orizzontale')], ['portrait', tr('stampa.verticale')]], stato.direzione, v => { stato.direzione = v; dopoCambioProporzione(); if (chiaveReport) inquadraReport(); })),
+      sceltaDa('stampa-formato', tr('html.stampa.formato'), Object.keys(FORMATI).map(f => [f, f]), stato.formato, v => { stato.formato = v; dopoCambioProporzione(); reinquadra(); }),
+      sceltaDa('stampa-direzione', tr('html.stampa.orient'), [['landscape', tr('stampa.orizzontale')], ['portrait', tr('stampa.verticale')]], stato.direzione, v => { stato.direzione = v; dopoCambioProporzione(); reinquadra(); })),
     el('div', { className: 'stampa-riga' },
       sceltaDa('stampa-uscita', tr('html.stampa.uscita'), ['png', 'jpg', 'pdf', 'stampa'].map(v => [v, tr(`stampa.uscita.${v}`)]), stato.uscita, v => { stato.uscita = v; dopoCambioProporzione(); }),
       sceltaDa('stampa-scala', tr('html.stampa.scala'), [['', tr('stampa.vistaAttuale')], ...SCALE_STAMPA.map(n => [String(n), tr('stampa.opzioneScala', { n: n.toLocaleString(localeIntl()) })])], '', v => { stato.scala = +v || null; if (stato.scala) { adattaFormatoAScala(); stato.riquadro = adattaProporzione(stato.riquadro, proporzione(), vista()); adattaAScala(); portaInVista(); aggiornaRisoluzione(); } else { riquadro.classList.remove('a-scala'); stato.riquadro = riquadroIniziale(vista(), proporzione()); posiziona(); } riempiEventi(); aggiornaAnteprima(false); })),
@@ -565,13 +582,45 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
       const comuni = { formato: stato.formato, direzione: stato.direzione, scala: stato.scala, centro, zoom, titolo: stato.titolo };
       statoEsporta.hidden = true;
       const riuscita = await conAvvisoStampa(tr('avviso.stampaInCorso'), () => stato.uscita === 'stampa' ? stampaFoglio(map, comuni)
-        : esportaFile(map, { ...comuni, uscita: stato.uscita, dpi: stato.dpi, titolo: stato.titolo || tr('stampa.poster.titoloDefault'), sottotitolo: sottotitoloEffettivo(), elementi: stato.elementi, evento: eventoScelto(), stelle: stelleDaEventi(), forti: fortiDaEventi(), soglia: stato.soglia, scheda: schedaDaEvento(), layout: stato.layout, dati: stato.layout === 'poster' ? null : datiPannelli(eventi()) }));
+        : esportaFile(map, { ...comuni, uscita: stato.uscita, dpi: stato.dpi, titolo: stato.titolo || tr('stampa.poster.titoloDefault'), sottotitolo: sottotitoloEffettivo(), elementi: elementiEffettivi(), evento: eventoScelto(), stelle: stelleDaEventi(), forti: fortiDaEventi(), soglia: stato.soglia, scheda: schedaDaEvento(), layout: stato.layout, dati: stato.layout === 'poster' ? null : datiPannelli(eventi()), densita: mappaPerStampa() }));
       statoEsporta.hidden = riuscita !== false; // cattura o scrittura fallite (di solito immagine troppo grande per il dispositivo)
     } finally { stato.occupato = false; esporta.disabled = false; esporta.textContent = etichetta; }
   });
 
   // Contorni accesi o spenti da altrove (scheda, chip, link): il pannello si riallinea e l'anteprima attende l'arrivo delle linee
   const suContorni = () => { riempiEventi(); aggiornaEvidenza(); setTimeout(() => aggiornaAnteprima(), 1400); };
+
+  // Con una mappa del tab «Mappe» accesa la stampa parte da quella: layout poster, titolo e sottotitolo della mappa (modificabili),
+  // e si spengono i comandi che riguardano solo i terremoti in tempo reale (report, layout a pannelli, ShakeMap, scheda evento, ML, elenco);
+  // senza mappa, i testi scritti dalla mappa tornano vuoti e i comandi si riaccendono
+  const comandiTempoReale = () => [sceltaReport, campiPeriodo, sceltaLayout, shake, campoScheda,
+    ...[...elementi.querySelectorAll('input')].filter((_, i) => ['ml', 'elenco'].includes(OPZIONI_ELEMENTI[i]))];
+  function preparaMappa() {
+    const d = mappaPerStampa();
+    const campoT = campoTitolo.querySelector('input'), campoS = sottotitolo.querySelector('input');
+    for (const n of comandiTempoReale()) {
+      for (const c of (n.matches('input, select') ? [n] : n.querySelectorAll('input, select'))) c.disabled = !!d;
+      n.classList.toggle('stampa-non-disponibile', !!d);
+    }
+    notaMappa.hidden = !d;
+    if (d) {
+      notaMappa.textContent = tr('stampa.mappa.nota', { nome: d.titolo });
+      if (chiaveReport) { chiaveReport = ''; sceltaReport.querySelector('select').value = ''; campiPeriodo.hidden = true; giroReport++; spegniContorniReport(); }
+      stato.layout = 'poster'; radice.querySelector('#stampa-layout').value = 'poster';
+      stato.titolo = d.titolo; stato.sottotitolo = d.sottotitolo;
+      campoT.value = d.titolo; campoS.value = d.sottotitolo;
+      titoliDaMappa = true;
+    } else if (titoliDaMappa) {
+      stato.titolo = ''; stato.sottotitolo = '';
+      campoT.value = ''; campoS.value = '';
+      titoliDaMappa = false;
+    }
+  }
+  // Una mappa si accende o si spegne col pannello aperto: i comandi, i testi e l'anteprima la seguono
+  document.addEventListener('change', e => {
+    if (!aperto || !e.target.matches?.('input[id^="strato-"]')) return;
+    setTimeout(() => { preparaMappa(); dopoCambioProporzione(); reinquadra(); }, 80);
+  });
 
   // Il tab si apre e si chiude dal pannello di sinistra (pulsante, Esc, altro tab): qui si segue lo stato della sezione
   function imposta(apri) {
@@ -581,6 +630,7 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
     document.body.classList.toggle('stampa-pannello', apri); // su desktop nasconde legenda, minimappa, logo e scala della mappa
     aggiornaEvidenza(); // chiuso il pannello l'alone va via, i contorni restano
     if (!apri) { giroReport++; ripristinaLimiti(); spegniContorniReport(); map.off('moveend', sulMovimento); window.removeEventListener('resize', sulRidimensionamento); document.removeEventListener(EVENTO_SHAKEMAP, suContorni); return; }
+    preparaMappa();
     stato.riquadro = stato.riquadro ? adattaProporzione(stato.riquadro, proporzione(), vista()) : riquadroIniziale(vista(), proporzione());
     posiziona();
     map.on('moveend', sulMovimento);
@@ -592,6 +642,7 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
     caricaLogo().then(i => { logo = i; aggiornaAnteprima(false); });
     aggiornaAnteprima();
     radice.querySelector('#stampa-titolo').focus();
+    if (mappaPerStampa()?.italiaIntera) inquadraDensita(); // dopo il riquadro: l'Italia va centrata nella fascia libera del foglio
   }
   new MutationObserver(() => imposta(!radice.hidden)).observe(radice, { attributes: true, attributeFilter: ['hidden'] });
   imposta(!radice.hidden); // il contenuto si crea al primo clic sul tab, quando la sezione è già aperta

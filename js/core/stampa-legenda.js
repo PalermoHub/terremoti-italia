@@ -41,10 +41,27 @@ function voceChip(ctx, c, v) {
   return {
     w: c * 1.8 + ctx.measureText(v.testo).width,
     disegna(g, x, y) {
-      g.fillStyle = v.colore; g.beginPath(); g.roundRect(x, y - c * 0.35, c * 1.5, c * 0.7, c * 0.35); g.fill();
-      g.strokeStyle = 'rgba(15,23,42,.35)'; g.lineWidth = 0.1; g.stroke();
+      g.fillStyle = v.colore; g.globalAlpha = v.opacita ?? 1; g.beginPath(); g.roundRect(x, y - c * 0.35, c * 1.5, c * 0.7, c * 0.35); g.fill(); g.globalAlpha = 1;
+      g.strokeStyle = v.bordo ?? 'rgba(15,23,42,.35)'; g.lineWidth = v.bordo ? c * 0.2 : 0.1; g.stroke();
       g.font = `${c * 0.85}px ${FONT}`; g.fillStyle = TESTO; g.textAlign = 'left'; g.textBaseline = 'middle';
       g.fillText(v.testo, x + c * 1.8, y);
+    },
+  };
+}
+
+// Rampa continua (magnitudo massima per esagono): barra sfumata e intervallo
+function voceRampa(ctx, c, v) {
+  ctx.font = `${c * 0.85}px ${FONT}`;
+  const barra = c * 9;
+  return {
+    w: barra + c * 0.5 + ctx.measureText(v.testo).width,
+    disegna(g, x, y) {
+      const s = g.createLinearGradient(x, 0, x + barra, 0);
+      v.colori.forEach((k, i) => s.addColorStop(i / (v.colori.length - 1), k));
+      g.fillStyle = s; g.beginPath(); g.roundRect(x, y - c * 0.35, barra, c * 0.7, c * 0.35); g.fill();
+      g.strokeStyle = 'rgba(15,23,42,.35)'; g.lineWidth = 0.1; g.stroke();
+      g.font = `${c * 0.85}px ${FONT}`; g.fillStyle = TESTO; g.textAlign = 'left'; g.textBaseline = 'middle';
+      g.fillText(v.testo, x + barra + c * 0.5, y);
     },
   };
 }
@@ -73,10 +90,13 @@ function datiScala(c, vista) {
 }
 
 // Dispone la scheda in una larghezza massima `wMax`: ritorna larghezza, altezza e le sezioni già impaginate in righe
-function misura(ctx, c, wMax, el, tema, contorni, scala) {
+function misura(ctx, c, wMax, el, tema, contorni, scala, densita = null) {
   const pad = c * 0.9, riga = c * 1.9, gap = c * 1.1;
   const sezioni = [];
-  if (el.legenda) {
+  if (el.legenda && densita) { // mappa a esagoni: la legenda è quella delle sue classi, non quella delle magnitudo
+    const voci = [...densita.voci.map(v => voceChip(ctx, c, v)), ...(densita.rampa ? [voceRampa(ctx, c, densita.rampa)] : [])];
+    sezioni.push({ titolo: densita.nomeLegenda, voci, nota: densita.nota });
+  } else if (el.legenda) {
     sezioni.push({ titolo: tr('terremoti.ev.magnitudo'), voci: CLASSI_MAGNITUDO.map(k => voceClasse(ctx, c, k, tema.modo === 'magnitudo')) });
     if (tema.modo !== 'magnitudo' && tema.voci.length) sezioni.push({ titolo: tema.nome, voci: tema.voci.map(v => voceChip(ctx, c, v)) });
     if (contorni) sezioni.push({ titolo: contorni.titolo, voci: contorni.voci.map(v => voceLinea(ctx, c, v)), nota: contorni.evento.riga1 });
@@ -109,11 +129,11 @@ function misura(ctx, c, wMax, el, tema, contorni, scala) {
 }
 
 // Altezza che la scheda occupa in fondo alla mappa (serve all'inquadratura per non coprire gli eventi)
-export function altezzaBlocchiBassi(c, wMax, el = { legenda: true, scala: true }) {
+export function altezzaBlocchiBassi(c, wMax, el = { legenda: true, scala: true }, densita = null) {
   if (typeof document === 'undefined') return c * 10;
   try {
     const ctx = document.createElement('canvas').getContext('2d');
-    return misura(ctx, c, wMax, el, scalaTema(), legendaContorni(null), el.scala ? SCALA_DI_PROVA : null).h;
+    return misura(ctx, c, wMax, el, scalaTema(), legendaContorni(null), el.scala ? SCALA_DI_PROVA : null, densita).h;
   } catch { return c * 10; }
 }
 
@@ -122,7 +142,7 @@ export const larghezzaMassimaLegenda = (mappaL, c, riservaDestra = 0) => Math.mi
 
 // Disegna minimappa e scheda sulla mappa `m` ({ x, y, larghezza, altezza }); ritorna i riquadri occupati
 // `proj` = proiettore della vista, `el` = elementi accesi, `evento` = evento dei contorni ShakeMap, `riservaDestra` = fascia a destra già occupata
-export function disegnaBlocchi(ctx, u, c, m, proj, vista, el, { evento, minimappa }, riservaDestra = 0) {
+export function disegnaBlocchi(ctx, u, c, m, proj, vista, el, { evento, minimappa, densita = null }, riservaDestra = 0) {
   const occupati = [];
   const margine = c * 1.3;
   if (el.minimappa !== false) {
@@ -133,7 +153,7 @@ export function disegnaBlocchi(ctx, u, c, m, proj, vista, el, { evento, minimapp
   }
   if (!el.legenda && !el.scala) return occupati;
   const scala = el.scala ? datiScala(c, vista) : null;
-  const mis = misura(ctx, c, larghezzaMassimaLegenda(m.larghezza, c, riservaDestra), el, el.legenda ? scalaTema() : { modo: '', voci: [] }, el.legenda ? legendaContorni(evento) : null, scala);
+  const mis = misura(ctx, c, larghezzaMassimaLegenda(m.larghezza, c, riservaDestra), el, el.legenda ? scalaTema() : { modo: '', voci: [] }, el.legenda && !densita ? legendaContorni(evento) : null, scala, densita);
   const x = m.x + margine, y = m.y + m.altezza - margine - mis.h;
   carta(ctx, u, x, y, mis.w, mis.h, c * 0.8);
   occupati.push({ x, y, w: mis.w, h: mis.h });

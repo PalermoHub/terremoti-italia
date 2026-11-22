@@ -2,7 +2,7 @@
 // per territorio) in un posto solo, un tab per mappa. Ogni mappa è uno strato: scegliere il tab lo accende, accendere lo
 // strato dalla lista dei layer apre il pannello su quel tab. Le mappe si escludono a vicenda: accenderne una spegne le altre,
 // così non restano in vista i dati della precedente, e spegne anche i terremoti in tempo reale (che l'utente può riaccendere
-// dalla lista dei layer, anche con una mappa accesa). Si chiude con la X (gli strati restano accesi).
+// dalla lista dei layer, anche con una mappa accesa). Si chiude con la X: le mappe si spengono e tornano i terremoti in tempo reale.
 import { t } from './i18n.js';
 import { el } from './scheda-disegno.js';
 
@@ -73,7 +73,12 @@ export function collegaMappe(pannello, voci) {
   pannello.replaceChildren(testata, corpo);
   mostra();
   allineaTempoReale();
-  x.addEventListener('click', () => { pannello.hidden = true; });
+  // chiudere il pannello con la X chiude anche le mappe: si spengono tutte e tornano i terremoti in tempo reale
+  x.addEventListener('click', () => {
+    pannello.hidden = true;
+    for (const v of voci) spegni(v.id);
+    accendi(STRATO_TEMPO_REALE);
+  });
   // accendendo uno strato dalla lista dei layer il pannello si apre sul suo tab
   document.addEventListener('change', e => {
     if (e.target.matches?.(`#strato-${STRATO_TEMPO_REALE}`)) allineaTempoReale();

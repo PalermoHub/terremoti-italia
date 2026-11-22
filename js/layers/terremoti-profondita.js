@@ -1,10 +1,11 @@
-import { t, tl } from '../core/i18n.js';
+import { t, tl, localeIntl } from '../core/i18n.js';
 import { EVENTO_TABELLA } from '../core/tabella-dati.js';
 import { registraTooltipStrati } from '../core/tooltip.js';
 import { colonneTabellaTerremoti, modelloPopupTerremoto } from './scheda-terremoti.js';
 import { coloreProfondita, espressioneColoreProfondita } from '../core/profondita.js';
 import { creaPopupTerremoti, righeTooltip } from './terremoti-popup.js';
-import { eventiPeriodo, pannelloPeriodo, elencoEventi, legendaProfondita, legendaMappa } from './terremoti-periodo.js';
+import { eventiPeriodo, pannelloPeriodo, elencoEventi, legendaProfondita, legendaMappa, vociProfonditaStampa, bloccoStampa } from './terremoti-periodo.js';
+import { registraStampaMappa } from '../core/stampa-densita.js';
 
 // Terremoti per profondità: gli eventi di un anno o di un periodo dell'archivio, in tutta Italia, con il colore che dice la
 // profondità dell'ipocentro e la grandezza che dice la magnitudo. Spento all'avvio; non si aggiorna da solo.
@@ -21,6 +22,9 @@ let legenda = null;
 let eventi = [];
 let elenco = null;
 let richiesta = 0;
+
+// Legenda per la stampa: le classi di profondità, non le magnitudo dei terremoti in tempo reale
+registraStampaMappa(() => (acceso ? { italiaIntera: true, titolo: t('terremoti.prof.titolo'), sottotitolo: t('stampa.mappa.nEventi', { n: eventi.length.toLocaleString(localeIntl()) }), nomeLegenda: t('terremoti.prof.titolo'), voci: vociProfonditaStampa(), rampa: null, nota: '' } : null));
 const popup = creaPopupTerremoti();
 
 async function carica({ periodo, mag }) {
@@ -41,7 +45,7 @@ async function carica({ periodo, mag }) {
 function creaPannello() {
   elenco = elencoEventi(() => eventi, () => mappa);
   legenda = legendaMappa('terremoti-profondita', t('terremoti.prof.titolo'), [legendaProfondita()]);
-  pannello = pannelloPeriodo({ titolo: t('terremoti.prof.titolo'), alMostra: carica, ancora: [legendaProfondita(), elenco.nodo] });
+  pannello = pannelloPeriodo({ titolo: t('terremoti.prof.titolo'), alMostra: carica, ancora: [legendaProfondita(), bloccoStampa(), elenco.nodo] });
 }
 
 export const nodoMappa = () => pannello?.nodo ?? null;

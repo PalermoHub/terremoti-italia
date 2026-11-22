@@ -7,9 +7,10 @@ import { EVENTO_TABELLA } from '../core/tabella-dati.js';
 import { registraTooltipStrati } from '../core/tooltip.js';
 import { annoDi, avvisoCompletezza, etichettaPeriodo, ANNO_RETE_COMPLETA } from './scheda-archivio.js';
 import { RAMPA_COLORI } from './scheda-mappe.js';
-import { grigliaEsagoni, coloreClasse, proiettaPoligoni, celleInArea, eventiInCella, COLORE_VUOTO, stileClasse, anniCiviliPeriodo, durataAnni, LATI_KM, LATO_PREDEFINITO_KM, DURATA_MINIMA_GIORNI, classiAnimazione, periodoUltimiAnni, periodoTuttoArchivio } from './esagoni.js';
+import { grigliaEsagoni, coloreClasse, proiettaPoligoni, celleInArea, eventiInCella, COLORE_VUOTO, anniCiviliPeriodo, durataAnni, LATI_KM, LATO_PREDEFINITO_KM, DURATA_MINIMA_GIORNI, classiAnimazione, periodoUltimiAnni, periodoTuttoArchivio } from './esagoni.js';
+import { registraStampaMappa } from '../core/stampa-densita.js';
 import { scelta } from './terremoti-archivio.js';
-import { eventiPeriodo, pannelloPeriodo, elencoEventi, legendaMappa, el, numero } from './terremoti-periodo.js';
+import { eventiPeriodo, pannelloPeriodo, elencoEventi, legendaMappa, bloccoStampa, el, numero } from './terremoti-periodo.js';
 
 // Densità dei terremoti: esagoni equivalenti (lato 5, 10 o 20 km) colorati per classi di numero di eventi, adattive al periodo,
 // o per magnitudo massima, su un periodo dell'archivio di almeno un anno. Serve quando i cerchi sono troppi e si sovrappongono. Spento all'avvio; non si aggiorna da solo.
@@ -34,7 +35,6 @@ let richiesta = 0;
 let legenda = null; // la legenda in mappa
 let legende = []; // la legenda del pannello e quella in mappa: stesso contenuto, riscritto a ogni calcolo
 let ultimo = { classi: [], esagoniPerClasse: [], esagoniVuoti: 0, esagoniSempre: 0, anniCivili: 0, titolo: '', periodo: '' };
-let esporta = null; // controlli dell'esportazione
 let sempre = null; // casella «eventi in tutti gli anni»
 let latoMostrato = LATO_PREDEFINITO_KM;
 let area = null; // area di studio proiettata (Italia + 30 km di mare), null finché non è caricata o se il file manca
@@ -101,6 +101,28 @@ function scriviLegenda(nodo) {
 }
 const scriviLegende = () => legende.forEach(scriviLegenda);
 
+// Titolo, sottotitolo e legenda per la stampa: gli stessi numeri della legenda in mappa. Null se lo strato è spento o non ha ancora calcolato.
+registraStampaMappa(() => {
+  const u = ultimo;
+  if (!acceso || u.nEventi === undefined) return null;
+  const voci = [];
+  if (u.metrica !== 'magMax') {
+    if (u.esagoniVuoti > 0) voci.push({ colore: COLORE_VUOTO, opacita: 0.5, testo: `0 ${t('terremoti.den.eventi')} · ${t('terremoti.den.nEsagoni', { n: numero(u.esagoniVuoti) })}` });
+    u.classi.forEach((c, i) => voci.push({ colore: coloreClasse(i, u.classi.length), testo: `${etichettaClasse(c)} · ${t('terremoti.den.nEsagoni', { n: numero(u.esagoniPerClasse[i]) })}` }));
+  }
+  if (sempre?.checked && u.anniCivili > 1) voci.push({ colore: 'transparent', bordo: COLORE_SEMPRE, testo: t('terremoti.den.sempreLegenda', { anni: u.anniCivili, n: numero(u.esagoniSempre) }) });
+  const chiave = ['conteggio', 'magMax', 'tasso'].includes(u.metrica) ? u.metrica : 'conteggio';
+  return {
+    senzaEventi: true, italiaIntera: true,
+    titolo: t(`stampa.densita.titolo.${chiave}`),
+    sottotitolo: t('stampa.densita.sottotitolo', { periodo: u.periodo, km: u.km, n: numero(u.nEventi) }),
+    nomeLegenda: t(`terremoti.den.${chiave}`),
+    voci,
+    rampa: u.metrica === 'magMax' ? { colori: RAMPA_COLORI, testo: u.massimo > 0 ? `0 – ${numero(u.massimo, 1)}` : '' } : null,
+    nota: t('terremoti.den.avvertenza'),
+  };
+});
+
 let metrica = null;
 let lato = null;
 
@@ -160,9 +182,9 @@ let bottonePlay = null;
 const anniDelCarico = () => (carico ? [annoUtc(carico.periodo.da), annoUtc(carico.periodo.a)] : null);
 const numeroFinestre = () => { const a = anniDelCarico(); return a ? a[1] - a[0] + 1 - anim.finestra + 1 : 0; };
 function scriviStatoAnimazione(testo = '') {
-  if (!statoAnim) return;
-  statoAnim.textContent = testo || (carico && numeroFinestre() < 1 ? t('terremoti.den.anim.corto', { n: anim.finestra }) : '');
+  if (statoAnim) statoAnim.textContent = testo;
 }
+const troppoCorto = () => scriviStatoAnimazione(t('terremoti.den.anim.corto', { n: anim.finestra }));
 function eventiDellAnno(anno) {
   if (!carico.perAnno) {
     carico.perAnno = new Map();
@@ -187,7 +209,8 @@ function fermaAnimazione() {
   if (bottonePlay) bottonePlay.textContent = '▶';
 }
 function passoAnimazione(delta = 1) {
-  if (!carico || numeroFinestre() < 1) { scriviStatoAnimazione(); return false; }
+  if (!carico) { scriviStatoAnimazione(t('terremoti.den.anim.prima')); return false; }
+  if (numeroFinestre() < 1) { troppoCorto(); return false; }
   const prossimo = anim.k == null ? (delta > 0 ? 0 : numeroFinestre() - 1) : anim.k + delta;
   if (prossimo < 0 || prossimo >= numeroFinestre()) return false;
   mostraFinestra(prossimo);
@@ -200,7 +223,8 @@ function pausa() {
 }
 function avviaAnimazione() {
   if (!carico) { scriviStatoAnimazione(t('terremoti.den.anim.prima')); return; }
-  if (anim.k == null || anim.k >= numeroFinestre() - 1) { if (!passoAnimazione(0) && numeroFinestre() < 1) return; mostraFinestra(0); }
+  if (numeroFinestre() < 1) { troppoCorto(); return; }
+  if (anim.k == null || anim.k >= numeroFinestre() - 1) mostraFinestra(0);
   bottonePlay.textContent = '⏸';
   anim.timer = setInterval(() => { if (!passoAnimazione(1)) pausa(); }, PASSO_MS / anim.velocita);
 }
@@ -248,60 +272,6 @@ function creaAnimazione() {
   return nodo;
 }
 
-// Voci di legenda per la stampa: stesso contenuto della legenda in mappa
-function datiStampa() {
-  const u = ultimo;
-  const voci = [];
-  if (u.metrica !== 'magMax') {
-    if (u.esagoniVuoti > 0) voci.push({ colore: COLORE_VUOTO, opacita: 0.5, testo: `0 ${t('terremoti.den.eventi')} · ${t('terremoti.den.nEsagoni', { n: numero(u.esagoniVuoti) })}` });
-    u.classi.forEach((c, i) => voci.push({ ...stileClasse(i, u.classi.length), testo: `${etichettaClasse(c)} · ${t('terremoti.den.nEsagoni', { n: numero(u.esagoniPerClasse[i]) })}` }));
-  }
-  if (sempre?.checked && u.anniCivili > 1) voci.push({ bordo: COLORE_SEMPRE, testo: t('terremoti.den.sempreLegenda', { anni: u.anniCivili, n: numero(u.esagoniSempre) }) });
-  return {
-    titolo: t('terremoti.den.stampa.titolo'),
-    sottotitolo: t('terremoti.den.stampa.sottotitolo', { n: numero(u.nEventi), periodo: u.periodo, lato: u.km }),
-    legendaTitolo: t('terremoti.den.titolo'),
-    voci,
-    rampa: u.metrica === 'magMax' ? { colori: RAMPA_COLORI, testo: u.massimo > 0 ? `0 – ${numero(u.massimo, 1)}` : '' } : null,
-    comeLeggerlaTitolo: t('terremoti.den.stampa.comeLeggerlaTitolo'),
-    comeLeggerla: t('terremoti.den.stampa.comeLeggerla', { lato: u.km }),
-    creditiTitolo: t('terremoti.den.stampa.creditiTitolo'),
-    crediti: t('terremoti.den.stampa.crediti') + (u.rete ? ` ${u.rete}` : ''),
-  };
-}
-
-// Controlli dell'esportazione: formato di pagina, orientamento, tipo di file e pulsante
-function creaEsportazione() {
-  const sel = (etichetta, opzioni, predefinito) => {
-    const lab = el('label', 'terremoti-filtro');
-    const s = el('select');
-    for (const [v, testo] of opzioni) { const o = el('option', null, testo); o.value = v; s.append(o); }
-    s.value = predefinito;
-    lab.append(el('span', null, etichetta), s);
-    return { nodo: lab, valore: () => s.value };
-  };
-  const formato = sel(t('terremoti.den.stampa.formato'), ['A4', 'A3', 'A2', 'A1', 'A0'].map(f => [f, f]), 'A3');
-  const direzione = sel(t('terremoti.den.stampa.orientamento'), [['portrait', t('terremoti.den.stampa.verticale')], ['landscape', t('terremoti.den.stampa.orizzontale')]], 'portrait');
-  const uscita = sel(t('terremoti.den.stampa.file'), [['png', 'PNG'], ['pdf', 'PDF']], 'png');
-  const nodo = el('div', 'terremoti-esporta');
-  const filtri = el('div', 'terremoti-filtri');
-  filtri.append(formato.nodo, direzione.nodo, uscita.nodo);
-  const bottone = el('button', 'terremoti-archivio-btn secondario', t('terremoti.den.stampa.esporta'));
-  bottone.type = 'button';
-  const messaggio = el('p', 'uffici-nota');
-  bottone.addEventListener('click', async () => {
-    if (!mappa || !ultimo.periodo) { messaggio.textContent = t('terremoti.den.stampa.prima'); return; }
-    bottone.disabled = true;
-    messaggio.textContent = t('terremoti.den.stampa.inCorso');
-    const { esportaEsagoni } = await import('../core/stampa-esagoni.js');
-    const ok = await esportaEsagoni(mappa, { uscita: uscita.valore(), formato: formato.valore(), direzione: direzione.valore(), dati: datiStampa() });
-    messaggio.textContent = ok ? t('terremoti.den.stampa.fatto') : t('terremoti.den.stampa.errore');
-    bottone.disabled = false;
-  });
-  nodo.append(el('strong', null, t('terremoti.den.stampa.titoloBlocco')), filtri, bottone, messaggio);
-  return nodo;
-}
-
 // MapLibre rende i null delle proprietà come testo «null»
 const valore = v => (v == null || v === 'null' || v === '' ? null : Number(v));
 const data = ts => new Date(ts).toLocaleDateString(localeIntl(), { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Europe/Rome' });
@@ -342,7 +312,7 @@ function creaPannello() {
     ...[5, 10, 20].map(n => ({ id: String(n), etichetta: t('terremoti.den.preset.anni', { n }), periodo: ora => periodoUltimiAnni(n, ora) })),
     { id: 'tutto', etichetta: t('terremoti.den.preset.tutto'), periodo: ora => periodoTuttoArchivio(ora) },
   ];
-  pannello = pannelloPeriodo({ titolo: t('terremoti.den.titolo'), extra: [metrica, lato, { nodo: casella }], alMostra: carica, ancora: [legendaEsagoni(), creaAnimazione(), creaEsportazione(), elenco.nodo], minGiorni: DURATA_MINIMA_GIORNI, preset, avviso: testoRete, magPredefinita: 2 });
+  pannello = pannelloPeriodo({ titolo: t('terremoti.den.titolo'), extra: [metrica, lato, { nodo: casella }], alMostra: carica, ancora: [legendaEsagoni(), creaAnimazione(), bloccoStampa(), elenco.nodo], minGiorni: DURATA_MINIMA_GIORNI, preset, avviso: testoRete, magPredefinita: 2 });
 }
 
 export const nodoMappa = () => pannello?.nodo ?? null;

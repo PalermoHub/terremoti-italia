@@ -82,6 +82,19 @@ export function legendaProfondita() {
   return blocco;
 }
 
+// Legenda delle classi di profondità per la stampa (stesse voci della legenda in mappa)
+export const vociProfonditaStampa = () => CLASSI_PROFONDITA.map((c, i) => ({ colore: c.colore, testo: `${etichettaClasseProfondita(i)} km` }));
+
+// Blocco «Stampa la mappa» di ogni mappa del tab «Mappe»: un avviso e il pulsante che porta al pannello «Stampa» (poster, PNG e PDF fino ad A0)
+export function bloccoStampa() {
+  const nodo = el('div', 'terremoti-esporta');
+  const bottone = el('button', 'terremoti-archivio-btn secondario', t('terremoti.mappe.stampa.vai'));
+  bottone.type = 'button';
+  bottone.addEventListener('click', () => document.getElementById('btn-stampa')?.click());
+  nodo.append(el('strong', null, t('terremoti.mappe.stampa.titoloBlocco')), el('p', 'uffici-nota', t('terremoti.mappe.stampa.avviso')), bottone);
+  return nodo;
+}
+
 // Legenda in mappa di uno strato (in #legende, nascosta finché lo strato è spento): si sposta sotto lo strato con «Legende sulla mappa» spento.
 // Il suo selettore è `.lg-<id>`, da dichiarare come `legendaPannello` dello strato.
 export function legendaMappa(id, titolo, corpo) {

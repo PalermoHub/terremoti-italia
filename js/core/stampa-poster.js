@@ -143,13 +143,13 @@ export function areaMappaPoster(formato, direzione, layout = 'poster') {
 
 // Fascia centrale del poster che legenda, scala, elenco, rosa dei venti e piede lasciano libera (mm dall'angolo in alto a sinistra della mappa):
 // gli eventi dentro questa fascia non finiscono mai sotto un riquadro. Le misure replicano quelle di disegnaPoster.
-export function fasciaLiberaPoster(formato, direzione, layout = 'poster') {
+export function fasciaLiberaPoster(formato, direzione, layout = 'poster', densita = null) {
   const pannelli = layoutAPannelli(layout);
   const m = areaMappaPoster(formato, direzione, layout);
   const corpo = pannelli ? corpoLayout(paginaMm(formato, direzione).larghezza) : corpoTesto(paginaMm(formato, direzione).larghezza);
   const margine = corpo * 1.3;
   const riserva = pannelli ? 0 : larghezzaElenco(m, corpo) + corpo;
-  const basso = altezzaBlocchiBassi(corpo, larghezzaMassimaLegenda(m.larghezza, corpo, riserva)); // scheda di legenda e scala
+  const basso = altezzaBlocchiBassi(corpo, larghezzaMassimaLegenda(m.larghezza, corpo, riserva), undefined, densita); // scheda di legenda e scala
   return {
     x0: margine + corpo * LARGHEZZA_MINI + corpo, // la minimappa sta in alto a sinistra
     x1: m.larghezza - (pannelli ? corpo * 7 : margine + larghezzaElenco(m, corpo) + corpo), // rosa dei venti (o elenco) a destra
@@ -594,10 +594,10 @@ export function creaPdf(jpeg, pxL, pxA, paginaL, paginaA) {
 }
 
 export const caricaLogo = () => new Promise(risolvi => { const i = new Image(); i.onload = () => risolvi(i); i.onerror = () => risolvi(null); i.src = LOGO; });
-export const caricaImmagine = url => new Promise((risolvi, rifiuta) => { const i = new Image(); i.onload = () => risolvi(i); i.onerror = () => rifiuta(new Error('image load failed')); i.src = url; });
-export const comeBlob = (canvas, tipo, qualita) => new Promise((ok, ko) => canvas.toBlob(b => (b ? ok(b) : ko(new Error('canvas too large'))), tipo, qualita));
+const caricaImmagine = url => new Promise((risolvi, rifiuta) => { const i = new Image(); i.onload = () => risolvi(i); i.onerror = () => rifiuta(new Error('image load failed')); i.src = url; });
+const comeBlob = (canvas, tipo, qualita) => new Promise((ok, ko) => canvas.toBlob(b => (b ? ok(b) : ko(new Error('canvas too large'))), tipo, qualita));
 
-export function scarica(blob, nome) {
+function scarica(blob, nome) {
   const url = URL.createObjectURL(blob);
   const a = Object.assign(document.createElement('a'), { href: url, download: nome });
   document.body.append(a); a.click(); a.remove();
@@ -608,7 +608,7 @@ export function scarica(blob, nome) {
 // Sottotitolo di riserva: centro della mappa e data
 export const sottotitoloPredefinito = (centro, data) => tr('stampa.poster.sottotitolo', { lat: centro.lat.toFixed(3), lng: centro.lng.toFixed(3), data });
 
-export async function esportaPoster({ immagineUrl, uscita, formato, direzione, titolo, sottotitolo, elementi, evento, stelle, forti, soglia, scheda, attribuzioni, centro, zoom, protezioneCivile, layout = 'poster', dati }) {
+export async function esportaPoster({ immagineUrl, uscita, formato, direzione, titolo, sottotitolo, elementi, evento, stelle, forti, soglia, scheda, attribuzioni, centro, zoom, protezioneCivile, layout = 'poster', dati, densita = null }) {
   const pagina = paginaMm(formato, direzione);
   const area = areaMappaPoster(formato, direzione, layout);
   const mappa = await caricaImmagine(immagineUrl);
@@ -617,7 +617,7 @@ export async function esportaPoster({ immagineUrl, uscita, formato, direzione, t
   const canvas = Object.assign(document.createElement('canvas'), { width: Math.round(pagina.larghezza * k), height: Math.round(pagina.altezza * k) });
   const data = new Date().toLocaleDateString(localeIntl(), { day: 'numeric', month: 'long', year: 'numeric' });
   disegnaPoster(canvas, {
-    pagina, formato, direzione, titolo, attribuzioni, data, logo: await caricaLogo(), elementi, evento, stelle, forti, soglia, scheda, protezioneCivile, layout, dati, minimappa,
+    pagina, formato, direzione, titolo, attribuzioni, data, logo: await caricaLogo(), elementi, evento, stelle, forti, soglia, scheda, protezioneCivile, layout, dati, densita, minimappa,
     mappa: { immagine: mappa }, vista: { centro, zoom },
     sottotitolo: sottotitolo || sottotitoloPredefinito(centro, data),
   });
