@@ -3897,6 +3897,7 @@
   "stampa.el.rosa": "North arrow",
   "stampa.el.minimappa": "Italy overview map",
   "stampa.el.nota": "Frame, OpenDataSicilia logo, data source (INGV) and base-map attributions are always included.",
+  "stampa.adattaPagina": "Fit the map to the print area on the page",
   "stampa.riquadro.adatta": "Fit to view",
   "stampa.riquadro.nota": "The frame on the map is the area that gets printed: drag it, resize it from the bottom-right handle, or pan and zoom the map underneath.",
   "stampa.esporta": "Export",

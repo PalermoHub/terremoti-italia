@@ -2,7 +2,7 @@ import { t, localeIntl } from '../core/i18n.js';
 import { AREA_EVENTI } from '../core/config.js';
 import { scaricaEventiTutti, eventoDaIngv, accordionTerremoti, MAX_ELENCO } from './scheda-terremoti.js';
 import { disegnaAccordion } from '../core/scheda-disegno.js';
-import { ANNO_INIZIO, periodoValido } from './scheda-archivio.js';
+import { ANNO_INIZIO, periodoValido, etichettaPeriodo } from './scheda-archivio.js';
 import { CLASSI_PROFONDITA, etichettaClasseProfondita } from '../core/profondita.js';
 import { scelta, sceltaPeriodo, stato } from './terremoti-archivio.js';
 import { creaInterazione } from './scheda-terremoti-dom.js';
@@ -81,6 +81,9 @@ export function legendaProfondita() {
   });
   return blocco;
 }
+
+// Periodo esaminato e magnitudo minima, per il sottotitolo della stampa («2024 · M ≥ 2 · 1.234 eventi»)
+export const sottotitoloStampa = (periodo, mag, n) => [periodo ? etichettaPeriodo(periodo) : '', Number.isFinite(mag) ? `M ≥ ${numero(mag, mag % 1 ? 1 : 0)}` : '', t('stampa.mappa.nEventi', { n: numero(n) })].filter(Boolean).join(' · ');
 
 // Legenda delle classi di profondità per la stampa (stesse voci della legenda in mappa)
 export const vociProfonditaStampa = () => CLASSI_PROFONDITA.map((c, i) => ({ colore: c.colore, testo: `${etichettaClasseProfondita(i)} km` }));

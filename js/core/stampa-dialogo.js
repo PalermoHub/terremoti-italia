@@ -21,6 +21,7 @@ const LARGHEZZA_GRANDE = 2000; // px del canvas dell'anteprima ingrandita
 const LARGHEZZA_ANTEPRIMA = 640; // px del canvas dell'anteprima (CSS lo adatta al pannello)
 const LARGHEZZA_MIN_RIQUADRO = 80;
 const MARGINE_INIZIALE = 0.12;
+const MARGINE_ADATTATO = 0.02; // con «Adatta all'area di stampa» il riquadro riempie quasi tutta la parte libera della mappa
 
 // Proporzione larghezza/altezza dell'area stampata: la mappa dentro la cornice per il poster, l'area sopra i testi per il foglio
 export function aspetto(formato, direzione, uscita, layout = 'poster') {
@@ -31,13 +32,13 @@ export function aspetto(formato, direzione, uscita, layout = 'poster') {
 // Riquadro { x, y, w, h } in px dello schermo, al centro della vista e con un margine tutt'intorno
 // `vista.sinistra` (opzionale) = x da cui la mappa è libera: a sinistra c'è il pannello
 // `vista.alto` (opzionale) = y da cui la mappa è libera: sul telefono il pannello è un foglio in alto; `vista.altezza` è il limite in basso
-export function riquadroIniziale(vista, proporzione) {
+export function riquadroIniziale(vista, proporzione, margine = MARGINE_INIZIALE) {
   const sinistra = vista.sinistra ?? 0;
   const alto = vista.alto ?? 0;
   const libera = vista.larghezza - sinistra;
   const liberaA = vista.altezza - alto;
-  const maxL = libera * (1 - 2 * MARGINE_INIZIALE);
-  const maxA = liberaA * (1 - 2 * MARGINE_INIZIALE);
+  const maxL = libera * (1 - 2 * margine);
+  const maxA = liberaA * (1 - 2 * margine);
   const w = Math.min(maxL, maxA * proporzione);
   const h = w / proporzione;
   return { x: sinistra + (libera - w) / 2, y: alto + (liberaA - h) / 2, w, h };
@@ -91,7 +92,7 @@ const OPZIONI_ELEMENTI = ['legenda', 'scala', 'rosa', 'minimappa', 'griglia', 'm
 
 export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } = {}) {
   const contenitore = map.getContainer();
-  const stato = { layout: 'poster', formato: 'A4', direzione: 'landscape', uscita: 'png', dpi: 150, scala: null, titolo: '', sottotitolo: '', elementi: Object.fromEntries(OPZIONI_ELEMENTI.map(k => [k, true])), riquadro: null, occupato: false, soglia: SOGLIA_ELENCO };
+  const stato = { layout: 'poster', formato: 'A4', direzione: 'landscape', uscita: 'png', dpi: 150, scala: null, titolo: '', sottotitolo: '', elementi: Object.fromEntries(OPZIONI_ELEMENTI.map(k => [k, true])), riquadro: null, adattaPagina: false, occupato: false, soglia: SOGLIA_ELENCO };
   let logo = null;
   let ultimoFotogramma = null;
   let aperto = false;
@@ -170,6 +171,10 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
     radice.querySelector('#stampa-direzione').value = stato.direzione;
   };
   const proporzione = () => aspetto(stato.formato, stato.direzione, stato.uscita, stato.layout);
+  // Riquadro di partenza: con «Adatta all'area di stampa» il più grande che sta nella parte libera della mappa
+  const riquadroBase = () => riquadroIniziale(vista(), proporzione(), stato.adattaPagina ? MARGINE_ADATTATO : MARGINE_INIZIALE);
+  // Con l'opzione accesa (e senza scala fissa, che decide da sola l'area) il riquadro torna al massimo a ogni cambio di formato, orientamento, layout o dimensione della finestra
+  const adattaAllaPagina = () => { if (stato.adattaPagina && !stato.scala && stato.riquadro) { stato.riquadro = riquadroBase(); posiziona(); } };
 
   // — riquadro sulla mappa —
   const maniglia = el('span', { className: 'stampa-maniglia', title: tr('stampa.maniglia') });
@@ -261,7 +266,7 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
   finestraGrande.addEventListener('click', () => finestraGrande.close());
   document.body.append(finestraGrande);
   const sulMovimento = () => { adattaAScala(); riempiEventi(); aggiornaAnteprima(); };
-  const sulRidimensionamento = () => { if (aperto) { stato.riquadro = adattaProporzione(stato.riquadro, proporzione(), vista()); posiziona(); adattaAScala(); riempiEventi(); aggiornaAnteprima(); } };
+  const sulRidimensionamento = () => { if (aperto) { stato.riquadro = adattaProporzione(stato.riquadro, proporzione(), vista()); posiziona(); adattaAllaPagina(); adattaAScala(); riempiEventi(); aggiornaAnteprima(); } };
 
   // — controlli —
   const sceltaDa = (id, etichetta, opzioni, valore, suCambio) => {
@@ -274,7 +279,7 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
     input.addEventListener('input', () => suCambio(input.value.trim()));
     return el('label', { className: 'stampa-campo', htmlFor: id }, el('span', { textContent: etichetta }), input);
   };
-  const dopoCambioProporzione = () => { stato.riquadro = adattaProporzione(stato.riquadro, proporzione(), vista()); posiziona(); adattaAScala(); portaInVista(true); aggiornaVisibilita(); aggiornaRisoluzione(); riempiEventi(); aggiornaAnteprima(false); };
+  const dopoCambioProporzione = () => { stato.riquadro = adattaProporzione(stato.riquadro, proporzione(), vista()); posiziona(); adattaAllaPagina(); adattaAScala(); portaInVista(true); aggiornaVisibilita(); aggiornaRisoluzione(); riempiEventi(); aggiornaAnteprima(false); };
   const campoSoloPoster = [];
   const elementi = el('fieldset', { className: 'stampa-elementi' }, el('legend', { textContent: tr('stampa.elementi') }),
     ...OPZIONI_ELEMENTI.map(k => {
@@ -409,6 +414,13 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
   const statoEsporta = el('p', { className: 'stampa-nota stampa-errore', role: 'status', hidden: true, textContent: tr('stampa.errore') });
   const esporta = el('button', { type: 'button', className: 'stampa-esporta', textContent: tr('stampa.esporta') });
   const centra = el('button', { type: 'button', className: 'stampa-centra', textContent: tr('stampa.centra'), title: tr('stampa.centra.titolo') });
+  const casellaAdatta = el('input', { type: 'checkbox', id: 'stampa-adatta-pagina' });
+  const campoAdatta = el('label', { className: 'stampa-adatta-pagina' }, casellaAdatta, el('span', { textContent: tr('stampa.adattaPagina') }));
+  casellaAdatta.addEventListener('change', () => {
+    stato.adattaPagina = casellaAdatta.checked;
+    if (!stato.scala) { stato.riquadro = riquadroBase(); posiziona(); }
+    riempiEventi(); aggiornaAnteprima();
+  });
   const adatta = el('button', { type: 'button', className: 'stampa-adatta', textContent: tr('stampa.riquadro.adatta') });
 
   // Report periodico: periodo, magnitudo del filtro, soglia di elenco e ML e titolo; la mappa ricarica gli eventi e l'anteprima segue
@@ -544,7 +556,8 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
       sceltaDa('stampa-direzione', tr('html.stampa.orient'), [['landscape', tr('stampa.orizzontale')], ['portrait', tr('stampa.verticale')]], stato.direzione, v => { stato.direzione = v; dopoCambioProporzione(); reinquadra(); })),
     el('div', { className: 'stampa-riga' },
       sceltaDa('stampa-uscita', tr('html.stampa.uscita'), ['png', 'jpg', 'pdf', 'stampa'].map(v => [v, tr(`stampa.uscita.${v}`)]), stato.uscita, v => { stato.uscita = v; dopoCambioProporzione(); }),
-      sceltaDa('stampa-scala', tr('html.stampa.scala'), [['', tr('stampa.vistaAttuale')], ...SCALE_STAMPA.map(n => [String(n), tr('stampa.opzioneScala', { n: n.toLocaleString(localeIntl()) })])], '', v => { stato.scala = +v || null; if (stato.scala) { adattaFormatoAScala(); stato.riquadro = adattaProporzione(stato.riquadro, proporzione(), vista()); adattaAScala(); portaInVista(); aggiornaRisoluzione(); } else { riquadro.classList.remove('a-scala'); stato.riquadro = riquadroIniziale(vista(), proporzione()); posiziona(); } riempiEventi(); aggiornaAnteprima(false); })),
+      sceltaDa('stampa-scala', tr('html.stampa.scala'), [['', tr('stampa.vistaAttuale')], ...SCALE_STAMPA.map(n => [String(n), tr('stampa.opzioneScala', { n: n.toLocaleString(localeIntl()) })])], '', v => { stato.scala = +v || null; if (stato.scala) { adattaFormatoAScala(); stato.riquadro = adattaProporzione(stato.riquadro, proporzione(), vista()); adattaAScala(); portaInVista(); aggiornaRisoluzione(); } else { riquadro.classList.remove('a-scala'); stato.riquadro = riquadroBase(); posiziona(); } riempiEventi(); aggiornaAnteprima(false); })),
+    campoAdatta,
     campoRisoluzione, infoRisoluzione,
     shake,
     campoScheda, notaScheda,
@@ -568,7 +581,7 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
     stato.riquadro = dentroVista({ ...r, x: (v.sinistra ?? 0) + (v.larghezza - (v.sinistra ?? 0) - r.w) / 2, y: (v.alto ?? 0) + (v.altezza - (v.alto ?? 0) - r.h) / 2 }, v);
     posiziona(); riempiEventi(); aggiornaAnteprima();
   });
-  adatta.addEventListener('click', () => { stato.riquadro = riquadroIniziale(vista(), proporzione()); posiziona(); adattaAScala(); portaInVista(true); riempiEventi(); aggiornaAnteprima(); });
+  adatta.addEventListener('click', () => { stato.riquadro = riquadroBase(); posiziona(); adattaAScala(); portaInVista(true); riempiEventi(); aggiornaAnteprima(); });
 
   esporta.addEventListener('click', async () => {
     if (stato.occupato) return;
@@ -631,8 +644,8 @@ export function creaPannelloStampa(map, radice, bottone, { eventi = () => [] } =
     aggiornaEvidenza(); // chiuso il pannello l'alone va via, i contorni restano
     if (!apri) { giroReport++; ripristinaLimiti(); spegniContorniReport(); map.off('moveend', sulMovimento); window.removeEventListener('resize', sulRidimensionamento); document.removeEventListener(EVENTO_SHAKEMAP, suContorni); return; }
     preparaMappa();
-    stato.riquadro = stato.riquadro ? adattaProporzione(stato.riquadro, proporzione(), vista()) : riquadroIniziale(vista(), proporzione());
-    posiziona();
+    stato.riquadro = stato.riquadro ? adattaProporzione(stato.riquadro, proporzione(), vista()) : riquadroBase();
+    posiziona(); adattaAllaPagina();
     map.on('moveend', sulMovimento);
     document.addEventListener(EVENTO_SHAKEMAP, suContorni);
     if (!minimappaPronta()) caricaMinimappa().then(img => { if (img && aperto) aggiornaAnteprima(false); }); // confini dei comuni per la minimappa: si rende una volta sola

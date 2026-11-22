@@ -1,10 +1,10 @@
-import { t, tl, localeIntl } from '../core/i18n.js';
+import { t, tl } from '../core/i18n.js';
 import { EVENTO_TABELLA } from '../core/tabella-dati.js';
 import { registraTooltipStrati } from '../core/tooltip.js';
 import { colonneTabellaTerremoti, modelloPopupTerremoto } from './scheda-terremoti.js';
 import { coloreProfondita, espressioneColoreProfondita } from '../core/profondita.js';
 import { creaPopupTerremoti, righeTooltip } from './terremoti-popup.js';
-import { eventiPeriodo, pannelloPeriodo, elencoEventi, legendaProfondita, legendaMappa, vociProfonditaStampa, bloccoStampa } from './terremoti-periodo.js';
+import { eventiPeriodo, pannelloPeriodo, elencoEventi, legendaProfondita, legendaMappa, vociProfonditaStampa, sottotitoloStampa, bloccoStampa } from './terremoti-periodo.js';
 import { registraStampaMappa } from '../core/stampa-densita.js';
 
 // Terremoti per profondità: gli eventi di un anno o di un periodo dell'archivio, in tutta Italia, con il colore che dice la
@@ -20,11 +20,12 @@ let primaVolta = true;
 let pannello = null;
 let legenda = null;
 let eventi = [];
+let scelte = {}; // periodo e magnitudo dell'ultimo caricamento, per la stampa
 let elenco = null;
 let richiesta = 0;
 
 // Legenda per la stampa: le classi di profondità, non le magnitudo dei terremoti in tempo reale
-registraStampaMappa(() => (acceso ? { italiaIntera: true, titolo: t('terremoti.prof.titolo'), sottotitolo: t('stampa.mappa.nEventi', { n: eventi.length.toLocaleString(localeIntl()) }), nomeLegenda: t('terremoti.prof.titolo'), voci: vociProfonditaStampa(), rampa: null, nota: '' } : null));
+registraStampaMappa(() => (acceso ? { italiaIntera: true, titolo: t('terremoti.prof.titolo'), sottotitolo: sottotitoloStampa(scelte.periodo, scelte.mag, eventi.length), nomeLegenda: t('terremoti.prof.titolo'), voci: vociProfonditaStampa(), rampa: null, nota: '' } : null));
 const popup = creaPopupTerremoti();
 
 async function carica({ periodo, mag }) {
@@ -32,6 +33,7 @@ async function carica({ periodo, mag }) {
   const { eventi: nuovi, troncato } = await eventiPeriodo(periodo, mag);
   if (mia !== richiesta) return null;
   eventi = nuovi;
+  scelte = { periodo, mag };
   mappa?.getSource(SRC)?.setData({
     type: 'FeatureCollection',
     features: eventi.map(e => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [e.lon, e.lat] }, properties: { ...e, prof: e.prof ?? 0, colore: coloreProfondita(e.prof ?? 0) } })),

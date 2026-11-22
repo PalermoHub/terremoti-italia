@@ -3897,6 +3897,7 @@
   "stampa.el.rosa": "Rosa dei venti",
   "stampa.el.minimappa": "Minimappa dell'Italia",
   "stampa.el.nota": "Cornice, logo OpenDataSicilia, fonte dei dati (INGV) e attribuzioni delle basi cartografiche ci sono sempre.",
+  "stampa.adattaPagina": "Adatta la mappa all’area di stampa nella pagina",
   "stampa.riquadro.adatta": "Adatta alla vista",
   "stampa.riquadro.nota": "Il riquadro sulla mappa è l'area che si stampa: trascinalo, ridimensionalo dalla maniglia in basso a destra, oppure sposta e ingrandisci la mappa sotto.",
   "stampa.esporta": "Esporta",

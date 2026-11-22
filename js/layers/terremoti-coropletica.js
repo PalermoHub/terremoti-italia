@@ -6,7 +6,7 @@ import { caricaTerritorio } from '../core/territorio-eventi.js';
 import { amministrazioneDi } from '../core/territorio.js';
 import { aggregaTerritorio, RAMPA_COLORI } from './scheda-mappe.js';
 import { scelta } from './terremoti-archivio.js';
-import { eventiPeriodo, pannelloPeriodo, elencoEventi, legendaMappa, bloccoStampa, el, numero } from './terremoti-periodo.js';
+import { eventiPeriodo, pannelloPeriodo, elencoEventi, legendaMappa, sottotitoloStampa, bloccoStampa, el, numero } from './terremoti-periodo.js';
 import { registraStampaMappa } from '../core/stampa-densita.js';
 
 // Mappa coropletica dei terremoti: le province (o le regioni) colorate per numero di eventi o per magnitudo massima, su un anno o
@@ -23,6 +23,7 @@ let pannello = null;
 let livello = null;
 let righe = [];
 let eventiMostrati = [];
+let scelte = {}; // periodo e magnitudo dell'ultimo caricamento, per la stampa
 let elenco = null;
 let massimo = 0;
 let livelloMostrato = 'provincia';
@@ -56,7 +57,7 @@ registraStampaMappa(() => {
   return {
     senzaEventi: true, italiaIntera: true,
     titolo: t('terremoti.coro.titolo'),
-    sottotitolo: t('stampa.mappa.nEventi', { n: numero(eventiMostrati.length) }),
+    sottotitolo: sottotitoloStampa(scelte.periodo, scelte.mag, eventiMostrati.length),
     nomeLegenda: t(magMax ? 'terremoti.den.magMax' : 'terremoti.den.conteggio'),
     voci: [],
     rampa: { colori: RAMPA_COLORI, testo: massimo > 0 ? `0 – ${numero(massimo, magMax ? 1 : 0)}${magMax ? '' : ` ${t('terremoti.den.eventi')}`}` : '' },
@@ -74,6 +75,7 @@ async function carica({ periodo, mag }) {
   const a = aggregaTerritorio(eventi, l, amministrazioneDi, m);
   righe = a.righe;
   eventiMostrati = eventi;
+  scelte = { periodo, mag };
   massimo = a.massimo;
   livelloMostrato = l;
   applicaColori();

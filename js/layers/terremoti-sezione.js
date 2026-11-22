@@ -9,7 +9,7 @@ import { SEMILARGHEZZE_KM, SEZIONI_PREDEFINITE, coloreProfondita, fascia, riquad
 import { graficoSezione } from './grafico-sezione.js';
 import { creaInterazione } from './scheda-terremoti-dom.js';
 import { creaEvidenzaMappa } from '../core/evidenza-eventi.js';
-import { creditoIngv, elencoEventi, legendaProfondita, legendaMappa, vociProfonditaStampa, bloccoStampa } from './terremoti-periodo.js';
+import { creditoIngv, elencoEventi, legendaProfondita, legendaMappa, vociProfonditaStampa, sottotitoloStampa, bloccoStampa } from './terremoti-periodo.js';
 import { registraStampaMappa } from '../core/stampa-densita.js';
 import { catturaClic } from '../core/cattura-clic.js';
 import { registraTooltipStrati } from '../core/tooltip.js';
@@ -34,6 +34,7 @@ let acceso = false;
 let primaVolta = true;
 let richiesta = 0; // una risposta in ritardo di una richiesta precedente si scarta
 let sezione = null; // { a, b } della linea corrente
+let scelte = {}; // periodo e magnitudo dell'ultimo caricamento, per la stampa
 let eventiTabella = []; // eventi dentro la fascia, con distanza e scostamento dalla linea
 let punti = []; // punti scelti con i clic, prima che la linea sia completa
 let tracciando = false;
@@ -43,7 +44,7 @@ let interazione = null; // evidenza in mappa dell'evento sotto il mouse nel graf
 let elenco = null;
 
 // Legenda per la stampa: le classi di profondità; si stampa la vista attuale (la linea di sezione), non l'Italia intera
-registraStampaMappa(() => (acceso ? { titolo: t('terremoti.sez.titolo'), sottotitolo: t('stampa.mappa.nEventi', { n: eventiTabella.length.toLocaleString(localeIntl()) }), nomeLegenda: t('terremoti.sez.titolo'), voci: vociProfonditaStampa(), rampa: null, nota: '' } : null));
+registraStampaMappa(() => (acceso ? { titolo: t('terremoti.sez.titolo'), sottotitolo: sottotitoloStampa(scelte.periodo, scelte.mag, eventiTabella.length), nomeLegenda: t('terremoti.sez.titolo'), voci: vociProfonditaStampa(), rampa: null, nota: '' } : null));
 
 const el = (tag, classe, testo) => {
   const e = document.createElement(tag);
@@ -151,6 +152,7 @@ async function carica(periodo, magMin, semilarghezza, nota, grafico) {
   const tutti = scarico.eventi.map(f => eventoDaIngv(f, Infinity)).filter(Boolean).map(f => ({ ...f.properties, lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1] }));
   const dentro = proiettaEventi(tutti, a, b, semilarghezza);
   eventiTabella = dentro;
+  scelte = { periodo, mag: magMin };
   elenco?.aggiorna();
   document.dispatchEvent(new Event(EVENTO_TABELLA));
   const disegnati = dentro.length > MASSIMO_GRAFICO ? [...dentro].sort((p, q) => q.mag - p.mag).slice(0, MASSIMO_GRAFICO) : dentro;
