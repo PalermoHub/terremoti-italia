@@ -2,7 +2,7 @@
 export const MASSIMO_EVENTI = 5000; // per la mappa
 export const MASSIMO_TESTO = 200000; // per le serie storiche (formato testo)
 // Stesso riquadro dei limiti della mappa (js/core/config.js, LIMITI): lo verifica tests/js/config-italia.test.mjs
-export const AREA = { minlon: 5.5, minlat: 35.0, maxlon: 19.5, maxlat: 47.6 };
+export const AREA = { minlon: 4.5, minlat: 35.0, maxlon: 20.5, maxlat: 47.6 };
 const GIORNO_MS = 86400000;
 
 function numero(url, nome, predefinito) {

@@ -1,5 +1,4 @@
 // Aggregazioni degli eventi per le mappe di densità (esagoni) e coropletica (regioni, province): funzioni pure.
-import { cellaEsagonale, anelloEsagono, RAGGIO_GRIGLIA } from './scheda-archivio.js';
 
 export const METRICHE = ['conteggio', 'magMax'];
 
@@ -19,36 +18,6 @@ export function coloreRampa(norma) {
 export const RAMPA_COLORI = RAMPA;
 
 const norma = (v, massimo) => (massimo > 0 ? Math.sqrt(v / massimo) : 0);
-
-// Eventi → celle esagonali con conteggio, magnitudo massima e profondità media; `riga` è il record per la tabella
-export function grigliaConteggi(eventi, metrica = 'conteggio', raggio = RAGGIO_GRIGLIA) {
-  const celle = new Map();
-  for (const e of eventi) {
-    if (!Number.isFinite(e?.lon) || !Number.isFinite(e?.lat)) continue;
-    const { q, r } = cellaEsagonale(e.lon, e.lat, raggio);
-    const k = `${q},${r}`;
-    const c = celle.get(k) ?? { id: k, q, r, n: 0, magMax: -Infinity, sommaProf: 0, nProf: 0 };
-    c.n += 1;
-    c.magMax = Math.max(c.magMax, e.mag);
-    if (Number.isFinite(e.prof)) { c.sommaProf += e.prof; c.nProf += 1; }
-    celle.set(k, c);
-  }
-  const lista = [...celle.values()];
-  const massimo = Math.max(0, ...lista.map(c => valoreMetrica(c, metrica)));
-  const righe = lista.map(c => {
-    const anello = anelloEsagono(c.q, c.r, raggio);
-    const lon = anello.slice(0, 6).reduce((s, p) => s + p[0], 0) / 6;
-    const lat = anello.slice(0, 6).reduce((s, p) => s + p[1], 0) / 6;
-    return { id: c.id, n: c.n, magMax: c.magMax, profMedia: c.nProf ? c.sommaProf / c.nProf : null, lon, lat, anello, norma: norma(valoreMetrica(c, metrica), massimo) };
-  });
-  return {
-    righe, massimo,
-    geojson: {
-      type: 'FeatureCollection',
-      features: righe.map(c => ({ type: 'Feature', geometry: { type: 'Polygon', coordinates: [c.anello] }, properties: { id: c.id, n: c.n, magMax: c.magMax, profMedia: c.profMedia, colore: coloreRampa(c.norma), opacita: 0.25 + 0.6 * c.norma } })),
-    },
-  };
-}
 
 // Eventi → un record per regione o provincia (`livello` = 'regione' | 'provincia'); `di(evento)` dà il territorio
 // ({ regione, provincia }). Gli eventi senza territorio (in mare) non entrano: se ne dà il conto in `fuori`.

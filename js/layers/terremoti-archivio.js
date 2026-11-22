@@ -33,9 +33,15 @@ export function scelta(etichetta, valori, predefinito, testoValore = String) {
 }
 
 // Scelta dell'anno o di un periodo personalizzato (stesso calendario degli altri filtri): valore = { da, a } in UTC.
-export function sceltaPeriodo(etichetta, anni, predefinito) {
+// `preset` = scorciatoie in cima alla lista: [{ id, etichetta, periodo: adesso => ({ da, a }) }]; scelto uno, il periodo si calcola subito.
+export function sceltaPeriodo(etichetta, anni, predefinito, preset = []) {
   const lab = el('label', 'terremoti-filtro');
   const sel = el('select');
+  for (const p of preset) {
+    const o = el('option', null, p.etichetta);
+    o.value = `preset:${p.id}`;
+    sel.append(o);
+  }
   for (const a of anni) {
     const o = el('option', null, String(a));
     o.value = String(a);
@@ -47,10 +53,11 @@ export function sceltaPeriodo(etichetta, anni, predefinito) {
   const nota = el('small', 'terremoti-periodo-nota');
   let periodo = periodoAnno(predefinito);
   let custom = false;
+  let presetScelto = null;
   const allinea = () => {
-    sel.value = custom ? 'personalizzato' : String(annoDi(periodo));
-    nota.hidden = !custom;
-    nota.textContent = custom ? etichettaPeriodo(periodo) : '';
+    sel.value = presetScelto ? `preset:${presetScelto}` : custom ? 'personalizzato' : String(annoDi(periodo));
+    nota.hidden = !(custom || presetScelto);
+    nota.textContent = custom || presetScelto ? etichettaPeriodo(periodo) : '';
   };
   sel.addEventListener('change', () => {
     if (sel.value === 'personalizzato') {
@@ -58,18 +65,18 @@ export function sceltaPeriodo(etichetta, anni, predefinito) {
         da: periodo.da,
         a: periodo.a,
         utc: true,
-        alApplica: p => { periodo = p; custom = true; allinea(); },
+        alApplica: p => { periodo = p; custom = true; presetScelto = null; allinea(); },
         alChiudi: allinea,
       });
       return;
     }
-    periodo = periodoAnno(Number(sel.value));
-    custom = false;
+    const p = preset.find(x => `preset:${x.id}` === sel.value);
+    if (p) { periodo = p.periodo(Date.now()); presetScelto = p.id; custom = true; } else { periodo = periodoAnno(Number(sel.value)); presetScelto = null; custom = false; }
     allinea();
   });
   allinea();
   lab.append(el('span', null, etichetta), sel, nota);
-  return { nodo: lab, valore: () => periodo, personalizzato: () => custom, imposta: p => { periodo = p; custom = !periodoAnnoIntero(p); allinea(); } };
+  return { nodo: lab, valore: () => periodo, personalizzato: () => custom, imposta: p => { periodo = p; presetScelto = null; custom = !periodoAnnoIntero(p); allinea(); } };
 }
 
 // Scelta della classe di profondità: valore = { chiave, min, max } (min/max null = nessun limite)

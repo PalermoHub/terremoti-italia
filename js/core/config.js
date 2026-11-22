@@ -18,7 +18,7 @@ export const ZOOM = window.matchMedia('(max-width: 768px)').matches ? 4.6 : 5.4;
 // Limiti di spostamento: l'Italia con un largo margine (in verticale ampio: sul telefono la mappa è alta e le fasce in basso coprono il Sud, che va poter portare in vista): il margine fissa anche quanto ci si può allontanare (a mappa larga 1440 px serve circa 32° di longitudine).
 export const LIMITI = [[-6.0, 10.0], [30.0, 60.0]];
 // Riquadro degli eventi (terremoti): l'Italia e i mari vicini; deve coincidere con AREA di server/terremoti.js (lo verifica un test).
-export const AREA_EVENTI = { minlon: 5.5, minlat: 35.0, maxlon: 19.5, maxlat: 47.6 };
+export const AREA_EVENTI = { minlon: 4.5, minlat: 35.0, maxlon: 20.5, maxlat: 47.6 };
 export const ZOOM_SLIDER = [4, 16];
 // Al clic sulla mappa (scheda dell'evento) la vista si avvicina almeno a questo zoom, senza mai allontanarsi (livello regionale: i terremoti sono spesso in mare).
 export const ZOOM_SCHEDA = 8;

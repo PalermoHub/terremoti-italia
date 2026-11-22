@@ -33,13 +33,15 @@ export async function eventiPeriodo(periodo, magMin, area = AREA_EVENTI) {
 
 // Pannello della legenda: `alMostra({ periodo, mag })` scarica e disegna, e risponde { n, troncato } (null se superata da una richiesta più recente).
 // `extra` = altre scelte (come `scelta`: { nodo, valore }) che stanno accanto a periodo e magnitudo.
-export function pannelloPeriodo({ titolo, extra = [], alMostra, ancora = [] }) {
+// `minGiorni` = durata minima del periodo; `preset` = scorciatoie del menu del periodo (vedi sceltaPeriodo);
+// `magPredefinita` = magnitudo minima iniziale; `avviso(periodo, mag)` = nota in più sotto il risultato (testo, o '' per nessuna).
+export function pannelloPeriodo({ titolo, extra = [], alMostra, ancora = [], minGiorni = 0, preset = [], avviso = null, magPredefinita = MAG_PREDEFINITA }) {
   const nodo = el('div', 'terremoti-pannello terremoti-archivio');
   const { messaggio, esegui } = stato();
   const adesso = new Date().getUTCFullYear();
   const anni = Array.from({ length: adesso - ANNO_INIZIO + 1 }, (_, i) => adesso - i);
-  const periodo = sceltaPeriodo(t('terremoti.arc.anno'), anni, adesso - 1);
-  const mag = scelta(t('terremoti.arc.magMin'), MAGNITUDO, MAG_PREDEFINITA, m => `≥ ${numero(m, m % 1 ? 1 : 0)}`);
+  const periodo = sceltaPeriodo(t('terremoti.arc.anno'), anni, adesso - 1, preset);
+  const mag = scelta(t('terremoti.arc.magMin'), MAGNITUDO, magPredefinita, m => `≥ ${numero(m, m % 1 ? 1 : 0)}`);
   const filtri = el('div', 'terremoti-filtri');
   filtri.append(periodo.nodo, mag.nodo, ...extra.map(e => e.nodo));
   const bottone = el('button', 'terremoti-archivio-btn', t('terremoti.arc.mostraBtn'));
@@ -47,19 +49,24 @@ export function pannelloPeriodo({ titolo, extra = [], alMostra, ancora = [] }) {
   const nota = el('p', 'uffici-nota');
   const mostra = () => {
     const p = periodo.valore();
-    const errore = periodoValido(p);
+    const errore = periodoValido(p, Date.now(), minGiorni);
     if (errore) { messaggio.textContent = t(errore); return; }
     esegui(nodo, async () => {
       const r = await alMostra({ periodo: p, mag: mag.valore() });
       if (!r) return;
       nota.textContent = r.n
-        ? [t('terremoti.per.nota', { n: numero(r.n), da: giorno(p.da), a: giorno(p.a), mag: numero(mag.valore(), mag.valore() % 1 ? 1 : 0) }), r.troncato ? t('terremoti.per.troncato') : '', r.testo ?? ''].filter(Boolean).join(' ')
+        ? [t('terremoti.per.nota', { n: numero(r.n), da: giorno(p.da), a: giorno(p.a), mag: numero(mag.valore(), mag.valore() % 1 ? 1 : 0) }), r.troncato ? t('terremoti.per.troncato') : '', r.testo ?? '', avviso?.(p, mag.valore()) ?? ''].filter(Boolean).join(' ')
         : t('terremoti.arc.nessunEvento');
     }, mostra);
   };
   bottone.addEventListener('click', mostra);
   nodo.append(el('strong', null, titolo), filtri, bottone, nota, messaggio, ...ancora, el('p', 'uffici-nota', t('terremoti.arc.utc')), creditoIngv());
-  return { nodo, mostra };
+  // `stato()` = scelte correnti; `imposta({ periodo, mag })` le riporta nei menu (poi `mostra()` le applica)
+  return {
+    nodo, mostra,
+    stato: () => ({ periodo: periodo.valore(), mag: mag.valore() }),
+    imposta: ({ periodo: p, mag: m }) => { if (p) periodo.imposta(p); if (m != null) mag.imposta(m); },
+  };
 }
 
 // Righe di legenda dei colori per profondità: una riga per classe, con il campione e l'intervallo in km

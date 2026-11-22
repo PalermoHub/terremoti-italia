@@ -594,10 +594,10 @@ export function creaPdf(jpeg, pxL, pxA, paginaL, paginaA) {
 }
 
 export const caricaLogo = () => new Promise(risolvi => { const i = new Image(); i.onload = () => risolvi(i); i.onerror = () => risolvi(null); i.src = LOGO; });
-const caricaImmagine = url => new Promise((risolvi, rifiuta) => { const i = new Image(); i.onload = () => risolvi(i); i.onerror = () => rifiuta(new Error('image load failed')); i.src = url; });
-const comeBlob = (canvas, tipo, qualita) => new Promise((ok, ko) => canvas.toBlob(b => (b ? ok(b) : ko(new Error('canvas too large'))), tipo, qualita));
+export const caricaImmagine = url => new Promise((risolvi, rifiuta) => { const i = new Image(); i.onload = () => risolvi(i); i.onerror = () => rifiuta(new Error('image load failed')); i.src = url; });
+export const comeBlob = (canvas, tipo, qualita) => new Promise((ok, ko) => canvas.toBlob(b => (b ? ok(b) : ko(new Error('canvas too large'))), tipo, qualita));
 
-function scarica(blob, nome) {
+export function scarica(blob, nome) {
   const url = URL.createObjectURL(blob);
   const a = Object.assign(document.createElement('a'), { href: url, download: nome });
   document.body.append(a); a.click(); a.remove();

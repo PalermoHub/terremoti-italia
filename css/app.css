@@ -2186,6 +2186,7 @@ a.scheda-badge-tinta:hover, a.scheda-badge-tinta:focus-visible { background: col
 .terremoti-filtri { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 6px 0; }
 .terremoti-filtro { display: flex; flex-direction: column; gap: 2px; min-width: 0; padding: 0; font-size: var(--fs-xs); color: var(--text-muted); }
 .terremoti-filtro select { margin: 0; padding: 5px; }
+.terremoti-filtro.terremoti-casella { flex-direction: row; align-items: center; gap: 6px; grid-column: 1 / -1; }
 .terremoti-periodo-nota { display: block; font-size: var(--fs-xs); line-height: 1.2; color: var(--text-muted); white-space: normal; }
 .terremoti-periodo-nota[hidden] { display: none; }
 .terremoti-filtri > .terremoti-filtro-unita { grid-column: 1 / -1; }
@@ -2750,6 +2751,8 @@ details.scheda-sez-evento .scheda-sez-testo { display: contents; }
 
 /* Pannello «Mappe»: un tab per mappa sotto il titolo */
 .mappe-tab { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+.mappe-tempo-reale { display: block; margin-top: 8px; padding: 5px 12px; border: 1px dashed var(--border-ui); border-radius: 999px; background: none; color: var(--text-muted); font: inherit; font-size: var(--fs-sm, .85em); cursor: pointer; }
+.mappe-tempo-reale[aria-pressed="true"] { border-style: solid; border-color: var(--accent); color: var(--text); }
 .mappe-tab-btn { padding: 4px 10px; border: 1px solid var(--border-ui); border-radius: 999px; background: none; color: var(--text-muted); font: inherit; font-size: var(--fs-sm, .85em); cursor: pointer; }
 .mappe-tab-btn[aria-selected="true"] { background: var(--accent); border-color: var(--accent); color: #1f1300; font-weight: 700; }
 #mappe-pannello .terremoti-filtri { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -2760,6 +2763,15 @@ details.scheda-sez-evento .scheda-sez-testo { display: contents; }
 #mappe-pannello .terremoti-pannello[hidden] { display: none; }
 .terremoti-sezione-prof, .legenda .terremoti-sezione-prof { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; margin: 6px 0 0; font-size: .85em; }
 .terremoti-sezione-prof > div, .legenda .terremoti-sezione-prof > div { display: flex; align-items: center; justify-content: flex-start; gap: 6px; }
+.terremoti-legenda-esagoni, .legenda .terremoti-legenda-esagoni { display: flex; flex-direction: column; align-items: flex-start; gap: 3px; margin: 6px 0 0; font-size: .85em; }
+.terremoti-legenda-esagoni > div { display: flex; align-items: center; gap: 6px; }
+.terremoti-anim-comandi { display: flex; gap: 6px; margin: 6px 0; }
+.terremoti-anim-comandi button { flex: 1; min-width: 0; padding: 6px 4px; }
+.esagono-popup .maplibregl-popup-content { min-width: 250px; padding: 12px 14px; }
+.esagono-scheda { display: flex; flex-direction: column; gap: 6px; font-size: .88em; }
+.esagono-eventi { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.esagono-eventi li { display: flex; align-items: baseline; gap: 6px; }
+.terremoti-legenda-esagoni i.incendi-campione { display: inline-block; flex: none; width: 14px; height: 10px; border: 1.5px solid rgba(0, 0, 0, .35); border-radius: 2px; }
 /* nelle legende in mappa `.legenda div` e `.legenda i` renderebbero la rampa una riga con un quadratino */
 .legenda .terremoti-rampa { display: block; min-width: 150px; margin: 4px 0 0; }
 .legenda .terremoti-rampa-barra { display: block; width: 100%; height: 12px; border-radius: 6px; }

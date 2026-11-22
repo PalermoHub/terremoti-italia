@@ -3,6 +3,8 @@ import { FILTRO_INIZIALE, PROFONDITA, CLASSI_MAG } from '../layers/scheda-terrem
 // Indirizzo condivisibile: ricostruisce quello che l'utente vede. La vista della mappa sta nell'hash (MapLibre),
 // la scheda aperta in `scheda`/`tab` (scheda.js); qui si aggiungono strati accesi, filtri dei terremoti, tema e lingua.
 const LINGUE = ['it', 'en'];
+// Un modulo che cambia stato fuori dal pannello Layer (i pannelli delle mappe) lo annuncia con questo evento: l'indirizzo si aggiorna
+export const EVENTO_STATO_CONDIVISO = 'dt:stato-condiviso';
 const num = v => (v == null || v === '' ? null : Number(v));
 const finito = v => (Number.isFinite(v) ? v : null);
 
@@ -20,7 +22,16 @@ function decodificaPeriodo(v) {
   return n?.length === 2 && n.every(Number.isFinite) ? { da: n[0], a: n[1] } : null;
 }
 
-export function codificaStato({ strati, filtro: f, tema, lingua, opacita = {}, storico = null, confronto = null, area = null, shakemap = null }) {
+// Esagoni: periodo, magnitudo minima, lato in km e misura (0 = eventi, 1 = magnitudo massima, 2 = eventi per anno) → «da-a_mag_lato_misura»
+const LATI_ESAGONI = [5, 10, 20];
+const codificaEsagoni = e => `${e.periodo.da}-${e.periodo.a}_${e.mag}_${e.lato}_${e.metrica}`;
+function decodificaEsagoni(v) {
+  const m = /^(\d+)-(\d+)_(\d+(?:\.\d+)?)_(\d+)_([012])$/.exec(v ?? '');
+  if (!m || Number(m[1]) > Number(m[2]) || !LATI_ESAGONI.includes(Number(m[4]))) return null;
+  return { periodo: { da: Number(m[1]), a: Number(m[2]) }, mag: Number(m[3]), lato: Number(m[4]), metrica: Number(m[5]) };
+}
+
+export function codificaStato({ strati, filtro: f, tema, lingua, opacita = {}, storico = null, confronto = null, area = null, shakemap = null, esagoni = null }) {
   const p = new URLSearchParams();
   p.set('strati', strati.join(','));
   if (lingua) p.set('lng', lingua);
@@ -48,6 +59,7 @@ export function codificaStato({ strati, filtro: f, tema, lingua, opacita = {}, s
     p.set('area', codificaTerritorio(area));
     if (area.soloEventi) p.set('solo', '1');
   }
+  if (esagoni) p.set('esa', codificaEsagoni(esagoni));
   if (shakemap) p.set('sm', `${shakemap.id}.${shakemap.prodotto}`); // contorni ShakeMap in mappa: evento e prodotto
   return p;
 }
@@ -76,6 +88,7 @@ export function decodificaStato(search) {
   return {
     opacita: Object.keys(opacita).length ? opacita : null,
     storico: decodificaPeriodo(p.get('sto')),
+    esagoni: decodificaEsagoni(p.get('esa')),
     confronto: ca && cb && cprof && Number.isFinite(cmag) ? { a: ca, b: cb, mag: cmag, prof: cprof.chiave, territorio: decodificaTerritorio(p.get('ct')) } : null,
     shakemap: sm && { id: sm[1], prodotto: sm[2] },
     area: area && { ...area, soloEventi: p.get('solo') === '1' },

@@ -25,8 +25,10 @@ export const etichettaPeriodo = p => {
 };
 
 // null = periodo valido; altrimenti la chiave i18n dell'errore
-export function periodoValido({ da, a }, adesso = Date.now()) {
+// `minGiorni` = durata minima del periodo (0 = nessuna): le mappe a esagoni chiedono almeno un anno
+export function periodoValido({ da, a }, adesso = Date.now(), minGiorni = 0) {
   if (da > a) return 'terremoti.arc.errInvertito';
+  if (minGiorni > 0 && a - da + 1 < minGiorni * GIORNO_MS) return 'terremoti.arc.errBreve';
   if (da < periodoAnno(ANNO_INIZIO).da) return 'terremoti.arc.errPrima';
   if (da > adesso) return 'terremoti.arc.errFuturo';
   return null;

@@ -3,7 +3,7 @@
 // Home, ricerca, zoom su una zona) è il centro della parte rimasta visibile, e si aggiorna quando un pannello si apre o si chiude.
 const ZERO = { top: 0, right: 0, bottom: 0, left: 0 };
 const SINISTRA = ['#barra-strati', '#pannello', '#legende-box']; // la legenda in mappa copre i punti sotto di sé: il centro dei popup cade nella parte libera
-const DESTRA = ['#rail-pannelli', '#scheda', '#rndt-pannello', '#geoimage-pannello', '#tema-ui-pannello', '#chatbot-pannello', '#storico-pannello', '#confronto-pannello'];
+const DESTRA = ['#rail-pannelli', '#scheda', '#rndt-pannello', '#geoimage-pannello', '#tema-ui-pannello', '#chatbot-pannello', '#storico-pannello', '#confronto-pannello', '#mappe-pannello'];
 const MOBILE = '(max-width: 720px)';
 const MOBILE_ALTO = ['#cerca'];
 const MOBILE_BASSO = ['#legende-box', '#ultimo-peek', '#barra-tab', '#scheda']; // i riquadri che sul telefono stanno sopra la mappa, in basso
